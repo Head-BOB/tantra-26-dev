@@ -119,8 +119,7 @@ export function initIntro() {
     rk.style.transform = 'translate3d(0,0,0)';
     if (rkVis) {
       const rkProg = io(seg(t, 4760, 340));
-      const pp = Math.min(sc0 / (innerHeight || 800), 1);
-      rk.style.opacity = rkProg * (1 - pp * 0.75);
+      rk.style.opacity = rkProg;
       const sh = seg(t, 5100, 1800);
       let x = 0, y = 0;
       if (sh > 0 && sh < 1) {
@@ -187,15 +186,25 @@ export function initIntro() {
   const T = 11400, PX = 0.6;
   const track = $('#track');
   let maxS = 0, cur = 0;
+  let lastW = 0, lastH = 0;
 
-  function sizeTrack() {
-    const vh = window.innerHeight;
+  function sizeTrack(force = false) {
+    const nw = window.innerWidth || 1200;
+    const nh = window.innerHeight || 800;
+    // Don't resize track on mobile browser address-bar toggles (width unchanged, small height diff)
+    if (!force && lastW > 0 && Math.abs(nw - lastW) === 0 && Math.abs(nh - lastH) < 160) return;
+    lastW = nw;
+    lastH = nh;
+    const vh = nh;
     maxS = T * PX;
     track.style.height = `${vh + maxS + vh * 0.7}px`;
   }
-  sizeTrack();
-  window.addEventListener('resize', sizeTrack);
-  window.addEventListener('orientationchange', () => setTimeout(sizeTrack, 250));
+  sizeTrack(true);
+  window.addEventListener('resize', () => sizeTrack(false));
+  window.addEventListener('orientationchange', () => {
+    lastW = 0;
+    setTimeout(() => sizeTrack(true), 250);
+  });
 
   // Key stage scroll positions (px)
   const STAGE_SCROLLS = [

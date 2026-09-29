@@ -5,10 +5,14 @@
 
 @import './tokens.css';
 
-html { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+html {
+  background: #0a0e1c;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
 html::-webkit-scrollbar { display: none; }
 body {
-  background: var(--cream);
+  background: #0a0e1c;
   overflow-x: hidden;
   font-family: 'Anton', Impact, 'Arial Narrow Bold', sans-serif;
   color: var(--ink);
@@ -18,8 +22,15 @@ body {
 
 /* ── Scroll-driven stage system ── */
 .stage {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  width: 100%; height: 100%;
+  position: fixed;
+  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   will-change: transform, visibility;
@@ -27,10 +38,16 @@ body {
   pointer-events: none;
 }
 #track { width: 1px; pointer-events: none; }
-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: calc(100% + 120px);
+}
 
 /* ── Scene 1: "Ready?" ── */
-#s1 { background: var(--cream); z-index: 1; }
+#s1 { background: var(--cream); color: var(--ink); z-index: 1; }
 .line {
   display: block; overflow: hidden;
   font-size: clamp(4rem, 17vw, 16rem);
@@ -49,7 +66,15 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #n1 { background: var(--green); color: var(--cream); z-index: 4; }
 
 /* ── Rocket stage ── */
-#rk { background: #0a0e1c; transform: translate3d(0,0,0); opacity: 0; z-index: 5; visibility: hidden; }
+#rk {
+  background: #0a0e1c;
+  transform: translate3d(0,0,0);
+  opacity: 0;
+  z-index: 5;
+  visibility: hidden;
+  bottom: -120px;
+  min-height: calc(100dvh + 120px);
+}
 #rocket {
   position: absolute; bottom: 14%; left: 50%;
   height: 44vh; width: calc(44vh * .4706);

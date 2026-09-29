@@ -21,8 +21,14 @@ export function initDepartments() {
   let maxT = 0, range = 1, top0 = 0, curX = 0, pad = 0;
   let isManualDragging = false;
 
-  function measure() {
-    const vh = innerHeight || 800;
+  let lastDepW = 0, lastDepH = 0;
+  function measure(force = false) {
+    const nw = window.innerWidth || 1200;
+    const nh = window.innerHeight || 800;
+    if (!force && lastDepW > 0 && Math.abs(nw - lastDepW) === 0 && Math.abs(nh - lastDepH) < 160) return;
+    lastDepW = nw;
+    lastDepH = nh;
+    const vh = nh;
     pad = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
     maxT = Math.max(0, rtrack.scrollWidth + 2 * pad - rail.clientWidth);
     dep.style.height = `${vh + Math.max(maxT * 1.05, vh * 0.8)}px`;
@@ -82,10 +88,14 @@ export function initDepartments() {
     requestAnimationFrame(tick);
   }
 
-  measure();
-  addEventListener('resize', measure);
-  addEventListener('load', measure);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+  measure(true);
+  addEventListener('resize', () => measure(false));
+  addEventListener('orientationchange', () => {
+    lastDepW = 0;
+    setTimeout(() => measure(true), 250);
+  });
+  addEventListener('load', () => measure(true));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => measure(true));
   requestAnimationFrame(tick);
 
   // ---------- Touch & Pointer Dragging ----------
