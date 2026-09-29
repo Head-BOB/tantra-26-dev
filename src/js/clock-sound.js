@@ -158,8 +158,9 @@ export function initLaunchCountdownAudio() {
 
   /**
    * Smooth, flowing volume fading based on viewport position.
-   * - Clearly audible while viewing the countdown.
-   * - Flowingly fades out to absolute silence when scrolling past #launch into footer.
+   * - Strictly silent while viewing the departments carousel or intro.
+   * - Only audible when #launch has actually entered the viewport.
+   * - Flowingly fades out to absolute silence when scrolling past #launch into the footer.
    */
   function updateVolume() {
     const launch = document.getElementById('launch') || document.getElementById('cd');
@@ -170,24 +171,23 @@ export function initLaunchCountdownAudio() {
 
     let targetVol = 0;
 
-    if (rect.top <= vh && rect.bottom >= 0) {
-      // When visible on screen: full volume
-      targetVol = 1.0;
+    // Strictly require #launch to have entered the screen (at least 60px inside the viewport)
+    // and not have scrolled completely past the top (rect.bottom > 60px)
+    if (rect.top < vh - 60 && rect.bottom > 60) {
+      const visibleTop = Math.max(0, rect.top);
+      const visibleBottom = Math.min(vh, rect.bottom);
+      const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+      const totalH = Math.min(rect.height || 260, vh);
 
-      // 1. Smooth fade-in when scrolling down into #launch
-      if (rect.top > vh * 0.25) {
-        targetVol = Math.max(0, (vh - rect.top) / (vh * 0.75));
-      }
+      // Smooth fade-in as #launch enters, full volume once ~35% visible
+      targetVol = Math.min(1.0, (visibleHeight / totalH) / 0.35);
 
-      // 2. Smooth fade-out when scrolling past #launch down into the footer
+      // Smooth fade-out when scrolling down towards the footer
       if (rect.bottom < vh * 0.45) {
-        targetVol = Math.max(0, rect.bottom / (vh * 0.45));
+        targetVol = Math.min(targetVol, rect.bottom / (vh * 0.45));
       }
-    } else if (rect.top > vh && rect.top < vh + 400) {
-      // Approaching from above
-      targetVol = Math.max(0, 1.0 - (rect.top - vh) / 400);
     } else {
-      // Offscreen: absolute silence
+      // Offscreen (in departments, intro, or footer): absolute silence
       targetVol = 0;
     }
 
