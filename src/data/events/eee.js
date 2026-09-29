@@ -1,0 +1,56 @@
+export const CONFIG = {
+  dept: 'Electrical and Electronics',
+  slug: 'eee',
+  endpoint: '',
+  coordinators: [
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+  ],
+};
+
+export const EVENTS = [
+  {
+    id: 'circuit-debug',
+    type: 'Competition',
+    title: 'Circuit Debug',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'Electronics Lab',
+    team: 2,
+    fee: '₹100',
+    desc: 'Faulty boards, a multimeter and a countdown. Find every fault before the others do.',
+  },
+  {
+    id: 'line-follower',
+    type: 'Competition',
+    title: 'Line Follower',
+    date: '7 Oct',
+    time: '2:30 PM',
+    venue: 'Workshop Ground',
+    team: 3,
+    fee: '₹150',
+    desc: 'Program a bot to follow the track and finish first without leaving the line.',
+  },
+  {
+    id: 'pcb-workshop',
+    type: 'Workshop',
+    title: 'PCB Design',
+    date: '7 Oct',
+    time: '11:00 AM',
+    venue: 'Electronics Lab',
+    team: 1,
+    fee: 'Free',
+    desc: 'From schematic to a board ready to print, step by step.',
+  },
+  {
+    id: 'spark-quiz',
+    type: 'Competition',
+    title: 'Spark Quiz',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'Seminar Hall',
+    team: 2,
+    fee: '₹50',
+    desc: 'Rapid-fire quiz on circuits, machines and power. Buzzers included.',
+  },
+];

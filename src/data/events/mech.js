@@ -1,0 +1,56 @@
+export const CONFIG = {
+  dept: 'Mechanical',
+  slug: 'mech',
+  endpoint: '',
+  coordinators: [
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+  ],
+};
+
+export const EVENTS = [
+  {
+    id: 'robo-race',
+    type: 'Competition',
+    title: 'Robo Race',
+    date: '7 Oct',
+    time: '11:00 AM',
+    venue: 'Workshop Ground',
+    team: 4,
+    fee: '₹200',
+    desc: 'Build a bot and race it around the obstacle track. Fastest clean lap wins.',
+  },
+  {
+    id: 'cad-modelling',
+    type: 'Competition',
+    title: 'CAD Modelling',
+    date: '7 Oct',
+    time: '3:00 PM',
+    venue: 'CAD Lab',
+    team: 1,
+    fee: '₹50',
+    desc: 'Model a mechanical assembly from a reference and a deadline.',
+  },
+  {
+    id: 'engine-teardown',
+    type: 'Workshop',
+    title: 'Engine Teardown',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'Automobile Lab',
+    team: 2,
+    fee: 'Free',
+    desc: 'Strip down an engine, learn what each part does, then put it back together.',
+  },
+  {
+    id: 'design-talk',
+    type: 'Talk',
+    title: 'Design for Manufacture',
+    date: '7 Oct',
+    time: '10:30 AM',
+    venue: 'Seminar Hall',
+    team: 1,
+    fee: 'Free',
+    desc: 'How ideas turn into parts that can actually be made.',
+  },
+];

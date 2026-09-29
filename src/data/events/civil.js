@@ -1,0 +1,56 @@
+export const CONFIG = {
+  dept: 'Civil Engineering',
+  slug: 'civil',
+  endpoint: '',
+  coordinators: [
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+  ],
+};
+
+export const EVENTS = [
+  {
+    id: 'bridge-builders',
+    type: 'Competition',
+    title: 'Bridge Builders',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'Civil Workshop',
+    team: 3,
+    fee: '₹150',
+    desc: 'Build a bridge from limited material. The one that holds the most load wins.',
+  },
+  {
+    id: 'cad-showdown',
+    type: 'Competition',
+    title: 'CAD Showdown',
+    date: '7 Oct',
+    time: '2:00 PM',
+    venue: 'Computer Lab',
+    team: 1,
+    fee: '₹50',
+    desc: 'Draft a structure from a brief inside a strict time limit.',
+  },
+  {
+    id: 'survey-sprint',
+    type: 'Competition',
+    title: 'Survey Sprint',
+    date: '7 Oct',
+    time: '9:30 AM',
+    venue: 'Campus Ground',
+    team: 3,
+    fee: '₹100',
+    desc: 'Field survey race: measure, map and close your traverse with the smallest error.',
+  },
+  {
+    id: 'site-talk',
+    type: 'Talk',
+    title: 'Building in the Real World',
+    date: '7 Oct',
+    time: '11:00 AM',
+    venue: 'Seminar Hall',
+    team: 1,
+    fee: 'Free',
+    desc: 'A practising engineer on how projects go from drawing to site.',
+  },
+];

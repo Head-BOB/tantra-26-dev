@@ -1,0 +1,17 @@
+/* ============================================================
+   TANTRA 26 — Design tokens
+   Shared across all pages. Edit colour values here only.
+   ============================================================ */
+
+:root {
+  --cream: #efe8da;
+  --ink:   #141414;
+  --red:   #c23b22;
+  --gold:  #e3a72f;
+  --green: #2b6a4d;
+  --navy:  #182338;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after { box-sizing: inherit; }
+* { margin: 0; padding: 0; }

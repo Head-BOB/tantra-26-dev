@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mechanical · Tantra 26</title>
+<meta name="description" content="Mechanical Engineering department events, workshops and competitions at Tantra 26.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>:root{--c:#182338;--t:#efe8da;--acc:#182338;--accfg:#efe8da}</style>
+<script type="module" src="/src/js/entries/mech.js"></script>
+</head>
+<body>
+
+<header class="hero">
+  <nav class="top">
+    <a class="back" href="/">&larr; Tantra 26</a>
+    <span class="crumb">Departments</span>
+  </nav>
+  <span class="ghost" aria-hidden="true">ME</span>
+  <div class="hero-in">
+    <div>
+      <p class="eye">Tantra 26 &middot; Department of</p>
+      <h1><span class="ln"><span>Mechanical</span></span></h1>
+      <p class="tag">Gears, engines and machines that move. Build fast, race hard, take it apart to see how it works.</p>
+      <div class="chips" id="chips"></div>
+      <a class="cta" href="#events">See events <b>&darr;</b></a>
+    </div>
+  </div>
+</header>
+
+<section id="events">
+  <div class="sh"><p>Pick your battle</p><h2>Events</h2></div>
+  <div class="filters" id="filters"></div>
+  <div class="grid" id="grid"></div>
+</section>
+
+<section class="info">
+  <h2>Questions?</h2>
+  <div class="coord" id="coord"></div>
+  <h2>Other departments</h2>
+  <div class="others">
+    <a href="/departments/cse.html"   style="--bg:#2b6a4d">Computer Science</a>
+    <a href="/departments/ai.html"    style="--bg:#c23b22">Artificial Intelligence</a>
+    <a href="/departments/civil.html" style="--bg:#e3a72f">Civil Engineering</a>
+    <a href="/departments/eee.html"   style="--bg:#efe8da">Electrical &amp; Electronics</a>
+    <a href="/"                       style="--bg:#efe8da">Home</a>
+  </div>
+  <p class="credit">Tantra 26 &middot; Technical Fest</p>
+</section>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+  <div class="reg-sheet">
+    <div class="sheet-h">
+      <div><small id="m-type">Register</small><h3 id="m-title">Event</h3></div>
+      <button class="x" id="m-x" aria-label="Close">&times;</button>
+    </div>
+
+    <!-- Stepper indicator -->
+    <div class="modal-steps" id="m-steps">
+      <div class="step-indicator active" id="step-dot-1"><span>1</span> Details</div>
+      <div class="step-line" id="step-line-1"></div>
+      <div class="step-indicator" id="step-dot-2"><span>2</span> Pay UPI</div>
+      <div class="step-line" id="step-line-2"></div>
+      <div class="step-indicator" id="step-dot-3"><span>3</span> Pass</div>
+    </div>
+
+    <!-- Sliding Viewport -->
+    <div class="modal-viewport">
+      <div class="modal-slider" id="modal-slider">
+
+        <!-- PANEL 1: Details -->
+        <div class="modal-panel" id="panel-details">
+          <form id="form" novalidate>
+            <div class="panel-fee-badge">
+              <span>Entry Fee: <strong id="m-fee-display">₹100</strong></span>
+              <span class="team-badge" id="m-team-display">Individual</span>
+            </div>
+            <label>Full name<input name="name" required autocomplete="name" placeholder="e.g. Alex Morgan"></label>
+            <div class="row">
+              <label>Email<input name="email" type="email" required autocomplete="email" placeholder="alex@college.edu"></label>
+              <label>Phone<input name="phone" type="tel" required autocomplete="tel" placeholder="10-digit number"></label>
+            </div>
+            <label>College / Institution<input name="college" required placeholder="e.g. Institute of Technology"></label>
+            <label id="team-l" style="display:none">Team members (names, comma separated)<textarea name="team" rows="2" placeholder="e.g. Member 2, Member 3"></textarea></label>
+            <p class="err" id="err"></p>
+            <div class="panel-actions">
+              <button class="sub" id="sub" type="submit">Proceed to Payment &rarr;</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PANEL 2: UPI Payment -->
+        <div class="modal-panel" id="panel-payment">
+          <div class="pay-wrap">
+            <div class="pay-header">
+              <button type="button" class="back-link" id="pay-back-btn">&larr; Edit details</button>
+              <span class="pay-amount-tag">Amount: <strong id="pay-amount-val">₹100</strong></span>
+            </div>
+
+            <div class="qr-section">
+              <div class="qr-frame">
+                <canvas id="pay-qr" width="135" height="135"></canvas>
+                <img id="pay-qr-img" width="135" height="135" style="display:none;object-fit:contain;border-radius:4px" alt="UPI QR">
+                <div class="qr-brand">TANTRA 26 &middot; UPI</div>
+              </div>
+              <div class="upi-details">
+                <div class="upi-id-box">
+                  <span class="upi-id-label">UPI ID</span>
+                  <div class="upi-id-val-row">
+                    <code id="upi-id-text">tantra26@okhdfcbank</code>
+                    <button type="button" class="upi-copy-btn" id="upi-copy-btn">Copy</button>
+                  </div>
+                </div>
+                <div class="pay-apps-row">
+                  <span>Pay via:</span>
+                  <span class="app-chip">GPay</span>
+                  <span class="app-chip">PhonePe</span>
+                  <span class="app-chip">Paytm</span>
+                  <span class="app-chip">BHIM</span>
+                </div>
+              </div>
+            </div>
+
+            <ol class="pay-instructions">
+              <li>Scan the QR code or pay to the UPI ID: exact amount <strong id="instr-amount">₹100</strong>.</li>
+              <li>After payment, copy the <strong>12-digit UPI Reference / UTR Number</strong> from your payment receipt.</li>
+              <li>Paste the Transaction ID below to confirm your registration.</li>
+            </ol>
+
+            <form id="pay-form" novalidate>
+              <label>UPI Transaction ID / UTR Number
+                <input id="pay-txn-id" name="txnId" required autocomplete="off" placeholder="e.g. 428190348210 (12 digits)">
+              </label>
+              <p class="err" id="pay-err"></p>
+              <div class="panel-actions">
+                <button type="button" class="cancel-btn" id="pay-cancel-btn">Back</button>
+                <button type="submit" class="sub" id="pay-submit-btn">Finish Transaction &rarr;</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- PANEL 3: Confirmation Ticket -->
+        <div class="modal-panel" id="panel-confirm">
+          <div class="ok" id="ok">
+            <div class="ok-badge">Registration Confirmed ✓</div>
+            <h3>You're in!</h3>
+            <p id="ok-msg"></p>
+            <div class="ticket-card">
+              <div class="ticket-head">
+                <span class="ticket-event" id="ticket-event-name">Event</span>
+                <span class="ticket-tag" id="ticket-dept-tag">DEPT</span>
+              </div>
+              <div class="rid" id="rid">T26-XXXX</div>
+              <div class="ticket-meta">
+                <div><span>Participant</span><strong id="ticket-name"></strong></div>
+                <div><span>College</span><strong id="ticket-college"></strong></div>
+                <div><span>Entry Fee</span><strong id="ticket-amount"></strong></div>
+                <div><span>UPI Txn ID</span><strong id="ticket-txnid"></strong></div>
+              </div>
+            </div>
+            <p class="ticket-note">Save your Registration ID or take a screenshot. Present it at the desk on fest day.</p>
+            <button class="sub" id="ok-close" type="button">Done</button>
+          </div>
+        </div>
+
+      </div><!-- /modal-slider -->
+    </div><!-- /modal-viewport -->
+  </div><!-- /reg-sheet -->
+</div>
+
+</body>
+</html>

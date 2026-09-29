@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Tantra 26</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="module" src="/src/js/entries/admin.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     LOGIN GATE (Independent passwords per dept or superadmin)
+═══════════════════════════════════════════════ -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-top">
+      <div class="gate-logo">
+        <span class="gate-t26">Tantra 26</span>
+        <span class="gate-badge">Admin Portal</span>
+      </div>
+      <h1>Sign in</h1>
+      <p class="gate-sub">Enter your department or administrator password to access your dashboard.</p>
+    </div>
+    <div class="gate-body">
+      <form id="gate-form" novalidate>
+        <label>Access Password
+          <input type="password" id="gate-pw" autocomplete="current-password" required placeholder="Enter password (e.g. cse26, ai26, tantra26)">
+        </label>
+        <p class="gate-err" id="gate-err"></p>
+        <button type="submit" class="gate-btn" id="gate-btn">Sign in &rarr;</button>
+        <div class="gate-hints">
+          <small>Dept heads: use your dept code (<code>cse26</code>, <code>ai26</code>, <code>civil26</code>, <code>mech26</code>, <code>eee26</code>).</small>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     DASHBOARD
+═══════════════════════════════════════════════ -->
+<div id="app" hidden>
+
+  <!-- Top bar -->
+  <header id="topbar">
+    <div class="topbar-brand">
+      <span class="brand-t26">Tantra 26</span>
+      <span class="brand-sep">·</span>
+      <span class="brand-admin">Dashboard</span>
+    </div>
+    <div class="topbar-actions">
+      <button id="export-excel-btn" class="tb-btn">Export to Excel</button>
+      <button id="logout-btn" class="tb-btn tb-btn--danger">Sign out</button>
+    </div>
+  </header>
+
+  <div id="layout">
+
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-label" id="sidebar-dept-label">Departments</div>
+      <nav id="dept-nav"></nav>
+
+      <!-- Super Admin Dedicated Side Panel -->
+      <div id="central-admin-nav" hidden>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-label">Admin Central</div>
+        <button class="dept-btn" id="nav-central-qrs">
+          <span>Payment QRs</span>
+          <span class="badge">UPI</span>
+        </button>
+        <button class="dept-btn" id="nav-central-regs">
+          <span>All Registrations</span>
+          <span class="badge" id="central-regs-badge">0</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main id="main">
+
+      <!-- DEPARTMENT HEADER (shown in Dept views) -->
+      <div id="main-header">
+        <div>
+          <div class="main-eyebrow" id="main-eyebrow">Tantra 26 · Department of</div>
+          <h2 id="main-title">Computer Science</h2>
+        </div>
+        <div class="main-header-right">
+          <!-- View switcher tabs -->
+          <div class="view-tabs" id="view-tabs">
+            <button type="button" class="vtab active" id="tab-events">Events</button>
+            <button type="button" class="vtab" id="tab-regs">Registrations <span class="badge" id="regs-badge">0</span></button>
+          </div>
+          <button id="add-btn" class="add-btn">+ Add Event</button>
+        </div>
+      </div>
+
+      <!-- VIEW 1: Department Events & Coordinators -->
+      <div id="view-events-content">
+        <div id="stats-row"></div>
+        <!-- Coordinator section injected by JS here -->
+        <div id="events-list"></div>
+        <div id="empty-state" hidden>
+          <div class="empty-state-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>
+          </div>
+          <p>No events added yet.</p>
+          <p>Click <strong>+ Add Event</strong> above to publish events for this department.</p>
+        </div>
+      </div>
+
+      <!-- VIEW 2: Department Registrations (with UPI Txn IDs) -->
+      <div id="view-regs-content" hidden>
+        <div class="regs-toolbar">
+          <input type="search" id="regs-search" placeholder="Search by name, college, email, or UPI Txn ID…" autocomplete="off">
+          <button type="button" id="export-dept-excel-btn" class="add-small-btn excel-btn">Download Excel (.xlsx)</button>
+        </div>
+        <div class="regs-table-wrap">
+          <table class="regs-table">
+            <thead>
+              <tr>
+                <th>Pass ID</th>
+                <th>Participant</th>
+                <th>Event</th>
+                <th>Fee</th>
+                <th>UPI Transaction ID</th>
+                <th>Contact</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="regs-tbody"></tbody>
+          </table>
+        </div>
+        <div id="regs-empty-state" hidden>
+          <div class="empty-state-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M6 15h4"/></svg>
+          </div>
+          <p>No registrations recorded yet for this department.</p>
+          <p>When participants register on the department page, their details and UPI transaction IDs will appear here.</p>
+        </div>
+      </div>
+
+      <!-- VIEW 3: Super Admin Central - Payment QRs for all departments -->
+      <div id="view-central-qrs" hidden>
+        <div class="central-header">
+          <div class="main-eyebrow">Central Administration</div>
+          <h2>Department Payment QRs & UPI Config</h2>
+          <p class="central-sub">Upload separate payment QR codes and configure UPI IDs for each department. These will be shown seamlessly to participants on the registration payment screen.</p>
+        </div>
+        <div class="qrs-grid" id="qrs-grid"></div>
+      </div>
+
+      <!-- VIEW 4: Super Admin Central - Master Registrations View -->
+      <div id="view-central-regs" hidden>
+        <div class="central-header">
+          <div class="main-eyebrow">Central Administration</div>
+          <h2>All Registrations Master View</h2>
+          <p class="central-sub">Complete participant list across all departments with payment verification and UPI transaction IDs.</p>
+        </div>
+        <div class="master-stats-row" id="master-stats-row"></div>
+        <div class="regs-toolbar">
+          <select id="central-dept-filter" class="dept-select-filter">
+            <option value="">All Departments</option>
+            <option value="cse">Computer Science</option>
+            <option value="ai">Artificial Intelligence</option>
+            <option value="civil">Civil Engineering</option>
+            <option value="mech">Mechanical</option>
+            <option value="eee">Electrical & Electronics</option>
+          </select>
+          <input type="search" id="central-regs-search" placeholder="Search across all registrations…" autocomplete="off">
+          <button type="button" id="export-master-excel-btn" class="add-small-btn excel-btn">Download Master Excel (.xlsx)</button>
+        </div>
+        <div class="regs-table-wrap">
+          <table class="regs-table">
+            <thead>
+              <tr>
+                <th>Pass ID</th>
+                <th>Participant</th>
+                <th>Event</th>
+                <th>Dept</th>
+                <th>Fee</th>
+                <th>UPI Transaction ID</th>
+                <th>Contact</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="central-regs-tbody"></tbody>
+          </table>
+        </div>
+        <div id="central-empty-state" hidden>
+          <div class="empty-state-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <p>No registrations recorded across any department yet.</p>
+        </div>
+      </div>
+
+    </main>
+
+  </div><!-- /layout -->
+
+
+  <!-- ── Add / Edit event modal with styled Date & Time pickers ── -->
+  <div class="modal" id="event-modal" role="dialog" aria-modal="true" aria-labelledby="em-title">
+    <div class="sheet">
+      <div class="sheet-h">
+        <div>
+          <small id="em-mode">Add Event</small>
+          <h3 id="em-title">New Event</h3>
+        </div>
+        <button class="x" id="em-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="event-form" novalidate>
+        <label>Event title
+          <input name="title" required autocomplete="off" placeholder="e.g. Code Rush">
+        </label>
+        <div class="row">
+          <label>Type
+            <select name="type">
+              <option>Competition</option>
+              <option>Workshop</option>
+              <option>Talk</option>
+            </select>
+          </label>
+          <label>Entry fee
+            <input name="fee" required placeholder="e.g. ₹100 or Free">
+          </label>
+        </div>
+        <div class="row">
+          <label>Date
+            <input name="date" id="em-date" value="7 Oct" readonly class="locked-input" title="Tantra 26 fest date is fixed to 7 Oct">
+            <span class="field-hint">Fest date is fixed to 7 Oct</span>
+          </label>
+          <label>Time
+            <input name="time" id="em-time" required placeholder="e.g. 10:00 AM" autocomplete="off">
+            <span class="field-hint">Specify event start time</span>
+          </label>
+        </div>
+        <div class="row">
+          <label>Venue
+            <input name="venue" required placeholder="e.g. CS Lab 1">
+          </label>
+          <label>Max team size
+            <input name="team" type="number" min="1" max="20" value="1">
+          </label>
+        </div>
+        <label>Description
+          <textarea name="desc" rows="3" required placeholder="Short event description shown on the card…"></textarea>
+        </label>
+        <p class="err" id="em-err"></p>
+        <div class="form-actions">
+          <button type="button" id="em-cancel" class="cancel-btn">Cancel</button>
+          <button type="submit" class="sub" id="em-submit">Save event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Add / Edit coordinator modal ── -->
+  <div class="modal" id="coord-modal" role="dialog" aria-modal="true" aria-labelledby="cm-title">
+    <div class="sheet coord-sheet">
+      <div class="sheet-h">
+        <div>
+          <small id="cm-mode">Add Coordinator</small>
+          <h3 id="cm-title">New Coordinator</h3>
+        </div>
+        <button class="x" id="cm-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="coord-form" class="coord-form" novalidate>
+        <label>Full name
+          <input id="cm-name" name="name" required autocomplete="off" placeholder="e.g. Riya Sharma">
+        </label>
+        <label>Phone number
+          <input id="cm-phone" name="phone" type="tel" required autocomplete="off" placeholder="e.g. +91 98765 43210">
+        </label>
+        <p class="err" id="cm-err"></p>
+        <div class="form-actions">
+          <button type="button" id="cm-cancel" class="cancel-btn">Cancel</button>
+          <button type="submit" class="sub">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Export to Excel Department Selection Modal (Super Admin only) ── -->
+  <div class="modal" id="excel-modal" role="dialog" aria-modal="true" aria-labelledby="excel-modal-title">
+    <div class="sheet excel-sheet">
+      <div class="sheet-h">
+        <div>
+          <small>Export Registrations</small>
+          <h3 id="excel-modal-title">Export to Excel</h3>
+        </div>
+        <button class="x" id="excel-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="excel-modal-body">
+        <label>Select Department
+          <select id="excel-dept-select">
+            <option value="all">All Departments (Master Spreadsheet)</option>
+            <option value="cse">Computer Science</option>
+            <option value="ai">Artificial Intelligence</option>
+            <option value="civil">Civil Engineering</option>
+            <option value="mech">Mechanical</option>
+            <option value="eee">Electrical & Electronics</option>
+          </select>
+        </label>
+        <p class="excel-modal-hint">Choose which department data to export, or download a consolidated master file with all participants and UPI transaction IDs.</p>
+        <div class="form-actions">
+          <button type="button" class="cancel-btn" id="excel-modal-cancel">Cancel</button>
+          <button type="button" class="sub" id="excel-modal-download">Download .xlsx</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Delete confirm modal ── -->
+  <div class="modal" id="del-modal" role="dialog" aria-modal="true" aria-labelledby="del-heading">
+    <div class="sheet del-sheet">
+      <div class="sheet-h del-h">
+        <h3 id="del-heading">Confirm delete</h3>
+        <div></div>
+      </div>
+      <div class="del-body">
+        <p>Are you sure you want to remove <strong id="del-name"></strong>?</p>
+        <p class="del-note">Static items from initial data files cannot be deleted here.</p>
+        <div class="del-actions">
+          <button class="cancel-btn" id="del-cancel">Cancel</button>
+          <button class="del-confirm-btn" id="del-confirm">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification container -->
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+
+</div><!-- /app -->
+
+</body>
+</html>

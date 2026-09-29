@@ -1,0 +1,56 @@
+export const CONFIG = {
+  dept: 'Computer Science',
+  slug: 'cse',
+  endpoint: '',
+  coordinators: [
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+  ],
+};
+
+export const EVENTS = [
+  {
+    id: 'code-rush',
+    type: 'Competition',
+    title: 'Code Rush',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'CS Lab 1',
+    team: 1,
+    fee: '₹50',
+    desc: 'Timed competitive programming round. Solve as many problems as you can before the clock runs out.',
+  },
+  {
+    id: 'bug-hunt',
+    type: 'Competition',
+    title: 'Bug Hunt',
+    date: '7 Oct',
+    time: '2:00 PM',
+    venue: 'CS Lab 2',
+    team: 2,
+    fee: '₹100',
+    desc: 'Teams get a broken codebase and a ticking timer. Find the bugs, fix them, climb the board.',
+  },
+  {
+    id: 'git-deploy',
+    type: 'Workshop',
+    title: 'Git & Deploy',
+    date: '7 Oct',
+    time: '11:00 AM',
+    venue: 'Seminar Hall',
+    team: 1,
+    fee: 'Free',
+    desc: 'Hands-on session: version control, pull requests and putting a project live in under an hour.',
+  },
+  {
+    id: 'hack-night',
+    type: 'Competition',
+    title: 'Hack Night',
+    date: '7 Oct',
+    time: '6:00 PM',
+    venue: 'Main Auditorium',
+    team: 4,
+    fee: '₹200',
+    desc: 'A night-long build sprint. Pitch an idea, ship a prototype, demo it to the judges.',
+  },
+];
