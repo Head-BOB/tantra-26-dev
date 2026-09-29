@@ -1090,3 +1090,8 @@ function esc(t) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
 }
+
+try {
+  document.documentElement.appendChild(document.createComment(' #TECHNOBLADENEVERDIES '));
+} catch (_) {}
+

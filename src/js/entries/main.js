@@ -7,3 +7,7 @@ import { initDepartments } from '../departments.js';
 
 initIntro();
 initDepartments();
+
+try {
+  document.documentElement.appendChild(document.createComment(' #TECHNOBLADENEVERDIES '));
+} catch (_) {}

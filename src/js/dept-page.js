@@ -456,4 +456,8 @@ export function initDeptPage(CONFIG, EVENTS) {
       okMsg.textContent = `Registered for ${curEvent.title} on ${curEvent.date} at ${curEvent.time} in ${curEvent.venue}.`;
     }
   }
+
+  try {
+    document.documentElement.appendChild(document.createComment(' #TECHNOBLADENEVERDIES '));
+  } catch (_) {}
 }
