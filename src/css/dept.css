@@ -151,12 +151,19 @@ h1, h2, h3 {
 .coord b { display: block; font: 400 1.15rem/1.2 'Anton', Impact, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
 .others { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .others a {
-  font: 700 12px/1 'Inter'; letter-spacing: .2em; text-transform: uppercase;
-  text-decoration: none; color: var(--ink); background: var(--bg);
+  font: 700 12px/1 'Inter', sans-serif; letter-spacing: .2em; text-transform: uppercase;
+  text-decoration: none; color: var(--fg, var(--cream)); background: var(--bg);
   padding: 15px 22px; clip-path: polygon(3% 0,100% 8%,97% 100%,0 92%);
-  transition: transform .3s;
+  transition: transform .3s, filter .2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
-.others a:hover { transform: translateY(-4px); }
+.others a:hover { transform: translateY(-4px); filter: brightness(1.15); }
+.others a[href*="mech"]  { --bg: #243a5e; --fg: #efe8da; }
+.others a[href*="cse"]   { --bg: #2b6a4d; --fg: #efe8da; }
+.others a[href*="ai"]    { --bg: #c23b22; --fg: #efe8da; }
+.others a[href*="civil"] { --bg: #e3a72f; --fg: #141414; }
+.others a[href*="eee"]   { --bg: #efe8da; --fg: #141414; }
+.others a[href="/"]      { --bg: #efe8da; --fg: #141414; }
 .credit { margin-top: 50px; font: 600 11px/1 'Inter'; letter-spacing: .32em; text-transform: uppercase; color: rgba(239,232,218,.6); }
 
 /* ── Registration dialog ── */
