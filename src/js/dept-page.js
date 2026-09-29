@@ -127,6 +127,25 @@ export function initDeptPage(CONFIG, EVENTS) {
   const payForm     = $('#pay-form');
   const UPI_ID      = 'tantra26@okhdfcbank';
 
+  // Easter egg teaser suggestions for registration modal
+  const EASTER_EGG_PEOPLE = [
+    { name: 'Panamaram Pachu', email: 'kolamassarju@email.com' },
+    { name: 'Rasak',           email: 'rasakrafu@email.com' },
+    { name: 'Garvasis',        email: 'johnsgarvasis@email.com' },
+    { name: 'Shibu',           email: 'shibukuttan@email.com' },
+    { name: 'Njuni',           email: 'njunialen@email.com' },
+  ];
+
+  function applyEasterEggPlaceholder(form) {
+    if (!form || !form.elements) return;
+    const pick = EASTER_EGG_PEOPLE[Math.floor(Math.random() * EASTER_EGG_PEOPLE.length)];
+    if (form.elements.name) form.elements.name.placeholder = `e.g. ${pick.name}`;
+    if (form.elements.email) form.elements.email.placeholder = pick.email;
+  }
+
+  // Set initial teaser on load
+  applyEasterEggPlaceholder(detailsForm);
+
   let curEvent    = null;
   let curData     = null;
   let isFreeEvent = false;
@@ -166,6 +185,7 @@ export function initDeptPage(CONFIG, EVENTS) {
     // Form setup
     detailsForm.reset();
     $('#err').textContent = '';
+    applyEasterEggPlaceholder(detailsForm);
     const teamL = $('#team-l');
     if (teamL) teamL.style.display = ev.team > 1 ? 'grid' : 'none';
 
