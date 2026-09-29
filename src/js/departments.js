@@ -126,33 +126,30 @@ export function initDepartments() {
     const totalDy = currentY - touchStartY;
 
     if (isHorizSwipe === null) {
-      if (Math.abs(totalDx) > 7 && Math.abs(totalDx) > Math.abs(totalDy)) {
+      if (Math.abs(totalDx) > 6 && Math.abs(totalDx) >= Math.abs(totalDy)) {
         isHorizSwipe = true;
         isManualDragging = true;
         rail.classList.add('drag');
-      } else if (Math.abs(totalDy) > 7) {
+      } else if (Math.abs(totalDy) > 6) {
         isHorizSwipe = false;
         isManualDragging = false;
       }
     }
 
     if (isHorizSwipe === true) {
-      // Free manual horizontal swipe to choose department!
+      // Free manual horizontal swipe on touch devices
       if (e.cancelable) e.preventDefault();
       moved = true;
       touchLastX = currentX;
 
-      // Update card position directly under finger with smooth response
-      curX = clamp(curX - dx * 1.25, 0, maxT);
+      // Update card position directly under finger with responsive 1:1 feel
+      curX = clamp(curX - dx * 1.15, 0, maxT);
       rtrack.style.transform = `translate3d(${-curX}px,0,0)`;
 
       const i = idx();
       [...dots.children].forEach((d, k) => { d.className = k === i ? 'on' : ''; });
       pv.disabled = curX < 8;
       nx.disabled = curX > maxT - 8;
-
-      // Synchronize window vertical scroll position to this exact card
-      window.scrollTo(0, scrollYForX(curX));
     }
   }, { passive: false });
 
@@ -160,9 +157,11 @@ export function initDepartments() {
     if (isManualDragging) {
       isManualDragging = false;
       rail.classList.remove('drag');
+      // Synchronize window vertical scroll position to this exact card
       window.scrollTo(0, scrollYForX(curX));
     }
     isHorizSwipe = null;
+    setTimeout(() => { moved = false; }, 160);
   }
 
   rail.addEventListener('touchend', endTouch, { passive: true });
@@ -188,7 +187,6 @@ export function initDepartments() {
     [...dots.children].forEach((d, k) => { d.className = k === i ? 'on' : ''; });
     pv.disabled = curX < 8;
     nx.disabled = curX > maxT - 8;
-    window.scrollTo(0, scrollYForX(curX));
   });
   function endPtr() {
     if (ptrDown) {
@@ -197,10 +195,16 @@ export function initDepartments() {
       rail.classList.remove('drag');
       window.scrollTo(0, scrollYForX(curX));
     }
+    setTimeout(() => { moved = false; }, 160);
   }
   addEventListener('pointerup', endPtr);
   addEventListener('pointercancel', endPtr);
-  rail.addEventListener('click', (e) => { if (moved) { e.preventDefault(); moved = false; } }, true);
+  rail.addEventListener('click', (e) => {
+    if (moved) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
 
   // ---- Countdown timer ----
   // EVENT_START: 7 October 2026, 9:00 AM IST (UTC+05:30)
