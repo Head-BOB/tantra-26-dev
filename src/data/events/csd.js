@@ -1,0 +1,56 @@
+export const CONFIG = {
+  dept: 'Computer Science & Design',
+  slug: 'csd',
+  endpoint: '',
+  coordinators: [
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+  ],
+};
+
+export const EVENTS = [
+  {
+    id: 'design-sprint',
+    type: 'Competition',
+    title: 'Design Sprint',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'Design Studio',
+    team: 2,
+    fee: '₹100',
+    desc: 'Redesign a broken app screen from a short brief before the timer ends.',
+  },
+  {
+    id: 'poster-slam',
+    type: 'Competition',
+    title: 'Poster Slam',
+    date: '7 Oct',
+    time: '2:30 PM',
+    venue: 'Design Studio',
+    team: 1,
+    fee: '₹50',
+    desc: 'One theme, one canvas, two hours. Make the poster that stops people walking.',
+  },
+  {
+    id: 'figma-frontend',
+    type: 'Workshop',
+    title: 'Figma to Front-end',
+    date: '7 Oct',
+    time: '11:00 AM',
+    venue: 'Computer Lab',
+    team: 1,
+    fee: 'Free',
+    desc: 'Take a design from a Figma file to a working web page.',
+  },
+  {
+    id: 'design-talk',
+    type: 'Talk',
+    title: 'Designing for People',
+    date: '7 Oct',
+    time: '10:30 AM',
+    venue: 'Seminar Hall',
+    team: 1,
+    fee: 'Free',
+    desc: 'A designer talks through how good products get made.',
+  },
+];

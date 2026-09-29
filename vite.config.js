@@ -18,9 +18,12 @@ export default defineConfig({
         // Department pages
         deptAi:    resolve(__dirname, 'departments/ai.html'),
         deptCse:   resolve(__dirname, 'departments/cse.html'),
+        deptCsd:   resolve(__dirname, 'departments/csd.html'),
+        deptCsbs:  resolve(__dirname, 'departments/csbs.html'),
         deptCivil: resolve(__dirname, 'departments/civil.html'),
         deptMech:  resolve(__dirname, 'departments/mech.html'),
         deptEee:   resolve(__dirname, 'departments/eee.html'),
+        deptAei:   resolve(__dirname, 'departments/aei.html'),
         // Admin dashboard
         admin: resolve(__dirname, 'admin/index.html'),
       },

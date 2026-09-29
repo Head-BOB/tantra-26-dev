@@ -1,0 +1,56 @@
+export const CONFIG = {
+  dept: 'Applied Electronics & Instrumentation',
+  slug: 'aei',
+  endpoint: '',
+  coordinators: [
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+  ],
+};
+
+export const EVENTS = [
+  {
+    id: 'sensor-quest',
+    type: 'Competition',
+    title: 'Sensor Quest',
+    date: '7 Oct',
+    time: '10:30 AM',
+    venue: 'Instrumentation Lab',
+    team: 3,
+    fee: '₹100',
+    desc: 'Build a small sensor project that measures something real and shows the reading.',
+  },
+  {
+    id: 'signal-chase',
+    type: 'Competition',
+    title: 'Signal Chase',
+    date: '7 Oct',
+    time: '2:30 PM',
+    venue: 'Electronics Lab',
+    team: 2,
+    fee: '₹100',
+    desc: 'Trace faults in a signal chain using an oscilloscope. Fastest clean fix wins.',
+  },
+  {
+    id: 'micro-workshop',
+    type: 'Workshop',
+    title: 'Microcontroller Basics',
+    date: '7 Oct',
+    time: '11:00 AM',
+    venue: 'Electronics Lab',
+    team: 1,
+    fee: 'Free',
+    desc: 'Program a microcontroller to read a sensor and drive an output.',
+  },
+  {
+    id: 'automation-talk',
+    type: 'Talk',
+    title: 'Automation in Industry',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'Seminar Hall',
+    team: 1,
+    fee: 'Free',
+    desc: 'How measurement and control keep factories running.',
+  },
+];

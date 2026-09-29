@@ -1,0 +1,56 @@
+export const CONFIG = {
+  dept: 'Computer Science & Business Systems',
+  slug: 'csbs',
+  endpoint: '',
+  coordinators: [
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+  ],
+};
+
+export const EVENTS = [
+  {
+    id: 'startup-pitch',
+    type: 'Competition',
+    title: 'Startup Pitch',
+    date: '7 Oct',
+    time: '11:00 AM',
+    venue: 'Seminar Hall',
+    team: 3,
+    fee: '₹150',
+    desc: 'Pitch an idea to a panel in five minutes. Best plan takes the prize.',
+  },
+  {
+    id: 'biz-code-battle',
+    type: 'Competition',
+    title: 'Biz Code Battle',
+    date: '7 Oct',
+    time: '2:30 PM',
+    venue: 'CS Lab 1',
+    team: 2,
+    fee: '₹100',
+    desc: 'A business case with a coding twist. Solve it with logic and code.',
+  },
+  {
+    id: 'data-decisions',
+    type: 'Workshop',
+    title: 'Data to Decisions',
+    date: '7 Oct',
+    time: '10:30 AM',
+    venue: 'Computer Lab',
+    team: 1,
+    fee: 'Free',
+    desc: 'Turn a spreadsheet into a decision using simple analytics.',
+  },
+  {
+    id: 'fintech-talk',
+    type: 'Talk',
+    title: 'Inside Fintech',
+    date: '7 Oct',
+    time: '11:00 AM',
+    venue: 'Main Auditorium',
+    team: 1,
+    fee: 'Free',
+    desc: 'How software is changing money, payments and markets.',
+  },
+];

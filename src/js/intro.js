@@ -16,9 +16,8 @@ export function initIntro() {
   // Logo letter elements
   const logoLetters = [...document.querySelectorAll('#tantra-svg .logo-let')];
 
-  // Star fields
-  const f1 = new Field($('#c1'), 110, false);
-  const f2 = new Field($('#c2'), 260, true);
+  // Star field (single continuous field across rocket liftoff and logo reveal)
+  const f1 = new Field($('#c1'), 220, true);
 
   // ---------- Easing helpers ----------
   const clamp = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -57,33 +56,71 @@ export function initIntro() {
   const hint = $('#hint');
   let sc0 = 0;
 
+  const COUNTDOWN_STAGES = [
+    { sIn: 2060, sHold: 2400, sOut: 2960, sEnd: 3300 }, // 3 (#n3)
+    { sIn: 2960, sHold: 3300, sOut: 3860, sEnd: 4200 }, // 2 (#n2)
+    { sIn: 3860, sHold: 4200, sOut: 4760, sEnd: 5100 }, // 1 (#n1)
+  ];
+
   function render(t) {
     // Scene 1: "Ready?"
-    s1.style.visibility = t < 2940 ? 'visible' : 'hidden';
+    if (t < 2060) {
+      s1.style.visibility = 'visible';
+      s1.style.opacity = 1;
+    } else if (t < 2400) {
+      s1.style.visibility = 'visible';
+      s1.style.opacity = 1 - io(seg(t, 2060, 340));
+    } else {
+      s1.style.visibility = 'hidden';
+      s1.style.opacity = 0;
+    }
 
-    // 3-2-1 slabs
+    // 3-2-1 countdown: in-place crossfade (fade out old, fade in next in the same place)
     slabs.forEach((e, i) => {
-      const s0 = 2600 + i * 720;
-      const nextS = s0 + 720 + 340;
-      const isVis = t >= s0 - 30 && t < nextS;
+      const st = COUNTDOWN_STAGES[i];
+      const isVis = t >= st.sIn - 20 && t < st.sEnd + 20;
       e.style.visibility = isVis ? 'visible' : 'hidden';
-      if (isVis) {
-        const prog = io(seg(t, s0, 320));
-        e.style.transform = `translate3d(0,${105 * (1 - prog)}%,0)`;
-        const v = outX(seg(t, s0 + 120, 380));
-        const b = e.querySelector('b');
-        if (b) { b.style.transform = `scale(${2.4 - 1.4 * v})`; b.style.opacity = v; }
+      e.style.transform = 'translate3d(0,0,0)';
+      const b = e.querySelector('b');
+
+      if (!isVis) {
+        e.style.opacity = 0;
+        if (b) b.style.opacity = 0;
+        return;
+      }
+
+      // Stage background opacity (keeps background solid during exit so next stage cleanly overlays)
+      if (t < st.sHold) {
+        e.style.opacity = io(seg(t, st.sIn, st.sHold - st.sIn));
       } else {
-        e.style.transform = t < s0 ? 'translate3d(0,105%,0)' : 'translate3d(0,0,0)';
+        e.style.opacity = 1;
+      }
+
+      // Number text opacity and subtle in-place micro-scale
+      if (b) {
+        if (t < st.sHold) {
+          const inP = io(seg(t, st.sIn, st.sHold - st.sIn));
+          b.style.opacity = inP;
+          b.style.transform = `scale(${1.04 - 0.04 * inP})`;
+        } else if (t < st.sOut) {
+          b.style.opacity = 1;
+          b.style.transform = 'scale(1)';
+        } else {
+          const outP = io(seg(t, st.sOut, st.sEnd - st.sOut));
+          b.style.opacity = 1 - outP;
+          b.style.transform = `scale(${1 - 0.04 * outP})`;
+        }
       }
     });
 
-    // Rocket stage
-    const rkVis = t >= 4730 && t < 8450;
+    // Rocket stage (seamless in-place fade in)
+    const rkVis = t >= 4740;
     rk.style.visibility = rkVis ? 'visible' : 'hidden';
+    rk.style.transform = 'translate3d(0,0,0)';
     if (rkVis) {
       const rkProg = io(seg(t, 4760, 340));
-      rk.style.transform = `translate3d(0,${105 * (1 - rkProg)}%,0)`;
+      const pp = Math.min(sc0 / (innerHeight || 800), 1);
+      rk.style.opacity = rkProg * (1 - pp * 0.75);
       const sh = seg(t, 5100, 1800);
       let x = 0, y = 0;
       if (sh > 0 && sh < 1) {
@@ -91,9 +128,10 @@ export function initIntro() {
         x = Math.sin(k) * 3.5;
         y = Math.cos(k * 1.7) * 1.5;
       }
-      const up = inQ(seg(t, 6900, 1400));
+      const upProg = seg(t, 6900, 1300);
+      const up = Math.pow(upProg, 2.4);
       const vh = window.innerHeight || 800;
-      rocket.style.transform = `translate3d(${x}px,${y - up * 1.4 * vh}px,0)`;
+      rocket.style.transform = `translate3d(${x}px,${y - up * 2.8 * vh}px,0)`;
 
       if (t >= 5050 && t <= 7800) {
         puffs.forEach((q) => {
@@ -106,16 +144,15 @@ export function initIntro() {
         puffs.forEach((q) => { q.e.style.opacity = 0; });
       }
     } else {
-      rk.style.transform = t < 4730 ? 'translate3d(0,105%,0)' : 'translate3d(0,0,0)';
+      rk.style.opacity = 0;
       puffs.forEach((q) => { q.e.style.opacity = 0; });
     }
 
-    // Final logo
+    // Final logo stage (seamless overlay on the same space background)
     const finVis = t >= 7570;
     fin.style.visibility = finVis ? 'visible' : 'hidden';
     if (finVis) {
-      const finProg = io(seg(t, 7600, 800));
-      fin.style.transform = `translate3d(0,${105 * (1 - finProg)}%,0)`;
+      fin.style.transform = 'translate3d(0,0,0)';
       logoLetters.forEach((e, j) => {
         const st2 = 8600 + j * 190;
         const p = outX(seg(t, st2, 600));
@@ -123,7 +160,7 @@ export function initIntro() {
         e.setAttribute('transform', `translate(0, ${-45 * (1 - p)})`);
       });
     } else {
-      fin.style.transform = 'translate3d(0,105%,0)';
+      fin.style.transform = 'translate3d(0,0,0)';
       logoLetters.forEach((e) => {
         e.style.opacity = 0;
         e.setAttribute('transform', 'translate(0, -45)');
@@ -135,13 +172,18 @@ export function initIntro() {
     l26.setAttribute('transform', `translate(0,${14 * (1 - outX(seg(t, 10250, 700)))})`);
     hint.style.opacity = seg(t, 10900, 400) * (1 - clamp(sc0 / 60));
 
-    // Star field speeds
-    f1.target = t > 6900 ? 3200 : 26;
-    if (t < 8400) { f2.speed = 3000; f2.target = 3000; } else { f2.target = 24; }
-    if (t < 6900) f1.speed = Math.min(f1.speed, 60);
+    // Star field speeds on the single continuous canvas
+    if (t >= 8350) {
+      f1.target = 24;
+    } else if (t > 6900) {
+      f1.target = 3200;
+    } else {
+      f1.target = 26;
+      if (t < 6900) f1.speed = Math.min(f1.speed, 60);
+    }
   }
 
-  // ---------- Scroll driver ----------
+  // ---------- Scroll driver & Stage Pacing ----------
   const T = 11400, PX = 0.6;
   const track = $('#track');
   let maxS = 0, cur = 0;
@@ -154,6 +196,236 @@ export function initIntro() {
   sizeTrack();
   window.addEventListener('resize', sizeTrack);
   window.addEventListener('orientationchange', () => setTimeout(sizeTrack, 250));
+
+  // Key stage scroll positions (px)
+  const STAGE_SCROLLS = [
+    0,            // Stage 0: Ready?
+    2600 * PX,    // Stage 1: 3 (~1560px)
+    3500 * PX,    // Stage 2: 2 (~2100px)
+    4400 * PX,    // Stage 3: 1 (~2640px)
+    5100 * PX,    // Stage 4: Rocket ignition (~3060px)
+  ];
+
+  function getCurrentStageIndex() {
+    const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
+    if (sc >= maxS - 120) return 5; // Logo reveal / completed
+    if (sc >= 2850) return 4;       // Rocket stage
+    if (sc >= 2370) return 3;       // Number 1
+    if (sc >= 1830) return 2;       // Number 2
+    if (sc >= 800)  return 1;       // Number 3
+    return 0;                       // Ready?
+  }
+
+  let isAutoScrolling = false;
+  let autoScrollRaf = null;
+  let isTransitioning = false;
+  let transitionRaf = null;
+
+  function cancelAutoScroll() {
+    if (isAutoScrolling) {
+      isAutoScrolling = false;
+      if (autoScrollRaf) {
+        cancelAnimationFrame(autoScrollRaf);
+        autoScrollRaf = null;
+      }
+    }
+  }
+
+  function smoothScrollTo(targetY, duration = 460, onComplete) {
+    cancelAutoScroll();
+    if (transitionRaf) {
+      cancelAnimationFrame(transitionRaf);
+      transitionRaf = null;
+    }
+    isTransitioning = true;
+    const startY = window.pageYOffset || document.documentElement.scrollTop || 0;
+    const dist = targetY - startY;
+    if (Math.abs(dist) < 4) {
+      window.scrollTo(0, targetY);
+      isTransitioning = false;
+      if (onComplete) onComplete();
+      return;
+    }
+    const startTime = performance.now();
+    function step(now) {
+      const elapsed = now - startTime;
+      const p = Math.min(1, elapsed / duration);
+      // Smooth quintic ease-out: rapid departure, feathered landing
+      const ease = 1 - Math.pow(1 - p, 4);
+      window.scrollTo(0, Math.round(startY + dist * ease));
+      if (p < 1) {
+        transitionRaf = requestAnimationFrame(step);
+      } else {
+        window.scrollTo(0, targetY);
+        isTransitioning = false;
+        transitionRaf = null;
+        if (onComplete) onComplete();
+      }
+    }
+    transitionRaf = requestAnimationFrame(step);
+  }
+
+  function startAutoScroll() {
+    if (isAutoScrolling) return;
+    if (transitionRaf) {
+      cancelAnimationFrame(transitionRaf);
+      transitionRaf = null;
+    }
+    const startSc = window.pageYOffset || document.documentElement.scrollTop || 0;
+    const targetSc = maxS;
+    if (startSc >= targetSc - 120) return;
+
+    isAutoScrolling = true;
+    const startTime = performance.now();
+    const totalDist = targetSc - startSc;
+    const duration = Math.min(3400, Math.max(2000, totalDist * 0.85));
+
+    function step(now) {
+      if (!isAutoScrolling) return;
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      // Smooth cubic ease-in-out
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      const currentY = Math.round(startSc + totalDist * eased);
+      window.scrollTo(0, currentY);
+
+      if (progress < 1 && isAutoScrolling) {
+        autoScrollRaf = requestAnimationFrame(step);
+      } else {
+        window.scrollTo(0, targetSc);
+        isAutoScrolling = false;
+        autoScrollRaf = null;
+      }
+    }
+
+    autoScrollRaf = requestAnimationFrame(step);
+  }
+
+  function goToNextStage() {
+    if (isAutoScrolling) return;
+    const idx = getCurrentStageIndex();
+    if (idx < 3) {
+      smoothScrollTo(STAGE_SCROLLS[idx + 1], 460);
+    } else if (idx === 3) {
+      // From 1 -> Rocket pad
+      smoothScrollTo(STAGE_SCROLLS[4], 460, () => {
+        setTimeout(() => {
+          startAutoScroll();
+        }, 180);
+      });
+    } else if (idx === 4) {
+      startAutoScroll();
+    }
+  }
+
+  function goToPrevStage() {
+    if (isAutoScrolling) {
+      cancelAutoScroll();
+    }
+    const idx = getCurrentStageIndex();
+    if (idx === 5) {
+      // From logo reveal: step back to 1
+      smoothScrollTo(STAGE_SCROLLS[3], 500);
+    } else if (idx > 0) {
+      smoothScrollTo(STAGE_SCROLLS[idx - 1], 460);
+    }
+  }
+
+  // Touch handling on mobile (prevents inertial fling past the intro to the footer)
+  let touchStartY = 0;
+  let touchActive = false;
+
+  window.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      touchStartY = e.touches[0].clientY;
+      touchActive = true;
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!touchActive || e.touches.length !== 1) return;
+    const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
+
+    // While inside the intro, cancel native momentum fling
+    if (sc < maxS - 15) {
+      if (e.cancelable) e.preventDefault();
+    }
+  }, { passive: false });
+
+  window.addEventListener('touchend', (e) => {
+    if (!touchActive) return;
+    touchActive = false;
+    const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
+
+    // In main site, native touch scroll handles navigation
+    if (sc >= maxS - 15) return;
+
+    const touchEndY = e.changedTouches[0].clientY;
+    const dy = touchStartY - touchEndY; // positive = swipe up = scroll down
+
+    if (Math.abs(dy) > 30) {
+      if (dy > 0) {
+        goToNextStage();
+      } else {
+        goToPrevStage();
+      }
+    }
+  }, { passive: true });
+
+  // Mouse wheel handling on desktop (debounced stage stepping in intro)
+  let lastWheelTime = 0;
+  window.addEventListener('wheel', (e) => {
+    const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
+
+    if (sc < maxS - 15) {
+      e.preventDefault();
+      const now = performance.now();
+      if (now - lastWheelTime < 380) return;
+
+      if (e.deltaY > 12) {
+        lastWheelTime = now;
+        goToNextStage();
+      } else if (e.deltaY < -12) {
+        lastWheelTime = now;
+        goToPrevStage();
+      }
+    } else {
+      // In main site: allow scrolling back up into intro if at the very top
+      if (e.deltaY < -20 && sc <= maxS + 5) {
+        const now = performance.now();
+        if (now - lastWheelTime >= 380) {
+          lastWheelTime = now;
+          goToPrevStage();
+        }
+      }
+    }
+  }, { passive: false });
+
+  // Keyboard navigation
+  window.addEventListener('keydown', (e) => {
+    const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
+    if (sc < maxS - 15) {
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        goToNextStage();
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        goToPrevStage();
+      }
+    }
+  });
+
+  // Clicking "SCROLL" hint smoothly guides to departments
+  if (hint) {
+    hint.style.cursor = 'pointer';
+    hint.addEventListener('click', () => {
+      const depts = document.querySelector('#depts');
+      if (depts) depts.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
 
   // Clone Tantra SVG into footer logo
   const fl = $('#foot-logo');

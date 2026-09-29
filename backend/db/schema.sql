@@ -5,7 +5,7 @@
 
 -- 1. DEPARTMENTS TABLE
 CREATE TABLE IF NOT EXISTS departments (
-    slug VARCHAR(10) PRIMARY KEY,     -- 'cse', 'ai', 'civil', 'mech', 'eee'
+    slug VARCHAR(10) PRIMARY KEY,     -- 'cse', 'ai', 'csd', 'csbs', 'eee', 'aei', 'civil', 'mech'
     name VARCHAR(100) NOT NULL,
     color VARCHAR(20) NOT NULL,
     fg VARCHAR(20) NOT NULL

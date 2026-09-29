@@ -4,7 +4,7 @@
  */
 
 export const CONFIG = {
-  dept: 'Artificial Intelligence',
+  dept: 'Artificial Intelligence & Data Science',
   slug: 'ai',
 
   /*

@@ -33,7 +33,7 @@
         <p class="gate-err" id="gate-err"></p>
         <button type="submit" class="gate-btn" id="gate-btn">Sign in &rarr;</button>
         <div class="gate-hints">
-          <small>Dept heads: use your dept code (<code>cse26</code>, <code>ai26</code>, <code>civil26</code>, <code>mech26</code>, <code>eee26</code>).</small>
+          <small>Dept heads: use your dept code (<code>cse26</code>, <code>ai26</code>, <code>csd26</code>, <code>csbs26</code>, <code>eee26</code>, <code>aei26</code>, <code>civil26</code>, <code>mech26</code>).</small>
         </div>
       </form>
     </div>
@@ -165,11 +165,14 @@
         <div class="regs-toolbar">
           <select id="central-dept-filter" class="dept-select-filter">
             <option value="">All Departments</option>
-            <option value="cse">Computer Science</option>
-            <option value="ai">Artificial Intelligence</option>
+            <option value="cse">Computer Science &amp; Engineering</option>
+            <option value="ai">Artificial Intelligence &amp; Data Science</option>
+            <option value="csd">Computer Science &amp; Design</option>
+            <option value="csbs">Computer Science &amp; Business Systems</option>
+            <option value="eee">Electrical &amp; Electronics Engineering</option>
+            <option value="aei">Applied Electronics &amp; Instrumentation</option>
             <option value="civil">Civil Engineering</option>
-            <option value="mech">Mechanical</option>
-            <option value="eee">Electrical & Electronics</option>
+            <option value="mech">Mechanical Engineering</option>
           </select>
           <input type="search" id="central-regs-search" placeholder="Search across all registrations…" autocomplete="off">
           <button type="button" id="export-master-excel-btn" class="add-small-btn excel-btn">Download Master Excel (.xlsx)</button>
@@ -300,11 +303,14 @@
         <label>Select Department
           <select id="excel-dept-select">
             <option value="all">All Departments (Master Spreadsheet)</option>
-            <option value="cse">Computer Science</option>
-            <option value="ai">Artificial Intelligence</option>
+            <option value="cse">Computer Science &amp; Engineering</option>
+            <option value="ai">Artificial Intelligence &amp; Data Science</option>
+            <option value="csd">Computer Science &amp; Design</option>
+            <option value="csbs">Computer Science &amp; Business Systems</option>
+            <option value="eee">Electrical &amp; Electronics Engineering</option>
+            <option value="aei">Applied Electronics &amp; Instrumentation</option>
             <option value="civil">Civil Engineering</option>
-            <option value="mech">Mechanical</option>
-            <option value="eee">Electrical & Electronics</option>
+            <option value="mech">Mechanical Engineering</option>
           </select>
         </label>
         <p class="excel-modal-hint">Choose which department data to export, or download a consolidated master file with all participants and UPI transaction IDs.</p>

@@ -22,15 +22,21 @@ import {
 
 import { EVENTS as CSE_EV }   from '../data/events/cse.js';
 import { EVENTS as AI_EV }    from '../data/events/ai.js';
+import { EVENTS as CSD_EV }   from '../data/events/csd.js';
+import { EVENTS as CSBS_EV }  from '../data/events/csbs.js';
+import { EVENTS as EEE_EV }   from '../data/events/eee.js';
+import { EVENTS as AEI_EV }   from '../data/events/aei.js';
 import { EVENTS as CIVIL_EV } from '../data/events/civil.js';
 import { EVENTS as MECH_EV }  from '../data/events/mech.js';
-import { EVENTS as EEE_EV }   from '../data/events/eee.js';
 
 import { CONFIG as CSE_CFG }   from '../data/events/cse.js';
 import { CONFIG as AI_CFG }    from '../data/events/ai.js';
+import { CONFIG as CSD_CFG }   from '../data/events/csd.js';
+import { CONFIG as CSBS_CFG }  from '../data/events/csbs.js';
+import { CONFIG as EEE_CFG }   from '../data/events/eee.js';
+import { CONFIG as AEI_CFG }   from '../data/events/aei.js';
 import { CONFIG as CIVIL_CFG } from '../data/events/civil.js';
 import { CONFIG as MECH_CFG }  from '../data/events/mech.js';
-import { CONFIG as EEE_CFG }   from '../data/events/eee.js';
 
 // ─── Password & Role Mapping ───────────────────────────────────
 // No usernames required — entering password immediately routes user
@@ -40,15 +46,35 @@ const AUTH_MAP = {
   'tantra26-admin': { role: 'superadmin', name: 'Central Admin' },
   'admin26':        { role: 'superadmin', name: 'Central Admin' },
 
-  // Computer Science
-  'cse26':        { role: 'dept_admin', dept: 'cse', name: 'Computer Science' },
-  'tantra-cse':   { role: 'dept_admin', dept: 'cse', name: 'Computer Science' },
-  'tantra26-cse': { role: 'dept_admin', dept: 'cse', name: 'Computer Science' },
+  // Computer Science & Engineering
+  'cse26':        { role: 'dept_admin', dept: 'cse', name: 'Computer Science & Engineering' },
+  'tantra-cse':   { role: 'dept_admin', dept: 'cse', name: 'Computer Science & Engineering' },
+  'tantra26-cse': { role: 'dept_admin', dept: 'cse', name: 'Computer Science & Engineering' },
 
-  // Artificial Intelligence
-  'ai26':         { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence' },
-  'tantra-ai':    { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence' },
-  'tantra26-ai':  { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence' },
+  // Artificial Intelligence & Data Science
+  'ai26':         { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence & Data Science' },
+  'tantra-ai':    { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence & Data Science' },
+  'tantra26-ai':  { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence & Data Science' },
+
+  // Computer Science & Design
+  'csd26':        { role: 'dept_admin', dept: 'csd', name: 'Computer Science & Design' },
+  'tantra-csd':   { role: 'dept_admin', dept: 'csd', name: 'Computer Science & Design' },
+  'tantra26-csd': { role: 'dept_admin', dept: 'csd', name: 'Computer Science & Design' },
+
+  // Computer Science & Business Systems
+  'csbs26':        { role: 'dept_admin', dept: 'csbs', name: 'Computer Science & Business Systems' },
+  'tantra-csbs':   { role: 'dept_admin', dept: 'csbs', name: 'Computer Science & Business Systems' },
+  'tantra26-csbs': { role: 'dept_admin', dept: 'csbs', name: 'Computer Science & Business Systems' },
+
+  // Electrical & Electronics Engineering
+  'eee26':        { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics Engineering' },
+  'tantra-eee':   { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics Engineering' },
+  'tantra26-eee': { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics Engineering' },
+
+  // Applied Electronics & Instrumentation
+  'aei26':        { role: 'dept_admin', dept: 'aei', name: 'Applied Electronics & Instrumentation' },
+  'tantra-aei':   { role: 'dept_admin', dept: 'aei', name: 'Applied Electronics & Instrumentation' },
+  'tantra26-aei': { role: 'dept_admin', dept: 'aei', name: 'Applied Electronics & Instrumentation' },
 
   // Civil Engineering
   'civil26':        { role: 'dept_admin', dept: 'civil', name: 'Civil Engineering' },
@@ -56,30 +82,28 @@ const AUTH_MAP = {
   'tantra26-civil': { role: 'dept_admin', dept: 'civil', name: 'Civil Engineering' },
 
   // Mechanical Engineering
-  'mech26':        { role: 'dept_admin', dept: 'mech', name: 'Mechanical' },
-  'tantra-mech':   { role: 'dept_admin', dept: 'mech', name: 'Mechanical' },
-  'tantra26-mech': { role: 'dept_admin', dept: 'mech', name: 'Mechanical' },
-
-  // Electrical & Electronics
-  'eee26':        { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics' },
-  'tantra-eee':   { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics' },
-  'tantra26-eee': { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics' },
+  'mech26':        { role: 'dept_admin', dept: 'mech', name: 'Mechanical Engineering' },
+  'tantra-mech':   { role: 'dept_admin', dept: 'mech', name: 'Mechanical Engineering' },
+  'tantra26-mech': { role: 'dept_admin', dept: 'mech', name: 'Mechanical Engineering' },
 };
 
 const DEPTS = [
-  { slug: 'cse',   name: 'Computer Science',         color: '#2b6a4d', fg: '#efe8da' },
-  { slug: 'ai',    name: 'Artificial Intelligence',  color: '#c23b22', fg: '#efe8da' },
-  { slug: 'civil', name: 'Civil Engineering',        color: '#e3a72f', fg: '#141414' },
-  { slug: 'mech',  name: 'Mechanical',               color: '#182338', fg: '#efe8da' },
-  { slug: 'eee',   name: 'Electrical & Electronics', color: '#efe8da', fg: '#141414' },
+  { slug: 'cse',   name: 'Computer Science & Engineering',         color: '#2b6a4d', fg: '#efe8da' },
+  { slug: 'ai',    name: 'Artificial Intelligence & Data Science',  color: '#c23b22', fg: '#efe8da' },
+  { slug: 'csd',   name: 'Computer Science & Design',              color: '#e3a72f', fg: '#141414' },
+  { slug: 'csbs',  name: 'Computer Science & Business Systems',     color: '#182338', fg: '#efe8da' },
+  { slug: 'eee',   name: 'Electrical & Electronics Engineering',    color: '#efe8da', fg: '#141414' },
+  { slug: 'aei',   name: 'Applied Electronics & Instrumentation',   color: '#2b6a4d', fg: '#efe8da' },
+  { slug: 'civil', name: 'Civil Engineering',                      color: '#e3a72f', fg: '#141414' },
+  { slug: 'mech',  name: 'Mechanical Engineering',                 color: '#243a5e', fg: '#efe8da' },
 ];
 
 const STATIC_EVENTS = {
-  cse: CSE_EV, ai: AI_EV, civil: CIVIL_EV, mech: MECH_EV, eee: EEE_EV,
+  cse: CSE_EV, ai: AI_EV, csd: CSD_EV, csbs: CSBS_EV, eee: EEE_EV, aei: AEI_EV, civil: CIVIL_EV, mech: MECH_EV,
 };
 const STATIC_COORDS = {
-  cse: CSE_CFG.coordinators, ai: AI_CFG.coordinators,
-  civil: CIVIL_CFG.coordinators, mech: MECH_CFG.coordinators, eee: EEE_CFG.coordinators,
+  cse: CSE_CFG.coordinators, ai: AI_CFG.coordinators, csd: CSD_CFG.coordinators, csbs: CSBS_CFG.coordinators,
+  eee: EEE_CFG.coordinators, aei: AEI_CFG.coordinators, civil: CIVIL_CFG.coordinators, mech: MECH_CFG.coordinators,
 };
 
 // ─── Storage helpers ───────────────────────────────────────────

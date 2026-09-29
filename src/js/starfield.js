@@ -25,8 +25,8 @@ export class Field {
     const me = this;
 
     function size() {
-      const nw = cv.clientWidth || innerWidth;
-      const nh = cv.clientHeight || innerHeight;
+      const nw = window.innerWidth || cv.clientWidth || 1200;
+      const nh = window.innerHeight || cv.clientHeight || 800;
       // Don't wipe canvas on small mobile address-bar toggles
       if (W > 0 && Math.abs(nw - W) === 0 && Math.abs(nh - H) < 140) return;
       D = Math.min(window.devicePixelRatio || 1, 2);
@@ -40,19 +40,25 @@ export class Field {
 
     for (let i = 0; i < n; i++) {
       const z = Math.pow(Math.random(), 1.6) * 0.9 + 0.1;
+      const fast = Math.random() < 0.32;
       st.push({
-        x: Math.random(), y: Math.random() * (H || 800),
-        z, s: 0.6 + z * 1.9, p: Math.random() * 6.28, r: 1 + Math.random() * 3,
+        x: Math.random(), y: Math.random() * (H || window.innerHeight || 800),
+        z, s: 1.4 + z * 1.8, p: Math.random() * 6.28,
+        r: fast ? (3.5 + Math.random() * 4.5) : (1.6 + Math.random() * 2.6),
         col: Math.random() < 0.16 ? '#e3a72f' : (Math.random() < 0.3 ? '#b9c4de' : '#efe8da'),
-        big: z > 0.82 && Math.random() < 0.7,
+        big: z > 0.8 && Math.random() < 0.65,
       });
     }
 
     function frame(now) {
       const dt = Math.min(0.05, (now - last) / 1e3); last = now; t += dt;
+      if (W === 0 || H === 0) size();
       me.speed += (me.target - me.speed) * Math.min(1, dt * 2.2);
       c.clearRect(0, 0, W, H);
-      const sp = me.speed, warp = sp > 260;
+      const sp = me.speed;
+
+      // Continuous warp factor: 0 when cruising (sp <= 50), 1 when at warp (sp >= 250)
+      const warpBlend = Math.min(1, Math.max(0, (sp - 50) / 200));
 
       for (let i = 0; i < st.length; i++) {
         const q = st[i];
@@ -61,22 +67,33 @@ export class Field {
         const px = q.x * W - mouse.x * q.z * 36;
         const py = q.y - mouse.y * q.z * 22;
         c.fillStyle = c.strokeStyle = q.col;
-        if (warp) {
-          c.globalAlpha = 0.4 + q.z * 0.6;
+
+        // 1. Draw warp streaks (smoothly shrinks in length & fades with warpBlend)
+        if (warpBlend > 0) {
+          const streakLen = Math.max(0, (sp - 30) * q.z * 0.045);
+          c.globalAlpha = (0.35 + q.z * 0.65) * warpBlend;
           c.lineWidth = q.s;
-          c.beginPath(); c.moveTo(px, py); c.lineTo(px, py - sp * q.z * 0.045); c.stroke();
-        } else {
-          c.globalAlpha = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * q.r + q.p));
+          c.beginPath();
+          c.moveTo(px, py);
+          c.lineTo(px, py - streakLen);
+          c.stroke();
+        }
+
+        // 2. Draw crisp dot stars (clearly visible, blinking/twinkling, no crosshairs)
+        if (warpBlend < 1) {
+          const s1 = Math.sin(t * q.r + q.p);
+          const s2 = Math.sin(t * (q.r * 1.7) + q.p * 2.1);
+          const raw = 0.5 + 0.35 * s1 + 0.15 * s2;
+          const blink = Math.pow(Math.max(0, raw), 2);
+          const dotFade = 1 - warpBlend;
+          c.globalAlpha = (0.35 + 0.65 * blink) * dotFade;
+
           if (q.big) {
-            const L = 5 + q.z * 7 * (0.6 + 0.4 * Math.sin(t * q.r + q.p));
-            c.lineWidth = 1.2;
-            c.beginPath();
-            c.moveTo(px - L, py); c.lineTo(px + L, py);
-            c.moveTo(px, py - L); c.lineTo(px, py + L);
-            c.stroke();
-            c.fillRect(px - 1.5, py - 1.5, 3, 3);
+            const sz = 3.2 + q.z * 1.4;
+            c.fillRect(px - sz / 2, py - sz / 2, sz, sz);
           } else {
-            c.fillRect(px - q.s / 2, py - q.s / 2, q.s, q.s);
+            const sz = Math.max(1.5, q.s);
+            c.fillRect(px - sz / 2, py - sz / 2, sz, sz);
           }
         }
       }

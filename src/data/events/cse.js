@@ -1,5 +1,5 @@
 export const CONFIG = {
-  dept: 'Computer Science',
+  dept: 'Computer Science & Engineering',
   slug: 'cse',
   endpoint: '',
   coordinators: [
