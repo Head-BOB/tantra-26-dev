@@ -28,48 +28,41 @@ export function initDepartments() {
   });
 
   function getMaxScroll() {
-    const padRight = parseFloat(getComputedStyle(rail).paddingRight) || 0;
-    const lastCard = cards[cards.length - 1];
-    if (!lastCard) return Math.max(0, rail.scrollWidth - rail.clientWidth);
-    const lastCardEnd = lastCard.offsetLeft + lastCard.offsetWidth + padRight;
-    return Math.max(0, lastCardEnd - rail.clientWidth);
+    return Math.max(0, rail.scrollWidth - rail.clientWidth);
   }
 
-  // Calculate target scrollLeft for card i to align to the left side
-  // Clamped so it never scrolls past Mech (maxScroll)
   function getCardScrollLeft(i) {
     i = Math.max(0, Math.min(cards.length - 1, i));
     const maxScroll = getMaxScroll();
-    if (i === cards.length - 1) {
-      return maxScroll;
-    }
-    const padLeft = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
+    if (i === 0) return 0;
+    if (i === cards.length - 1) return maxScroll;
     const c = cards[i];
-    const target = c.offsetLeft - padLeft;
-    return Math.min(maxScroll, Math.max(0, target));
+    return Math.min(maxScroll, Math.max(0, c.offsetLeft));
   }
 
-  // Find index of card currently visible at the front
   function getActiveIndex() {
     const maxScroll = getMaxScroll();
-    if (rail.scrollLeft >= maxScroll - 15 || maxScroll <= 5) {
-      return cards.length - 1;
-    }
-    const padLeft = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
-    const target = rail.scrollLeft + padLeft + 20;
+    if (rail.scrollLeft <= 12) return 0;
+    if (rail.scrollLeft >= maxScroll - 16) return cards.length - 1;
+
+    const currentScroll = rail.scrollLeft;
     let bestIdx = 0;
-    let bestDist = Infinity;
-    cards.forEach((c, i) => {
-      const dist = Math.abs(c.offsetLeft - target);
-      if (dist < bestDist) {
-        bestDist = dist;
+    let minDiff = Infinity;
+    for (let i = 0; i < cards.length; i++) {
+      const diff = Math.abs(cards[i].offsetLeft - currentScroll);
+      if (diff < minDiff) {
+        minDiff = diff;
         bestIdx = i;
       }
-    });
+    }
     return bestIdx;
   }
 
+  let targetIdx = 0;
+
   function scrollToCard(i) {
+    i = Math.max(0, Math.min(cards.length - 1, i));
+    targetIdx = i;
     const targetLeft = getCardScrollLeft(i);
     rail.scrollTo({ left: targetLeft, behavior: 'smooth' });
   }
@@ -78,9 +71,9 @@ export function initDepartments() {
   function updateState() {
     const maxScroll = getMaxScroll();
     const isAtStart = rail.scrollLeft <= 8;
-    const isAtEnd = rail.scrollLeft >= maxScroll - 12 || maxScroll <= 5;
+    const isAtEnd = rail.scrollLeft >= maxScroll - 12;
 
-    const active = isAtEnd ? cards.length - 1 : getActiveIndex();
+    const active = isAtEnd ? cards.length - 1 : (isAtStart ? 0 : getActiveIndex());
     [...dots.children].forEach((d, k) => {
       d.className = k === active ? 'on' : '';
     });
@@ -96,10 +89,6 @@ export function initDepartments() {
   }
 
   rail.addEventListener('scroll', () => {
-    const maxScroll = getMaxScroll();
-    if (rail.scrollLeft > maxScroll + 1) {
-      rail.scrollLeft = maxScroll;
-    }
     updateState();
   }, { passive: true });
   window.addEventListener('resize', updateState, { passive: true });
@@ -109,13 +98,25 @@ export function initDepartments() {
   requestAnimationFrame(updateState);
   setTimeout(updateState, 200);
 
-  if (pv) pv.onclick = () => scrollToCard(getActiveIndex() - 1);
+  if (pv) {
+    pv.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const active = getActiveIndex();
+      const base = (targetIdx < active && rail.scrollLeft > getCardScrollLeft(targetIdx) + 8) ? targetIdx : active;
+      scrollToCard(Math.max(0, base - 1));
+    };
+  }
+
   if (nx) {
-    nx.onclick = () => {
+    nx.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const maxScroll = getMaxScroll();
       if (rail.scrollLeft >= maxScroll - 12) return;
-      const cur = getActiveIndex();
-      scrollToCard(Math.min(cards.length - 1, cur + 1));
+      const active = getActiveIndex();
+      const base = (targetIdx > active && rail.scrollLeft < getCardScrollLeft(targetIdx) - 8) ? targetIdx : active;
+      scrollToCard(Math.min(cards.length - 1, base + 1));
     };
   }
 

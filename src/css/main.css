@@ -291,6 +291,7 @@ canvas {
   scroll-behavior: auto;
 }
 .rtrack {
+  position: relative;
   display: flex;
   gap: clamp(16px, 2.4vw, 28px);
   width: max-content;
@@ -356,12 +357,14 @@ canvas {
 
 /* Carousel arrows & dots */
 .arrow {
-  position: absolute; top: 44%; z-index: 4;
+  position: absolute; top: 44%; z-index: 10;
   width: 48px; height: 48px; border-radius: 50%;
   border: 2px solid var(--ink); background: var(--gold); color: var(--ink);
   font-size: 20px; cursor: pointer; box-shadow: 3px 3px 0 var(--ink);
   display: flex; align-items: center; justify-content: center;
   transition: transform .25s ease, opacity .25s ease, visibility .25s ease, background .25s ease;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .arrow:hover:not(:disabled) { transform: scale(1.1); background: var(--cream); }
 .arrow:disabled,
