@@ -281,6 +281,7 @@ canvas {
   scrollbar-width: none;
   overscroll-behavior-x: contain;
   padding: 20px clamp(28px, 6vw, 72px) 26px;
+  scroll-padding: 0 clamp(28px, 6vw, 72px);
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;

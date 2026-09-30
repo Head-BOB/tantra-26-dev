@@ -4,7 +4,7 @@ export function initDepartments() {
   const $ = (x) => document.querySelector(x);
 
   const rail = $('#rail');
-  const cards = [...rail.children];
+  if (!rail) return;
   const dots = $('#dots');
   const pv = $('.prev');
   const nx = $('.next');
@@ -14,87 +14,134 @@ export function initDepartments() {
   if (!rtrack) {
     rtrack = document.createElement('div');
     rtrack.className = 'rtrack';
-    cards.forEach((c) => rtrack.appendChild(c));
+    const initialCards = [...rail.children].filter((el) => el.classList.contains('card'));
+    initialCards.forEach((c) => rtrack.appendChild(c));
     rail.appendChild(rtrack);
   }
+
+  const getCards = () => [...rail.querySelectorAll('.card')];
+  const cards = getCards();
+
+  function getMaxScroll() {
+    return Math.max(0, rail.scrollWidth - rail.clientWidth);
+  }
+
+  // Calculate the target scrollLeft to align a card with the left padding
+  function getCardScrollTarget(card) {
+    if (!card) return 0;
+    const rRect = rail.getBoundingClientRect();
+    const cRect = card.getBoundingClientRect();
+    const padLeft = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
+    const diff = cRect.left - rRect.left - padLeft;
+    return Math.round(rail.scrollLeft + diff);
+  }
+
+  function getActiveIndex() {
+    const cardList = getCards();
+    if (!cardList.length) return 0;
+    const maxScroll = getMaxScroll();
+    if (rail.scrollLeft <= 10) return 0;
+    if (rail.scrollLeft >= maxScroll - 10) return cardList.length - 1;
+
+    const rRect = rail.getBoundingClientRect();
+    const padLeft = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
+    let bestIdx = 0;
+    let minDiff = Infinity;
+
+    cardList.forEach((c, idx) => {
+      const cRect = c.getBoundingClientRect();
+      const diff = Math.abs((cRect.left - rRect.left) - padLeft);
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestIdx = idx;
+      }
+    });
+
+    return bestIdx;
+  }
+
+  // Target scrollLeft to step one card to the left
+  function getPrevScrollLeft() {
+    const cardList = getCards();
+    if (!cardList.length) return 0;
+    const maxScroll = getMaxScroll();
+    if (rail.scrollLeft <= 10) return 0;
+
+    for (let i = cardList.length - 1; i >= 0; i--) {
+      const target = i === 0 ? 0 : Math.min(maxScroll, Math.max(0, getCardScrollTarget(cardList[i])));
+      if (target < rail.scrollLeft - 20) {
+        return target;
+      }
+    }
+
+    const active = getActiveIndex();
+    const prevIdx = Math.max(0, active - 1);
+    if (prevIdx === 0) return 0;
+    return Math.min(maxScroll, Math.max(0, getCardScrollTarget(cardList[prevIdx])));
+  }
+
+  // Target scrollLeft to step one card to the right
+  function getNextScrollLeft() {
+    const cardList = getCards();
+    if (!cardList.length) return 0;
+    const maxScroll = getMaxScroll();
+    if (rail.scrollLeft >= maxScroll - 10) return maxScroll;
+
+    for (let i = 0; i < cardList.length; i++) {
+      const target = i === cardList.length - 1 ? maxScroll : Math.min(maxScroll, Math.max(0, getCardScrollTarget(cardList[i])));
+      if (target > rail.scrollLeft + 20) {
+        return target;
+      }
+    }
+
+    return maxScroll;
+  }
+
+  let isProgrammatic = false;
+  let resetSnapTimeout = null;
+
+  function scrollToPosition(targetLeft) {
+    const maxScroll = getMaxScroll();
+    targetLeft = Math.max(0, Math.min(maxScroll, Math.round(targetLeft)));
+    isProgrammatic = true;
+    rail.style.scrollSnapType = 'none';
+    rail.scrollTo({ left: targetLeft, behavior: 'smooth' });
+
+    clearTimeout(resetSnapTimeout);
+    resetSnapTimeout = setTimeout(() => {
+      rail.style.scrollSnapType = '';
+      isProgrammatic = false;
+      updateState();
+    }, 450);
+  }
+
+  rail.addEventListener('scrollend', () => {
+    if (isProgrammatic) {
+      clearTimeout(resetSnapTimeout);
+      rail.style.scrollSnapType = '';
+      isProgrammatic = false;
+      updateState();
+    }
+  });
 
   // Generate pagination dots
   dots.innerHTML = '';
   cards.forEach((c, i) => {
     const d = document.createElement('i');
     d.setAttribute('aria-label', `Department ${i + 1}`);
-    d.onclick = () => scrollToCard(i);
+    d.onclick = () => {
+      const maxScroll = getMaxScroll();
+      const target = i === 0 ? 0 : (i === cards.length - 1 ? maxScroll : Math.min(maxScroll, Math.max(0, getCardScrollTarget(cards[i]))));
+      scrollToPosition(target);
+    };
     dots.appendChild(d);
   });
-
-  function getMaxScroll() {
-    return Math.max(0, rail.scrollWidth - rail.clientWidth);
-  }
-
-  function getCardScrollLeft(i) {
-    i = Math.max(0, Math.min(cards.length - 1, i));
-    const maxScroll = getMaxScroll();
-    if (i === 0) return 0;
-    if (i === cards.length - 1) return maxScroll;
-    const c = cards[i];
-    return Math.min(maxScroll, Math.max(0, c.offsetLeft));
-  }
-
-  // Find target scrollLeft to step one card to the left
-  function getPrevScrollLeft() {
-    const currentScroll = rail.scrollLeft;
-    const maxScroll = getMaxScroll();
-    for (let i = cards.length - 1; i >= 0; i--) {
-      const target = i === 0 ? 0 : Math.min(maxScroll, cards[i].offsetLeft);
-      if (target < currentScroll - 20) {
-        return target;
-      }
-    }
-    return 0;
-  }
-
-  // Find target scrollLeft to step one card to the right
-  function getNextScrollLeft() {
-    const currentScroll = rail.scrollLeft;
-    const maxScroll = getMaxScroll();
-    for (let i = 0; i < cards.length; i++) {
-      const target = i === cards.length - 1 ? maxScroll : Math.min(maxScroll, cards[i].offsetLeft);
-      if (target > currentScroll + 20) {
-        return target;
-      }
-    }
-    return maxScroll;
-  }
-
-  function getActiveIndex() {
-    const maxScroll = getMaxScroll();
-    if (rail.scrollLeft <= 12) return 0;
-    if (rail.scrollLeft >= maxScroll - 16) return cards.length - 1;
-
-    const currentScroll = rail.scrollLeft;
-    let bestIdx = 0;
-    let minDiff = Infinity;
-    for (let i = 0; i < cards.length; i++) {
-      const target = i === 0 ? 0 : Math.min(maxScroll, cards[i].offsetLeft);
-      const diff = Math.abs(target - currentScroll);
-      if (diff < minDiff) {
-        minDiff = diff;
-        bestIdx = i;
-      }
-    }
-    return bestIdx;
-  }
-
-  function scrollToCard(i) {
-    const targetLeft = getCardScrollLeft(i);
-    rail.scrollTo({ left: targetLeft, behavior: 'smooth' });
-  }
 
   // Update dots and arrow buttons based on current scroll position
   function updateState() {
     const maxScroll = getMaxScroll();
-    const isAtStart = rail.scrollLeft <= 8;
-    const isAtEnd = rail.scrollLeft >= maxScroll - 12;
+    const isAtStart = rail.scrollLeft <= 10;
+    const isAtEnd = rail.scrollLeft >= maxScroll - 10;
 
     const active = isAtEnd ? cards.length - 1 : (isAtStart ? 0 : getActiveIndex());
     [...dots.children].forEach((d, k) => {
@@ -125,8 +172,7 @@ export function initDepartments() {
     pv.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const target = getPrevScrollLeft();
-      rail.scrollTo({ left: target, behavior: 'smooth' });
+      scrollToPosition(getPrevScrollLeft());
     };
   }
 
@@ -134,8 +180,7 @@ export function initDepartments() {
     nx.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const target = getNextScrollLeft();
-      rail.scrollTo({ left: target, behavior: 'smooth' });
+      scrollToPosition(getNextScrollLeft());
     };
   }
 
@@ -169,7 +214,10 @@ export function initDepartments() {
       isDown = false;
       rail.classList.remove('drag');
       if (hasDragged) {
-        scrollToCard(getActiveIndex());
+        const active = getActiveIndex();
+        const maxScroll = getMaxScroll();
+        const target = active === 0 ? 0 : (active === cards.length - 1 ? maxScroll : Math.min(maxScroll, Math.max(0, getCardScrollTarget(cards[active]))));
+        scrollToPosition(target);
       }
     }
   }
