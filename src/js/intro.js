@@ -211,6 +211,7 @@ export function initIntro() {
   const track = $('#track');
   let maxS = 0, cur = 0;
   let lastW = 0, lastH = 0;
+  let baseVh = window.innerHeight || 800;
 
   function sizeTrack(force = false) {
     const nw = window.innerWidth || 1200;
@@ -219,9 +220,9 @@ export function initIntro() {
     if (!force && lastW > 0 && Math.abs(nw - lastW) === 0 && Math.abs(nh - lastH) < 160) return;
     lastW = nw;
     lastH = nh;
-    const vh = nh;
+    baseVh = nh;
     maxS = T * PX;
-    track.style.height = `${vh + maxS + vh * 0.7}px`;
+    track.style.height = `${baseVh + maxS + baseVh * 0.7}px`;
   }
   sizeTrack(true);
   window.addEventListener('resize', () => sizeTrack(false));
@@ -577,8 +578,8 @@ export function initIntro() {
     const target = Math.min(sc / (maxS || 6360), 1) * T;
     cur += (target - cur) * 0.18;
     if (Math.abs(target - cur) < 0.5) cur = target;
-    sc0 = Math.max(0, sc - maxS - (innerHeight || 800) * 0.7);
-    const pp = Math.min(sc0 / (innerHeight || 800), 1);
+    sc0 = Math.max(0, sc - maxS - baseVh * 0.7);
+    const pp = Math.min(sc0 / baseVh, 1);
     fin.style.opacity = 1 - pp * 0.75;
     $('#logo').style.transform = `scale(${1 - pp * 0.12})`;
     render(cur);
