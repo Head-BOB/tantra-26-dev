@@ -154,6 +154,18 @@ export function initDeptPage(CONFIG, EVENTS) {
       } catch {}
     }
   });
+  fetchDeptPayment(CONFIG.slug).then((cloudPay) => {
+    if (cloudPay) {
+      try {
+        const store = JSON.parse(localStorage.getItem('tantra26:admin:dept_payment') || '{}');
+        store[CONFIG.slug] = {
+          upiId: cloudPay.upi_id,
+          qrImage: cloudPay.qr_image_url,
+        };
+        localStorage.setItem('tantra26:admin:dept_payment', JSON.stringify(store));
+      } catch {}
+    }
+  });
 
   // ══════════════════════════════════════════════════════════════
   // REGISTRATION & UPI PAYMENT MODAL (SLIDING MULTI-STEP)
@@ -496,7 +508,7 @@ export function initDeptPage(CONFIG, EVENTS) {
         passRegId = res.pass.regId;
       }
     } catch (err) {
-      if (err.message && err.message.includes('already registered')) {
+      if (err.message && (err.message.includes('already registered') || err.message.includes('already been used'))) {
         throw err;
       }
       console.warn('Backend note:', err.message);

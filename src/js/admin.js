@@ -21,6 +21,7 @@ import {
   fetchDeptCoords,
   fetchDeptEvents,
   apiSavePayment,
+  fetchAllDeptPayments,
 } from './api.js';
 
 import { EVENTS as CSE_EV }   from '../data/events/cse.js';
@@ -249,6 +250,27 @@ function showApp() {
   } else {
     selectDept(DEPTS[0].slug);
   }
+
+  // Immediately pull live registrations from Supabase
+  syncLiveRegistrations();
+
+  // Load cloud payment configs for all departments
+  fetchAllDeptPayments().then(cloudPayments => {
+    if (cloudPayments && Array.isArray(cloudPayments) && cloudPayments.length > 0) {
+      const pStore = getDeptPayments();
+      cloudPayments.forEach(p => {
+        pStore[p.dept_slug] = {
+          upiId: p.upi_id,
+          qrImage: p.qr_image_url,
+        };
+      });
+      setDeptPayments(pStore);
+      if (currentView === 'central-qrs') renderCentralQRs();
+    }
+  }).catch(() => {});
+
+  // Sync all departments from cloud in background to populate badges
+  DEPTS.forEach(d => syncDeptDataFromCloud(d.slug));
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────
@@ -384,12 +406,22 @@ async function syncDeptDataFromCloud(slug) {
         date: '7 Oct',
         time: e.time,
         venue: e.venue,
-        team: e.team,
+        team: e.team_size || e.team || 1,
         fee: e.fee,
-        desc: e.desc,
+        desc: e.description || e.desc || '',
         _source: 'admin',
       }));
       setAdminEvents(evStore);
+
+      // Track any static events absent from cloudEvents as deleted
+      const cloudIds = new Set(cloudEvents.map(e => e.id));
+      const delStore = getDeletedEvents();
+      const staticDeletions = (STATIC_EVENTS[slug] || [])
+        .filter(se => !cloudIds.has(se.id))
+        .map(se => se.id);
+      delStore[slug] = staticDeletions;
+      setDeletedEvents(delStore);
+
       if (activeDept === slug) {
         renderStats(slug);
         renderEvents(slug);
@@ -626,22 +658,23 @@ function bindCoordModal() {
 
     const store = getAdminCoords();
     const slug  = activeDept;
-    if (!store[slug]) store[slug] = [...(STATIC_COORDS[slug] || [])];
+    const currentList = [...allCoordsFor(slug)];
 
-    if (editingCoordIdx !== null) {
-      store[slug][editingCoordIdx] = { name, phone };
+    if (editingCoordIdx !== null && editingCoordIdx >= 0 && editingCoordIdx < currentList.length) {
+      currentList[editingCoordIdx] = { name, phone };
       toast('Coordinator updated ✓');
     } else {
-      store[slug].push({ name, phone });
+      currentList.push({ name, phone });
       toast('Coordinator added ✓');
     }
 
+    store[slug] = currentList;
     setAdminCoords(store);
     closeCoordModal();
     renderCoords(slug);
 
     // Sync full department list to Supabase
-    apiSyncDeptCoords(slug, store[slug]).then(ok => {
+    apiSyncDeptCoords(slug, currentList).then(ok => {
       if (ok) toast('Synced to cloud ✓', 'info');
     }).catch(err => {
       console.error('Failed to sync coordinators to Supabase:', err);
@@ -703,7 +736,7 @@ function bindDeleteModal() {
       renderEvents(activeDept);
     } else if (pendingDeleteType === 'coord') {
       const store  = getAdminCoords();
-      const coords = allCoordsFor(activeDept);
+      const coords = [...allCoordsFor(activeDept)];
       coords.splice(pendingDeleteId, 1);
       store[activeDept] = coords;
       setAdminCoords(store);
@@ -741,7 +774,7 @@ function syncLiveRegistrations() {
   isSyncingRegs = true;
   fetchAdminRegistrations().then(liveRegs => {
     isSyncingRegs = false;
-    if (liveRegs && Array.isArray(liveRegs) && liveRegs.length > 0) {
+    if (liveRegs && Array.isArray(liveRegs)) {
       const formatted = liveRegs.map(r => ({
         regId: r.reg_id,
         name: r.name,
@@ -758,6 +791,7 @@ function syncLiveRegistrations() {
         time: r.created_at,
       }));
       save(REG_KEY, formatted);
+      updateRegsBadge();
       if (currentView === 'regs') renderDeptRegistrations();
       if (currentView === 'central-regs') renderCentralRegs();
     }
@@ -926,31 +960,39 @@ function renderCentralQRs() {
       const reader = new FileReader();
       reader.onload = ev => {
         const dataUrl = ev.target.result;
+        const curUpi = $(`upi-input-${dept.slug}`).value.trim() || upiId;
         const payments = getDeptPayments();
         if (!payments[dept.slug]) payments[dept.slug] = {};
         payments[dept.slug].qrImage = dataUrl;
-        payments[dept.slug].upiId = $(`upi-input-${dept.slug}`).value.trim() || upiId;
+        payments[dept.slug].upiId = curUpi;
         setDeptPayments(payments);
         toast(`${dept.name} QR updated ✓`);
         renderCentralQRs();
+        apiSavePayment({ dept_slug: dept.slug, upi_id: curUpi, qr_image_url: dataUrl }).then(ok => {
+          if (ok) toast(`${dept.name} synced to cloud ✓`, 'info');
+        }).catch(console.error);
       };
       reader.readAsDataURL(file);
     };
 
     // Save UPI ID button
     $(`save-qr-${dept.slug}`).onclick = () => {
-      const newUpi = $(`upi-input-${dept.slug}`).value.trim();
+      const newUpi = $(`upi-input-${dept.slug}`).value.trim() || upiId;
       const payments = getDeptPayments();
       if (!payments[dept.slug]) payments[dept.slug] = {};
-      payments[dept.slug].upiId = newUpi || upiId;
+      payments[dept.slug].upiId = newUpi;
       setDeptPayments(payments);
       toast(`${dept.name} settings saved ✓`);
       renderCentralQRs();
+      apiSavePayment({ dept_slug: dept.slug, upi_id: newUpi, qr_image_url: payments[dept.slug].qrImage || null }).then(ok => {
+        if (ok) toast(`${dept.name} synced to cloud ✓`, 'info');
+      }).catch(console.error);
     };
 
     // Reset button
     if (qrImage) {
       $(`reset-qr-${dept.slug}`).onclick = () => {
+        const curUpi = $(`upi-input-${dept.slug}`).value.trim() || upiId;
         const payments = getDeptPayments();
         if (payments[dept.slug]) {
           delete payments[dept.slug].qrImage;
@@ -958,6 +1000,9 @@ function renderCentralQRs() {
         }
         toast(`${dept.name} reverted to auto QR`, 'info');
         renderCentralQRs();
+        apiSavePayment({ dept_slug: dept.slug, upi_id: curUpi, qr_image_url: null }).then(ok => {
+          if (ok) toast(`${dept.name} reset synced to cloud ✓`, 'info');
+        }).catch(console.error);
       };
     }
   });

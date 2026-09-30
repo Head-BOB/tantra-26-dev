@@ -6,18 +6,23 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const RAW_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '';
+const RAW_KEY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || '';
+
+// Clean up any typo in the URL (e.g. prjj vs prjij) and fallback to production project
+const FALLBACK_URL = 'https://kzomczprjijbqeheqaaj.supabase.co';
+const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6b21jenByamlqYnFlaGVxYWFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2NTAyMDksImV4cCI6MjEwNjIyNjIwOX0.iFdjUtHI19dG04hF24nXdMxk8Cffu9DETBcR2Ktl-gs';
+
+const SUPABASE_URL = RAW_URL ? RAW_URL.replace('kzomczprjjbqeheqaaj', 'kzomczprjijbqeheqaaj') : FALLBACK_URL;
+const SUPABASE_ANON_KEY = RAW_KEY || FALLBACK_KEY;
+const API_BASE = ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) || '').replace(/\/$/, '');
 
 let supabaseClient = null;
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-  try {
-    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('✓ Supabase direct client connected.');
-  } catch (err) {
-    console.warn('⚠️ Could not initialize Supabase client:', err);
-  }
+try {
+  supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.log('✓ Supabase direct client connected:', SUPABASE_URL);
+} catch (err) {
+  console.warn('⚠️ Could not initialize Supabase client:', err);
 }
 
 const TOKEN_KEY = 'tantra26:auth_token';
@@ -46,15 +51,34 @@ export async function fetchDeptEvents(slug) {
         .eq('dept_slug', slug.toLowerCase())
         .eq('is_active', true)
         .order('created_at', { ascending: true });
-      if (!error && data && data.length > 0) return data;
-    } catch {}
+      if (!error && data && data.length > 0) {
+        return data.map(ev => ({
+          ...ev,
+          desc: ev.description || ev.desc || '',
+          description: ev.description || ev.desc || '',
+          team: ev.team_size ?? ev.team ?? 1,
+          team_size: ev.team_size ?? ev.team ?? 1,
+        }));
+      }
+    } catch (err) {
+      console.warn('fetchDeptEvents Supabase error:', err);
+    }
   }
 
   // 2. Try Backend API (Render mode)
   if (API_BASE) {
     try {
       const res = await fetch(`${API_BASE}/api/departments/${slug}/events`);
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const events = await res.json();
+        return events.map(ev => ({
+          ...ev,
+          desc: ev.description || ev.desc || '',
+          description: ev.description || ev.desc || '',
+          team: ev.team_size ?? ev.team ?? 1,
+          team_size: ev.team_size ?? ev.team ?? 1,
+        }));
+      }
     } catch {}
   }
 
@@ -74,7 +98,9 @@ export async function fetchDeptCoords(slug) {
         .eq('dept_slug', slug.toLowerCase())
         .order('display_order', { ascending: true });
       if (!error && data && data.length > 0) return data;
-    } catch {}
+    } catch (err) {
+      console.warn('fetchDeptCoords Supabase error:', err);
+    }
   }
 
   if (API_BASE) {
@@ -97,9 +123,11 @@ export async function fetchDeptPayment(slug) {
         .from('department_payments')
         .select('*')
         .eq('dept_slug', slug.toLowerCase())
-        .single();
+        .maybeSingle();
       if (!error && data) return data;
-    } catch {}
+    } catch (err) {
+      console.warn('fetchDeptPayment Supabase error:', err);
+    }
   }
 
   if (API_BASE) {
@@ -109,6 +137,23 @@ export async function fetchDeptPayment(slug) {
     } catch {}
   }
 
+  return null;
+}
+
+/**
+ * Fetch all department payments config (Central Admin)
+ */
+export async function fetchAllDeptPayments() {
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from('department_payments')
+        .select('*');
+      if (!error && data) return data;
+    } catch (err) {
+      console.warn('fetchAllDeptPayments Supabase error:', err);
+    }
+  }
   return null;
 }
 
@@ -145,6 +190,29 @@ export async function submitRegistration(payload) {
         }
       }
 
+      // Ensure event exists in events table to satisfy foreign key
+      const { data: evExists } = await supabaseClient
+        .from('events')
+        .select('id')
+        .eq('id', payload.event_id)
+        .maybeSingle();
+
+      if (!evExists) {
+        await supabaseClient.from('events').upsert([{
+          id: payload.event_id,
+          dept_slug: payload.dept_slug.toLowerCase(),
+          type: 'Event',
+          title: payload.event_title || payload.event_id,
+          date: '7 Oct',
+          time: '10:00 AM',
+          venue: 'Campus',
+          team_size: 1,
+          fee: payload.fee || 'Free',
+          description: payload.event_title || 'Tantra 26 Event',
+          is_active: true,
+        }]);
+      }
+
       // Generate Pass ID
       const regId = 'T26-' + payload.dept_slug.toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
       const insertRecord = {
@@ -158,7 +226,7 @@ export async function submitRegistration(payload) {
         college: payload.college.trim(),
         team_members: payload.team_members || null,
         fee: payload.fee || 'Free',
-        txn_id: payload.txn_id || 'FREE-REGISTRATION',
+        txn_id: cleanTxn || 'FREE-REGISTRATION',
         created_at: new Date().toISOString(),
       };
 
@@ -189,7 +257,7 @@ export async function submitRegistration(payload) {
         },
       };
     } catch (err) {
-      if (err.message && err.message.includes('already registered')) {
+      if (err.message && (err.message.includes('already registered') || err.message.includes('already been used'))) {
         throw err;
       }
       console.warn('Supabase direct insert issue, trying fallback:', err);
@@ -276,14 +344,14 @@ export async function apiSaveEvent(eventData, isEdit = false) {
       const record = {
         id: eventData.id,
         dept_slug: (eventData.dept_slug || '').toLowerCase(),
-        type: eventData.type,
-        title: eventData.title,
+        type: eventData.type || 'Competition',
+        title: eventData.title || 'Event',
         date: '7 Oct',
-        time: eventData.time,
-        venue: eventData.venue,
-        team_size: eventData.team_size || eventData.team || 1,
-        fee: eventData.fee,
-        description: eventData.desc || eventData.description,
+        time: eventData.time || '10:00 AM',
+        venue: eventData.venue || 'Campus',
+        team_size: parseInt(eventData.team_size || eventData.team || 1, 10) || 1,
+        fee: eventData.fee || 'Free',
+        description: eventData.desc || eventData.description || 'Tantra 26 event details',
         is_active: true,
         updated_at: new Date().toISOString(),
       };
@@ -431,14 +499,18 @@ export async function apiDeleteCoord(id) {
 export async function apiSavePayment(paymentData) {
   if (supabaseClient) {
     try {
-      await supabaseClient.from('department_payments').upsert([{
-        dept_slug: paymentData.dept_slug,
+      const record = {
+        dept_slug: (paymentData.dept_slug || '').toLowerCase(),
         upi_id: paymentData.upi_id,
-        qr_image_url: paymentData.qr_image_url,
+        qr_image_url: paymentData.qr_image_url ?? null,
         updated_at: new Date().toISOString(),
-      }]);
-      return true;
-    } catch {}
+      };
+      const { data, error } = await supabaseClient.from('department_payments').upsert([record]).select().single();
+      if (!error) return data || true;
+      console.error('⚠️ Supabase payment upsert error:', error?.message);
+    } catch (err) {
+      console.error('⚠️ Supabase payment upsert exception:', err);
+    }
   }
   return null;
 }
