@@ -236,7 +236,14 @@ canvas {
   box-shadow: 0 -30px 60px rgba(0,0,0,.45);
   position: relative;
   overflow: hidden;
-  padding: clamp(64px, 8vh, 96px) 0 clamp(48px, 6vh, 72px);
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
 }
 .pin {
   position: relative;
@@ -245,6 +252,8 @@ canvas {
   justify-content: center;
   box-sizing: border-box;
   width: 100%;
+  height: 100%;
+  padding: clamp(24px, 4vh, 48px) 0 clamp(16px, 2.5vh, 28px);
 }
 #depts::before {
   content: ""; position: absolute; inset: 0;
@@ -384,12 +393,24 @@ canvas {
 /* ── Countdown section ── */
 #launch {
   position: relative;
-  min-height: 100svh;
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
+  min-height: 100dvh;
   min-height: 520px;
-  display: flex; flex-direction: column; background: #0a0e1c; overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #0a0e1c;
+  overflow: hidden;
 }
-.slabs { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4,1fr); }
+.slabs {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
 .cd-u {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 2.5vh; background: var(--bg); color: var(--fg);
@@ -416,13 +437,15 @@ canvas {
 #foot {
   position: relative;
   background: #080c18;
-  min-height: 100svh;
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: clamp(50px, 7vh, 85px) 6vw clamp(32px, 5vh, 48px);
+  padding: clamp(40px, 6vh, 72px) 6vw clamp(24px, 4vh, 40px);
   text-align: center;
   overflow: hidden;
   box-sizing: border-box;
