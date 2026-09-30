@@ -1,5 +1,34 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import * as XLSX from 'xlsx';
 import { supabase } from '../config/supabase.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LOCAL_DB_PATH = path.resolve(__dirname, '../../db/registrations.json');
+
+function loadLocalRegs() {
+  try {
+    if (fs.existsSync(LOCAL_DB_PATH)) {
+      const raw = fs.readFileSync(LOCAL_DB_PATH, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.error('Error reading local registrations:', err);
+  }
+  return [];
+}
+
+function saveLocalRegs(regs) {
+  try {
+    const dir = path.dirname(LOCAL_DB_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(regs, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving local registrations:', err);
+  }
+}
 
 // Helper to generate a sleek, unique pass ID
 function generateRegId(deptSlug) {
@@ -42,10 +71,65 @@ export async function createRegistration(req, res) {
     const cleanTxnId = (txn_id || 'FREE-REGISTRATION').trim();
 
     if (!supabase) {
-      return res.status(503).json({ error: 'Database service not configured.' });
+      const localRegs = loadLocalRegs();
+      const existing = localRegs.find(
+        (r) => r.event_id === event_id && r.email.toLowerCase() === cleanEmail
+      );
+      if (existing) {
+        return res.status(409).json({ error: 'This email address is already registered for this event.' });
+      }
+
+      // Check duplicate UPI transaction ID / UTR
+      if (cleanTxnId && cleanTxnId.toUpperCase() !== 'FREE-REGISTRATION') {
+        const txnExists = localRegs.find(
+          (r) => r.txn_id &&
+          r.txn_id.toUpperCase() !== 'FREE-REGISTRATION' &&
+          r.txn_id.toLowerCase().trim() === cleanTxnId.toLowerCase()
+        );
+        if (txnExists) {
+          return res.status(409).json({
+            error: 'This UPI Transaction ID / UTR number has already been used for another registration.'
+          });
+        }
+      }
+
+      const regId = generateRegId(dept_slug);
+      const newRecord = {
+        id: localRegs.length + 1,
+        reg_id: regId,
+        dept_slug: dept_slug.toLowerCase(),
+        event_id,
+        event_title: (event_title || event_id).trim(),
+        name: name.trim(),
+        email: cleanEmail,
+        phone: cleanPhone,
+        college: college.trim(),
+        team_members: team_members ? String(team_members).trim() : null,
+        fee: fee ? fee.trim() : 'Free',
+        txn_id: cleanTxnId,
+        created_at: new Date().toISOString(),
+      };
+
+      localRegs.unshift(newRecord);
+      saveLocalRegs(localRegs);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Registration confirmed!',
+        pass: {
+          regId: newRecord.reg_id,
+          name: newRecord.name,
+          email: newRecord.email,
+          college: newRecord.college,
+          event: newRecord.event_title,
+          fee: newRecord.fee,
+          txnId: newRecord.txn_id,
+          time: newRecord.created_at,
+        },
+      });
     }
 
-    // 2. Check for duplicate registration on this event
+    // 2. Check for duplicate registration on this event (Supabase)
     const { data: existing } = await supabase
       .from('registrations')
       .select('id')
@@ -55,6 +139,21 @@ export async function createRegistration(req, res) {
 
     if (existing) {
       return res.status(409).json({ error: 'This email address is already registered for this event.' });
+    }
+
+    // Check duplicate UPI transaction ID / UTR (Supabase)
+    if (cleanTxnId && cleanTxnId.toUpperCase() !== 'FREE-REGISTRATION') {
+      const { data: existingTxn } = await supabase
+        .from('registrations')
+        .select('id')
+        .eq('txn_id', cleanTxnId)
+        .maybeSingle();
+
+      if (existingTxn) {
+        return res.status(409).json({
+          error: 'This UPI Transaction ID / UTR number has already been used for another registration.'
+        });
+      }
     }
 
     // 3. Generate Pass ID & Insert record
@@ -111,7 +210,13 @@ export async function createRegistration(req, res) {
 export async function getRegistrations(req, res) {
   try {
     if (!supabase) {
-      return res.status(503).json({ error: 'Database service not configured.' });
+      let data = loadLocalRegs();
+      if (req.user.role === 'dept_admin') {
+        data = data.filter(r => r.dept_slug === req.user.dept);
+      } else if (req.query.dept && req.query.dept !== 'all') {
+        data = data.filter(r => r.dept_slug === req.query.dept.toLowerCase());
+      }
+      return res.json(data);
     }
 
     let query = supabase
@@ -140,7 +245,53 @@ export async function getRegistrations(req, res) {
 export async function exportExcel(req, res) {
   try {
     if (!supabase) {
-      return res.status(503).json({ error: 'Database service not configured.' });
+      let regs = loadLocalRegs();
+      let targetDept = null;
+      if (req.user.role === 'dept_admin') {
+        targetDept = req.user.dept;
+        regs = regs.filter(r => r.dept_slug === targetDept);
+      } else if (req.query.dept && req.query.dept !== 'all') {
+        targetDept = req.query.dept.toLowerCase();
+        regs = regs.filter(r => r.dept_slug === targetDept);
+      }
+
+      if (!regs || regs.length === 0) {
+        return res.status(404).json({ error: 'No registrations found to export.' });
+      }
+
+      const excelData = regs.map((r, i) => ({
+        'Sl No': i + 1,
+        'Registration ID': r.reg_id,
+        'Participant Name': r.name,
+        'College / Institution': r.college,
+        'Email Address': r.email,
+        'Phone Number': r.phone,
+        'Department': r.dept_slug.toUpperCase(),
+        'Event Title': r.event_title,
+        'Entry Fee': r.fee,
+        'Team Members': r.team_members || 'Individual',
+        'UPI Transaction ID / UTR': r.txn_id,
+        'Registration Time': new Date(r.created_at).toLocaleString('en-IN'),
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      ws['!cols'] = [
+        { wch: 8 },  { wch: 18 }, { wch: 22 }, { wch: 30 },
+        { wch: 26 }, { wch: 16 }, { wch: 14 }, { wch: 24 },
+        { wch: 12 }, { wch: 24 }, { wch: 24 }, { wch: 24 },
+      ];
+      const wb = XLSX.utils.book_new();
+      const sheetName = targetDept ? targetDept.toUpperCase() : 'All Registrations';
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+      const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      const filename = targetDept
+        ? `Tantra26_${targetDept.toUpperCase()}_Registrations.xlsx`
+        : `Tantra26_Master_Registrations.xlsx`;
+
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      return res.send(buf);
     }
 
     let query = supabase

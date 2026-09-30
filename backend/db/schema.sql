@@ -5,7 +5,7 @@
 
 -- 1. DEPARTMENTS TABLE
 CREATE TABLE IF NOT EXISTS departments (
-    slug VARCHAR(10) PRIMARY KEY,     -- 'cse', 'ai', 'csd', 'csbs', 'eee', 'aei', 'civil', 'mech'
+    slug VARCHAR(10) PRIMARY KEY,     -- 'cse', 'ai', 'csd', 'csbs', 'eee', 'ece', 'aei', 'civil', 'mech'
     name VARCHAR(100) NOT NULL,
     color VARCHAR(20) NOT NULL,
     fg VARCHAR(20) NOT NULL
@@ -84,17 +84,34 @@ ALTER TABLE coordinators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE registrations ENABLE ROW LEVEL SECURITY;
 
 -- Public can read departments, payments, active events, coordinators
+DROP POLICY IF EXISTS "Public can view departments" ON departments;
 CREATE POLICY "Public can view departments" ON departments FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public can view department payments" ON department_payments;
 CREATE POLICY "Public can view department payments" ON department_payments FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public can view active events" ON events;
 CREATE POLICY "Public can view active events" ON events FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Public can view coordinators" ON coordinators;
 CREATE POLICY "Public can view coordinators" ON coordinators FOR SELECT USING (true);
 
 -- Public can register (insert only)
+DROP POLICY IF EXISTS "Public can register" ON registrations;
 CREATE POLICY "Public can register" ON registrations FOR INSERT WITH CHECK (true);
 
 -- Service role has full permissions for backend administration
+DROP POLICY IF EXISTS "Service role full access departments" ON departments;
 CREATE POLICY "Service role full access departments" ON departments FOR ALL USING (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role full access payments" ON department_payments;
 CREATE POLICY "Service role full access payments" ON department_payments FOR ALL USING (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role full access events" ON events;
 CREATE POLICY "Service role full access events" ON events FOR ALL USING (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role full access coordinators" ON coordinators;
 CREATE POLICY "Service role full access coordinators" ON coordinators FOR ALL USING (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role full access registrations" ON registrations;
 CREATE POLICY "Service role full access registrations" ON registrations FOR ALL USING (auth.role() = 'service_role');

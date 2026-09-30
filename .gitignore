@@ -41,4 +41,8 @@ DEPLOYMENT.md
 # Legacy & Unused
 _legacy/
 bun.lock
+miised_departments/
+
+# Local database fallback / test data
+backend/db/registrations.json
 

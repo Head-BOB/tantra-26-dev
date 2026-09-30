@@ -23,6 +23,7 @@ export default defineConfig({
         deptCivil: resolve(__dirname, 'departments/civil.html'),
         deptMech:  resolve(__dirname, 'departments/mech.html'),
         deptEee:   resolve(__dirname, 'departments/eee.html'),
+        deptEce:   resolve(__dirname, 'departments/ece.html'),
         deptAei:   resolve(__dirname, 'departments/aei.html'),
         // Admin dashboard
         admin: resolve(__dirname, 'admin/index.html'),
@@ -39,5 +40,11 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+    },
   },
 });

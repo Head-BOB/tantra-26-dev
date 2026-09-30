@@ -1,0 +1,56 @@
+export const CONFIG = {
+  dept: 'Electronics & Communication Engineering',
+  slug: 'ece',
+  endpoint: '',
+  coordinators: [
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+  ],
+};
+
+export const EVENTS = [
+  {
+    id: 'signal-decode',
+    type: 'Competition',
+    title: 'Signal Decode',
+    date: '7 Oct',
+    time: '10:30 AM',
+    venue: 'Communication Lab',
+    team: 2,
+    fee: '₹100',
+    desc: 'Recover a message hidden in a noisy signal. The cleanest decode wins.',
+  },
+  {
+    id: 'antenna-build',
+    type: 'Competition',
+    title: 'Antenna Build',
+    date: '7 Oct',
+    time: '2:30 PM',
+    venue: 'Electronics Lab',
+    team: 3,
+    fee: '₹150',
+    desc: 'Build an antenna from scratch and see whose reaches the farthest.',
+  },
+  {
+    id: 'embedded-workshop',
+    type: 'Workshop',
+    title: 'Embedded Basics',
+    date: '7 Oct',
+    time: '11:00 AM',
+    venue: 'Electronics Lab',
+    team: 1,
+    fee: 'Free',
+    desc: 'Program a board to send and receive data wirelessly.',
+  },
+  {
+    id: 'comm-talk',
+    type: 'Talk',
+    title: 'How the World Connects',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'Seminar Hall',
+    team: 1,
+    fee: 'Free',
+    desc: 'A talk on how signals travel from a tower to your phone.',
+  },
+];

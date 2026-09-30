@@ -54,6 +54,30 @@ export function initIntro() {
   }
 
   const hint = $('#hint');
+  const readyHint = $('#ready-scroll-hint');
+  let readyHintTimer = null;
+  let readyHintVisible = false;
+
+  function scheduleReadyHint() {
+    clearTimeout(readyHintTimer);
+    readyHintTimer = setTimeout(() => {
+      const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
+      if (sc < 15 && cur < 80 && readyHint) {
+        readyHint.classList.add('visible');
+        readyHintVisible = true;
+      }
+    }, 3000);
+  }
+
+  function dismissReadyHint() {
+    clearTimeout(readyHintTimer);
+    readyHintTimer = null;
+    if (readyHint && readyHintVisible) {
+      readyHint.classList.remove('visible');
+      readyHintVisible = false;
+    }
+  }
+
   let sc0 = 0;
 
   const COUNTDOWN_STAGES = [
@@ -229,8 +253,13 @@ export function initIntro() {
   let autoScrollRaf = null;
   let isTransitioning = false;
   let transitionRaf = null;
+  let countdownTimer = null;
 
   function cancelAutoScroll() {
+    if (countdownTimer) {
+      clearTimeout(countdownTimer);
+      countdownTimer = null;
+    }
     if (isAutoScrolling) {
       isAutoScrolling = false;
       if (autoScrollRaf) {
@@ -238,10 +267,14 @@ export function initIntro() {
         autoScrollRaf = null;
       }
     }
+    if (transitionRaf) {
+      cancelAnimationFrame(transitionRaf);
+      transitionRaf = null;
+    }
+    isTransitioning = false;
   }
 
   function smoothScrollTo(targetY, duration = 460, onComplete) {
-    cancelAutoScroll();
     if (transitionRaf) {
       cancelAnimationFrame(transitionRaf);
       transitionRaf = null;
@@ -313,33 +346,76 @@ export function initIntro() {
     autoScrollRaf = requestAnimationFrame(step);
   }
 
+  function startAutoCountdownFrom(fromIdx) {
+    cancelAutoScroll();
+
+    function stepTo(idx) {
+      if (idx === 1) {
+        // Ready? -> 3
+        smoothScrollTo(STAGE_SCROLLS[1], 460, () => {
+          countdownTimer = setTimeout(() => {
+            stepTo(2);
+          }, 680);
+        });
+      } else if (idx === 2) {
+        // 3 -> 2
+        smoothScrollTo(STAGE_SCROLLS[2], 420, () => {
+          countdownTimer = setTimeout(() => {
+            stepTo(3);
+          }, 680);
+        });
+      } else if (idx === 3) {
+        // 2 -> 1
+        smoothScrollTo(STAGE_SCROLLS[3], 420, () => {
+          countdownTimer = setTimeout(() => {
+            stepTo(4);
+          }, 680);
+        });
+      } else if (idx === 4) {
+        // 1 -> Rocket launch pad
+        smoothScrollTo(STAGE_SCROLLS[4], 440, () => {
+          countdownTimer = setTimeout(() => {
+            startAutoScroll();
+          }, 180);
+        });
+      }
+    }
+
+    stepTo(fromIdx);
+  }
+
   function goToNextStage() {
-    if (isAutoScrolling) return;
+    dismissReadyHint();
     const idx = getCurrentStageIndex();
-    if (idx < 3) {
-      smoothScrollTo(STAGE_SCROLLS[idx + 1], 460);
+    if (idx === 0) {
+      // From Ready? -> start full automatic countdown: 3 -> 2 -> 1 -> Rocket -> Tantra Logo!
+      startAutoCountdownFrom(1);
+    } else if (idx === 1) {
+      startAutoCountdownFrom(2);
+    } else if (idx === 2) {
+      startAutoCountdownFrom(3);
     } else if (idx === 3) {
-      // From 1 -> Rocket pad
-      smoothScrollTo(STAGE_SCROLLS[4], 460, () => {
-        setTimeout(() => {
-          startAutoScroll();
-        }, 180);
-      });
+      startAutoCountdownFrom(4);
     } else if (idx === 4) {
       startAutoScroll();
     }
   }
 
   function goToPrevStage() {
-    if (isAutoScrolling) {
-      cancelAutoScroll();
-    }
+    cancelAutoScroll();
+    dismissReadyHint();
     const idx = getCurrentStageIndex();
     if (idx === 5) {
-      // From logo reveal: step back to 1
-      smoothScrollTo(STAGE_SCROLLS[3], 500);
+      // From logo reveal: step back to Number 1
+      smoothScrollTo(STAGE_SCROLLS[3], 480);
+    } else if (idx === 4) {
+      // From rocket pad: step back to Number 1
+      smoothScrollTo(STAGE_SCROLLS[3], 440);
     } else if (idx > 0) {
-      smoothScrollTo(STAGE_SCROLLS[idx - 1], 460);
+      // 3 -> Ready?, 2 -> 3, 1 -> 2
+      smoothScrollTo(STAGE_SCROLLS[idx - 1], 440);
+    } else {
+      smoothScrollTo(0, 320);
     }
   }
 
@@ -358,6 +434,18 @@ export function initIntro() {
     if (!touchActive || e.touches.length !== 1) return;
     const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
 
+    // If user swipes downward (reversing), cancel any running auto-countdown immediately
+    const currentY = e.touches[0].clientY;
+    const dy = touchStartY - currentY;
+    if (Math.abs(dy) > 8) {
+      dismissReadyHint();
+    }
+    if (dy < -25 && (isAutoScrolling || countdownTimer)) {
+      cancelAutoScroll();
+      goToPrevStage();
+      touchStartY = currentY;
+    }
+
     // While inside the intro, cancel native momentum fling
     if (sc < maxS - 15) {
       if (e.cancelable) e.preventDefault();
@@ -368,14 +456,18 @@ export function initIntro() {
     if (!touchActive) return;
     touchActive = false;
     const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
-
-    // In main site, native touch scroll handles navigation
-    if (sc >= maxS - 15) return;
-
     const touchEndY = e.changedTouches[0].clientY;
     const dy = touchStartY - touchEndY; // positive = swipe up = scroll down
 
-    if (Math.abs(dy) > 30) {
+    // In main site (below intro): allow reverse scroll back into intro if at the very top
+    if (sc >= maxS - 15) {
+      if (dy < -30 && sc <= maxS + 40) {
+        goToPrevStage();
+      }
+      return;
+    }
+
+    if (Math.abs(dy) > 25) {
       if (dy > 0) {
         goToNextStage();
       } else {
@@ -387,25 +479,32 @@ export function initIntro() {
   // Mouse wheel handling on desktop (debounced stage stepping in intro)
   let lastWheelTime = 0;
   window.addEventListener('wheel', (e) => {
+    dismissReadyHint();
     const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
 
     if (sc < maxS - 15) {
       e.preventDefault();
       const now = performance.now();
-      if (now - lastWheelTime < 380) return;
 
-      if (e.deltaY > 12) {
-        lastWheelTime = now;
-        goToNextStage();
-      } else if (e.deltaY < -12) {
+      // Reverse scroll (upwards wheel): cancel auto-countdown immediately and step back
+      if (e.deltaY < -10) {
+        if (now - lastWheelTime < 280) return;
         lastWheelTime = now;
         goToPrevStage();
+        return;
+      }
+
+      // Forward scroll (downwards wheel)
+      if (e.deltaY > 10) {
+        if (now - lastWheelTime < 380) return;
+        lastWheelTime = now;
+        goToNextStage();
       }
     } else {
       // In main site: allow scrolling back up into intro if at the very top
-      if (e.deltaY < -20 && sc <= maxS + 5) {
+      if (e.deltaY < -18 && sc <= maxS + 25) {
         const now = performance.now();
-        if (now - lastWheelTime >= 380) {
+        if (now - lastWheelTime >= 350) {
           lastWheelTime = now;
           goToPrevStage();
         }
@@ -415,6 +514,7 @@ export function initIntro() {
 
   // Keyboard navigation
   window.addEventListener('keydown', (e) => {
+    dismissReadyHint();
     const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
     if (sc < maxS - 15) {
       if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
@@ -426,6 +526,23 @@ export function initIntro() {
       }
     }
   });
+
+  // Ready? screen idle scroll hint interaction
+  if (readyHint) {
+    readyHint.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dismissReadyHint();
+      goToNextStage();
+    });
+    readyHint.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        dismissReadyHint();
+        goToNextStage();
+      }
+    });
+  }
 
   // Clicking "SCROLL" hint smoothly guides to departments
   if (hint) {
@@ -458,10 +575,24 @@ export function initIntro() {
     fin.style.opacity = 1 - pp * 0.75;
     $('#logo').style.transform = `scale(${1 - pp * 0.12})`;
     render(cur);
+
+    // Ready screen scroll hint: dismiss when user leaves screen 0, re-schedule if returning to top
+    if (sc > 10 || cur > 80) {
+      if (readyHintVisible) {
+        dismissReadyHint();
+      } else if (readyHintTimer) {
+        clearTimeout(readyHintTimer);
+        readyHintTimer = null;
+      }
+    } else if (sc <= 2 && cur < 40 && !readyHintVisible && !readyHintTimer) {
+      scheduleReadyHint();
+    }
+
     requestAnimationFrame(loop);
   }
 
   scrollTo(0, 0);
   render(0);
+  scheduleReadyHint();
   requestAnimationFrame(loop);
 }

@@ -55,6 +55,22 @@
     {
       "source": "/departments/eee",
       "destination": "/departments/eee.html"
+    },
+    {
+      "source": "/departments/ece",
+      "destination": "/departments/ece.html"
+    },
+    {
+      "source": "/departments/csd",
+      "destination": "/departments/csd.html"
+    },
+    {
+      "source": "/departments/csbs",
+      "destination": "/departments/csbs.html"
+    },
+    {
+      "source": "/departments/aei",
+      "destination": "/departments/aei.html"
     }
   ]
 }

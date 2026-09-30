@@ -13,9 +13,20 @@
 <body>
 
 <div id="track"></div>
-<div class="stage" id="s1"><div class="wrap">
-  <div class="line"><span>Ready?</span></div>
-</div></div>
+<div class="stage" id="s1">
+  <div class="wrap">
+    <div class="line"><span>Ready?</span></div>
+  </div>
+  <div id="ready-scroll-hint" class="ready-scroll-hint" role="button" tabindex="0" aria-label="Scroll to begin">
+    <div class="ready-hint-mouse" aria-hidden="true">
+      <div class="ready-hint-wheel"></div>
+    </div>
+    <span class="ready-hint-text">Scroll</span>
+    <svg class="ready-hint-arr" width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+</div>
 
 <div class="stage num" id="n3"><b>3</b></div>
 <div class="stage num" id="n2"><b>2</b></div>
@@ -77,12 +88,12 @@
 <section id="depts">
  <div class="pin">
   <div class="dhead reveal">
-    <p class="eyebrow">Eight departments · One fest</p>
+    <p class="eyebrow">Nine departments · One fest</p>
     <h2>Departments</h2>
     <p class="sub">Pick a department to see its events, workshops and competitions.</p>
   </div>
   <div class="rail-wrap reveal">
-    <button class="arrow prev" aria-label="Previous" disabled>&larr;</button>
+    <button class="arrow prev hidden" aria-label="Previous" disabled>&larr;</button>
     <div class="rail" id="rail">
 
       <a class="card" href="/departments/cse.html" style="--c:#2b6a4d;--t:#efe8da">
@@ -123,6 +134,14 @@
           <svg viewBox="0 0 300 260"><path d="M20 70h60v40h50M280 190h-60v-40h-50M20 190h50" stroke="#141414" stroke-width="6" fill="none"/><circle cx="20" cy="70" r="9" fill="#c23b22"/><circle cx="280" cy="190" r="9" fill="#c23b22"/><circle cx="20" cy="190" r="9" fill="#2b6a4d"/><path class="bolt" d="M170 20L92 140h50l-18 100 92-130h-56z" fill="#e3a72f" stroke="#141414" stroke-width="7" stroke-linejoin="miter"/></svg>
         </div>
         <div class="info"><h3>Electrical &amp; Electronics Engineering</h3><span class="btn">View events <b>&rarr;</b></span></div>
+      </a>
+
+      <a class="card" href="/departments/ece.html" style="--c:#c23b22;--t:#efe8da">
+        <div class="poster">
+          <span class="ghost">ECE</span>
+          <svg viewBox="0 0 300 260"><path d="M104 224L150 66L196 224M118 178H182M128 138H172M138 100H162M118 178L172 138M182 178L128 138M128 138L162 100M172 138L138 100" stroke="#141414" stroke-width="7" fill="none" stroke-linejoin="round"/><path d="M70 224H230" stroke="#141414" stroke-width="10"/><circle cx="150" cy="56" r="13" fill="#e3a72f" stroke="#141414" stroke-width="5"/><g stroke="#e3a72f" stroke-width="8" fill="none" stroke-linecap="round"><path d="M178 34Q200 56 178 78"/><path d="M122 34Q100 56 122 78"/><path class="bolt" d="M196 18Q232 56 196 94"/><path class="bolt" d="M104 18Q68 56 104 94"/></g></svg>
+        </div>
+        <div class="info"><h3>Electronics &amp; Communication Engineering</h3><span class="btn">View events <b>&rarr;</b></span></div>
       </a>
 
       <a class="card" href="/departments/aei.html" style="--c:#2b6a4d;--t:#efe8da">
@@ -170,6 +189,10 @@
   <div class="fstars"></div>
   <div class="fin reveal">
     <div id="foot-logo" aria-label="Tantra 26"></div>
+    <div class="f-institution">
+      <p class="f-college">Vimal Jyothi Engineering College</p>
+      <span class="f-tagline">National Level Tech Fest</span>
+    </div>
     <p class="fdate">7 October 2026 <i></i> 9:00 AM IST</p>
     <nav class="fnav">
       <a href="#depts" id="go-depts" class="fdept-btn">Explore Departments <b>&rarr;</b></a>
@@ -180,7 +203,13 @@
       <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24"><path d="M14 8V6.5c0-.8.3-1.2 1.3-1.2H17V2h-2.6C11.5 2 10 3.7 10 6.2V8H7.5v3.5H10V22h4V11.5h2.8L17.3 8z" fill="currentColor"/></svg></a>
       <a href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24"><path d="M4 9h4v11H4zM6 3.5a2.3 2.3 0 110 4.6 2.3 2.3 0 010-4.6zM10 9h3.8v1.6c.6-1 1.9-1.9 3.8-1.9 3.6 0 4.4 2.3 4.4 5.4V20h-4v-5.2c0-1.3 0-2.9-1.8-2.9S14 13.3 14 14.7V20h-4z" fill="currentColor"/></svg></a>
     </div>
-    <p class="credit">Tantra 26 <i></i> Technical Fest</p>
+    <p class="credit">
+      <span>Tantra 26</span>
+      <i></i>
+      <span>National Level Tech Fest</span>
+      <i></i>
+      <span>Vimal Jyothi Engineering College</span>
+    </p>
   </div>
   <button id="top" aria-label="Back to top"><svg viewBox="0 0 24 26"><path d="M12 0 L24 14 L15 10 L13 26 L10 26 L9 10 L0 15Z"/></svg></button>
 </footer>

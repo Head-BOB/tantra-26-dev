@@ -10,6 +10,7 @@ INSERT INTO departments (slug, name, color, fg) VALUES
 ('csd',   'Computer Science & Design',              '#e3a72f', '#141414'),
 ('csbs',  'Computer Science & Business Systems',     '#182338', '#efe8da'),
 ('eee',   'Electrical & Electronics Engineering',    '#efe8da', '#141414'),
+('ece',   'Electronics & Communication Engineering', '#c23b22', '#efe8da'),
 ('aei',   'Applied Electronics & Instrumentation',   '#2b6a4d', '#efe8da'),
 ('civil', 'Civil Engineering',                      '#e3a72f', '#141414'),
 ('mech',  'Mechanical Engineering',                 '#243a5e', '#efe8da')
@@ -23,6 +24,7 @@ INSERT INTO department_payments (dept_slug, upi_id, qr_image_url) VALUES
 ('csd',   'tantra26.csd@okhdfcbank', NULL),
 ('csbs',  'tantra26.csbs@okhdfcbank', NULL),
 ('eee',   'tantra26.eee@okhdfcbank', NULL),
+('ece',   'tantra26.ece@okhdfcbank', NULL),
 ('aei',   'tantra26.aei@okhdfcbank', NULL),
 ('civil', 'tantra26.civil@okhdfcbank', NULL),
 ('mech',  'tantra26.mech@okhdfcbank', NULL)
@@ -60,6 +62,12 @@ INSERT INTO events (id, dept_slug, type, title, date, time, venue, team_size, fe
 ('pcb-workshop', 'eee', 'Workshop', 'PCB Design', '7 Oct', '11:00 AM', 'Electronics Lab', 1, 'Free', 'From schematic to a board ready to print, step by step.'),
 ('spark-quiz', 'eee', 'Competition', 'Spark Quiz', '7 Oct', '10:00 AM', 'Seminar Hall', 2, '₹50', 'Rapid-fire quiz on circuits, machines and power. Buzzers included.'),
 
+-- Electronics & Communication Engineering
+('signal-decode', 'ece', 'Competition', 'Signal Decode', '7 Oct', '10:30 AM', 'Communication Lab', 2, '₹100', 'Recover a message hidden in a noisy signal. The cleanest decode wins.'),
+('antenna-build', 'ece', 'Competition', 'Antenna Build', '7 Oct', '2:30 PM', 'Electronics Lab', 3, '₹150', 'Build an antenna from scratch and see whose reaches the farthest.'),
+('embedded-workshop', 'ece', 'Workshop', 'Embedded Basics', '7 Oct', '11:00 AM', 'Electronics Lab', 1, 'Free', 'Program a board to send and receive data wirelessly.'),
+('comm-talk', 'ece', 'Talk', 'How the World Connects', '7 Oct', '10:00 AM', 'Seminar Hall', 1, 'Free', 'A talk on how signals travel from a tower to your phone.'),
+
 -- Applied Electronics & Instrumentation
 ('sensor-quest', 'aei', 'Competition', 'Sensor Quest', '7 Oct', '10:30 AM', 'Instrumentation Lab', 3, '₹100', 'Build a small sensor project that measures something real and shows the reading.'),
 ('signal-chase', 'aei', 'Competition', 'Signal Chase', '7 Oct', '2:30 PM', 'Electronics Lab', 2, '₹100', 'Trace faults in a signal chain using an oscilloscope. Fastest clean fix wins.'),
@@ -92,6 +100,8 @@ INSERT INTO coordinators (dept_slug, name, phone, display_order) VALUES
 ('csbs', 'Faculty Coordinator', '+91 98765 43223', 2),
 ('eee', 'Student Organiser', '+91 98765 43218', 1),
 ('eee', 'Faculty Coordinator', '+91 98765 43219', 2),
+('ece', 'Student Organiser', '+91 98765 43226', 1),
+('ece', 'Faculty Coordinator', '+91 98765 43227', 2),
 ('aei', 'Student Organiser', '+91 98765 43224', 1),
 ('aei', 'Faculty Coordinator', '+91 98765 43225', 2),
 ('civil', 'Student Organiser', '+91 98765 43214', 1),

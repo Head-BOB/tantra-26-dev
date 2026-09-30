@@ -131,6 +131,20 @@ export async function submitRegistration(payload) {
         throw new Error('This email address is already registered for this event.');
       }
 
+      // Check duplicate UPI transaction ID / UTR
+      const cleanTxn = (payload.txn_id || '').trim();
+      if (cleanTxn && cleanTxn.toUpperCase() !== 'FREE-REGISTRATION') {
+        const { data: existingTxn } = await supabaseClient
+          .from('registrations')
+          .select('id')
+          .eq('txn_id', cleanTxn)
+          .maybeSingle();
+
+        if (existingTxn) {
+          throw new Error('This UPI Transaction ID / UTR number has already been used for another registration.');
+        }
+      }
+
       // Generate Pass ID
       const regId = 'T26-' + payload.dept_slug.toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
       const insertRecord = {
@@ -182,18 +196,26 @@ export async function submitRegistration(payload) {
     }
   }
 
-  // 2. Custom API Backend Submission
-  if (API_BASE) {
-    const res = await fetch(`${API_BASE}/api/registrations`, {
+  // 2. Custom API Backend Submission (Vite proxy /api or API_BASE)
+  const apiEndpoint = API_BASE ? `${API_BASE}/api/registrations` : '/api/registrations';
+  try {
+    const res = await fetch(apiEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) {
+    if (res.status === 409) {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || `Registration failed with code ${res.status}`);
+      throw new Error(errData.error || 'This email address is already registered for this event.');
     }
-    return await res.json();
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    if (err.message && err.message.includes('already registered')) {
+      throw err;
+    }
+    console.warn('Backend API note:', err.message);
   }
 
   // 3. Fallback: Local registration mode

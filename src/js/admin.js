@@ -25,6 +25,7 @@ import { EVENTS as AI_EV }    from '../data/events/ai.js';
 import { EVENTS as CSD_EV }   from '../data/events/csd.js';
 import { EVENTS as CSBS_EV }  from '../data/events/csbs.js';
 import { EVENTS as EEE_EV }   from '../data/events/eee.js';
+import { EVENTS as ECE_EV }   from '../data/events/ece.js';
 import { EVENTS as AEI_EV }   from '../data/events/aei.js';
 import { EVENTS as CIVIL_EV } from '../data/events/civil.js';
 import { EVENTS as MECH_EV }  from '../data/events/mech.js';
@@ -34,6 +35,7 @@ import { CONFIG as AI_CFG }    from '../data/events/ai.js';
 import { CONFIG as CSD_CFG }   from '../data/events/csd.js';
 import { CONFIG as CSBS_CFG }  from '../data/events/csbs.js';
 import { CONFIG as EEE_CFG }   from '../data/events/eee.js';
+import { CONFIG as ECE_CFG }   from '../data/events/ece.js';
 import { CONFIG as AEI_CFG }   from '../data/events/aei.js';
 import { CONFIG as CIVIL_CFG } from '../data/events/civil.js';
 import { CONFIG as MECH_CFG }  from '../data/events/mech.js';
@@ -41,50 +43,35 @@ import { CONFIG as MECH_CFG }  from '../data/events/mech.js';
 // ─── Password & Role Mapping ───────────────────────────────────
 // No usernames required — entering password immediately routes user
 const AUTH_MAP = {
-  // Super Admin
-  'tantra26':       { role: 'superadmin', name: 'Central Admin' },
-  'tantra26-admin': { role: 'superadmin', name: 'Central Admin' },
-  'admin26':        { role: 'superadmin', name: 'Central Admin' },
+  // Super Admin (Central Admin)
+  'u9rcDp': { role: 'superadmin', name: 'Central Admin' },
 
   // Computer Science & Engineering
-  'cse26':        { role: 'dept_admin', dept: 'cse', name: 'Computer Science & Engineering' },
-  'tantra-cse':   { role: 'dept_admin', dept: 'cse', name: 'Computer Science & Engineering' },
-  'tantra26-cse': { role: 'dept_admin', dept: 'cse', name: 'Computer Science & Engineering' },
+  'zWHCaX': { role: 'dept_admin', dept: 'cse', name: 'Computer Science & Engineering' },
 
   // Artificial Intelligence & Data Science
-  'ai26':         { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence & Data Science' },
-  'tantra-ai':    { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence & Data Science' },
-  'tantra26-ai':  { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence & Data Science' },
+  'MhFbxq': { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence & Data Science' },
 
   // Computer Science & Design
-  'csd26':        { role: 'dept_admin', dept: 'csd', name: 'Computer Science & Design' },
-  'tantra-csd':   { role: 'dept_admin', dept: 'csd', name: 'Computer Science & Design' },
-  'tantra26-csd': { role: 'dept_admin', dept: 'csd', name: 'Computer Science & Design' },
+  'gsGL3t': { role: 'dept_admin', dept: 'csd', name: 'Computer Science & Design' },
 
   // Computer Science & Business Systems
-  'csbs26':        { role: 'dept_admin', dept: 'csbs', name: 'Computer Science & Business Systems' },
-  'tantra-csbs':   { role: 'dept_admin', dept: 'csbs', name: 'Computer Science & Business Systems' },
-  'tantra26-csbs': { role: 'dept_admin', dept: 'csbs', name: 'Computer Science & Business Systems' },
+  'p6kjHf': { role: 'dept_admin', dept: 'csbs', name: 'Computer Science & Business Systems' },
 
   // Electrical & Electronics Engineering
-  'eee26':        { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics Engineering' },
-  'tantra-eee':   { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics Engineering' },
-  'tantra26-eee': { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics Engineering' },
+  'RQKRk2': { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics Engineering' },
+
+  // Electronics & Communication Engineering
+  'BXJ8eu': { role: 'dept_admin', dept: 'ece', name: 'Electronics & Communication Engineering' },
 
   // Applied Electronics & Instrumentation
-  'aei26':        { role: 'dept_admin', dept: 'aei', name: 'Applied Electronics & Instrumentation' },
-  'tantra-aei':   { role: 'dept_admin', dept: 'aei', name: 'Applied Electronics & Instrumentation' },
-  'tantra26-aei': { role: 'dept_admin', dept: 'aei', name: 'Applied Electronics & Instrumentation' },
+  'fRLYKh': { role: 'dept_admin', dept: 'aei', name: 'Applied Electronics & Instrumentation' },
 
   // Civil Engineering
-  'civil26':        { role: 'dept_admin', dept: 'civil', name: 'Civil Engineering' },
-  'tantra-civil':   { role: 'dept_admin', dept: 'civil', name: 'Civil Engineering' },
-  'tantra26-civil': { role: 'dept_admin', dept: 'civil', name: 'Civil Engineering' },
+  'F5TwfY': { role: 'dept_admin', dept: 'civil', name: 'Civil Engineering' },
 
   // Mechanical Engineering
-  'mech26':        { role: 'dept_admin', dept: 'mech', name: 'Mechanical Engineering' },
-  'tantra-mech':   { role: 'dept_admin', dept: 'mech', name: 'Mechanical Engineering' },
-  'tantra26-mech': { role: 'dept_admin', dept: 'mech', name: 'Mechanical Engineering' },
+  'zEzU6v': { role: 'dept_admin', dept: 'mech', name: 'Mechanical Engineering' },
 };
 
 const DEPTS = [
@@ -93,17 +80,18 @@ const DEPTS = [
   { slug: 'csd',   name: 'Computer Science & Design',              color: '#e3a72f', fg: '#141414' },
   { slug: 'csbs',  name: 'Computer Science & Business Systems',     color: '#182338', fg: '#efe8da' },
   { slug: 'eee',   name: 'Electrical & Electronics Engineering',    color: '#efe8da', fg: '#141414' },
+  { slug: 'ece',   name: 'Electronics & Communication Engineering', color: '#c23b22', fg: '#efe8da' },
   { slug: 'aei',   name: 'Applied Electronics & Instrumentation',   color: '#2b6a4d', fg: '#efe8da' },
   { slug: 'civil', name: 'Civil Engineering',                      color: '#e3a72f', fg: '#141414' },
   { slug: 'mech',  name: 'Mechanical Engineering',                 color: '#243a5e', fg: '#efe8da' },
 ];
 
 const STATIC_EVENTS = {
-  cse: CSE_EV, ai: AI_EV, csd: CSD_EV, csbs: CSBS_EV, eee: EEE_EV, aei: AEI_EV, civil: CIVIL_EV, mech: MECH_EV,
+  cse: CSE_EV, ai: AI_EV, csd: CSD_EV, csbs: CSBS_EV, eee: EEE_EV, ece: ECE_EV, aei: AEI_EV, civil: CIVIL_EV, mech: MECH_EV,
 };
 const STATIC_COORDS = {
   cse: CSE_CFG.coordinators, ai: AI_CFG.coordinators, csd: CSD_CFG.coordinators, csbs: CSBS_CFG.coordinators,
-  eee: EEE_CFG.coordinators, aei: AEI_CFG.coordinators, civil: CIVIL_CFG.coordinators, mech: MECH_CFG.coordinators,
+  eee: EEE_CFG.coordinators, ece: ECE_CFG.coordinators, aei: AEI_CFG.coordinators, civil: CIVIL_CFG.coordinators, mech: MECH_CFG.coordinators,
 };
 
 // ─── Storage helpers ───────────────────────────────────────────
@@ -211,7 +199,7 @@ function showGate() {
 
   form.onsubmit = async e => {
     e.preventDefault();
-    const pw = pwIn.value.trim().toLowerCase();
+    const pw = pwIn.value.trim();
     
     // 1. Try backend API login
     const apiRes = await adminLogin(pw);
@@ -718,7 +706,7 @@ function bindRegistrationsView() {
   });
 
   $('export-dept-excel-btn').onclick = () => {
-    exportToExcel(activeDept);
+    openExcelModal(activeDept);
   };
 }
 
@@ -806,7 +794,7 @@ function bindCentralAdminViews() {
   };
 
   $('export-master-excel-btn').onclick = () => {
-    exportToExcel(null);
+    openExcelModal('all');
   };
 }
 
@@ -989,13 +977,80 @@ function renderCentralRegs() {
   });
 }
 
-// ─── Real Excel (.xlsx) Export using SheetJS ──────────────────
-function exportToExcel(slug) {
+function getDepartmentEventsList(slug) {
+  if (!slug || slug === 'all') return [];
+  const list = [...(allEventsFor(slug) || [])];
   const allRegs = getAllRegistrations();
-  const regs = slug ? allRegs.filter(r => r.slug === slug) : allRegs;
+  const knownTitles = new Set(list.map(e => (e.title || '').trim().toLowerCase()));
+
+  allRegs.filter(r => r.slug === slug).forEach(r => {
+    if (r.event && !knownTitles.has(r.event.trim().toLowerCase())) {
+      knownTitles.add(r.event.trim().toLowerCase());
+      list.push({ id: r.eventId || r.event, title: r.event });
+    }
+  });
+  return list;
+}
+
+function populateExcelEventOptions(deptSlug) {
+  const eventSelect = $('excel-event-select');
+  const eventLabel = $('excel-event-label');
+  if (!eventSelect || !eventLabel) return;
+
+  if (!deptSlug || deptSlug === 'all') {
+    eventLabel.style.display = 'none';
+    eventSelect.innerHTML = '<option value="all">All Events (All Departments)</option>';
+    return;
+  }
+
+  eventLabel.style.display = 'block';
+  const deptObj = DEPTS.find(d => d.slug === deptSlug);
+  const deptName = deptObj ? deptObj.name : deptSlug.toUpperCase();
+
+  const events = getDepartmentEventsList(deptSlug);
+  const allRegs = getAllRegistrations().filter(r => r.slug === deptSlug);
+
+  let html = `<option value="all">All Events in ${deptName} (${allRegs.length} total)</option>`;
+
+  events.forEach(ev => {
+    const count = allRegs.filter(r => {
+      const matchId = r.eventId && (r.eventId === ev.id);
+      const matchTitle = r.event && (r.event.trim().toLowerCase() === ev.title.trim().toLowerCase());
+      return matchId || matchTitle;
+    }).length;
+    html += `<option value="${esc(ev.id || ev.title)}">${esc(ev.title)} (${count} registered)</option>`;
+  });
+
+  eventSelect.innerHTML = html;
+}
+
+// ─── Real Excel (.xlsx) Export using SheetJS ──────────────────
+function exportToExcel(slug, eventIdentifier = 'all') {
+  syncLiveRegistrations();
+  const allRegs = getAllRegistrations();
+  let regs = (slug && slug !== 'all') ? allRegs.filter(r => r.slug === slug) : allRegs;
+
+  let eventObj = null;
+  if (slug && slug !== 'all' && eventIdentifier && eventIdentifier !== 'all') {
+    const deptEvents = getDepartmentEventsList(slug);
+    eventObj = deptEvents.find(e => e.id === eventIdentifier || (e.title && e.title.trim().toLowerCase() === eventIdentifier.trim().toLowerCase()));
+
+    const targetTitle = (eventObj ? eventObj.title : eventIdentifier).trim().toLowerCase();
+    const targetId = eventObj ? eventObj.id : eventIdentifier;
+
+    regs = regs.filter(r => {
+      const matchId = r.eventId && (r.eventId === targetId);
+      const matchTitle = r.event && (r.event.trim().toLowerCase() === targetTitle);
+      return matchId || matchTitle;
+    });
+  }
 
   if (!regs.length) {
-    toast('No registrations found to export', 'info');
+    const eventName = eventObj ? eventObj.title : (eventIdentifier !== 'all' ? eventIdentifier : '');
+    const msg = eventName
+      ? `No registrations found for event: ${eventName}`
+      : (slug && slug !== 'all' ? `No registrations found for ${slug.toUpperCase()}` : 'No registrations found to export');
+    toast(msg, 'info');
     return;
   }
 
@@ -1008,7 +1063,7 @@ function exportToExcel(slug) {
     'Email Address': r.email || '',
     'Phone Number': r.phone || '',
     'Department': (r.dept || r.slug || '').toUpperCase(),
-    'Event Title': r.event || '',
+    'Event Title': r.event || (eventObj ? eventObj.title : ''),
     'Entry Fee': r.fee || 'Free',
     'Team Members': r.team || 'Individual',
     'UPI Transaction ID / UTR': r.txnId || 'N/A',
@@ -1027,7 +1082,7 @@ function exportToExcel(slug) {
     { wch: 26 }, // Email
     { wch: 16 }, // Phone
     { wch: 14 }, // Dept
-    { wch: 24 }, // Event
+    { wch: 26 }, // Event
     { wch: 12 }, // Fee
     { wch: 24 }, // Team
     { wch: 22 }, // Txn ID
@@ -1035,15 +1090,30 @@ function exportToExcel(slug) {
   ];
 
   const wb = XLSX.utils.book_new();
-  const sheetName = slug ? slug.toUpperCase() : 'All Registrations';
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-  const filename = slug
-    ? `Tantra26_${slug.toUpperCase()}_Registrations.xlsx`
-    : `Tantra26_Master_Registrations.xlsx`;
+  let rawSheet = 'All Registrations';
+  if (slug && slug !== 'all') {
+    if (eventObj) {
+      rawSheet = eventObj.title;
+    } else {
+      rawSheet = slug.toUpperCase();
+    }
+  }
+  const cleanSheetName = rawSheet.replace(/[:\\/?*\[\]]/g, '_').slice(0, 31);
+  XLSX.utils.book_append_sheet(wb, ws, cleanSheetName);
+
+  let filename = 'Tantra26_Master_Registrations.xlsx';
+  if (slug && slug !== 'all') {
+    if (eventObj) {
+      const safeEvent = eventObj.title.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
+      filename = `Tantra26_${slug.toUpperCase()}_${safeEvent}_Registrations.xlsx`;
+    } else {
+      filename = `Tantra26_${slug.toUpperCase()}_Registrations.xlsx`;
+    }
+  }
 
   XLSX.writeFile(wb, filename);
-  toast(`Excel file downloaded ✓`);
+  toast(eventObj ? `Excel file downloaded for ${eventObj.title} ✓` : `Excel file downloaded ✓`);
 }
 
 // ─── Topbar Actions & Excel Export Logic ───────────────────────
@@ -1055,11 +1125,10 @@ function bindTopbar() {
 
   $('export-excel-btn').onclick = () => {
     if (currentUser.role === 'dept_admin') {
-      // Logged in as department admin: automatically export only current department stuff
-      exportToExcel(currentUser.dept);
+      openExcelModal(currentUser.dept);
     } else {
-      // Super admin: pop up modal to choose specific department or all departments
-      openExcelModal();
+      const defaultDept = (activeDept && ['events', 'regs'].includes(currentView)) ? activeDept : 'all';
+      openExcelModal(defaultDept);
     }
   };
 }
@@ -1073,26 +1142,53 @@ function bindExcelModal() {
   modal.addEventListener('click', e => { if (e.target === modal) closeExcelModal(); });
   addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeExcelModal(); });
 
+  const deptSel = $('excel-dept-select');
+  if (deptSel) {
+    deptSel.addEventListener('change', () => {
+      populateExcelEventOptions(deptSel.value);
+    });
+  }
+
   $('excel-modal-download').onclick = () => {
-    const selVal = $('excel-dept-select').value;
+    const deptVal = (currentUser && currentUser.role === 'dept_admin')
+      ? currentUser.dept
+      : (deptSel ? deptSel.value : 'all');
+
+    const eventSel = $('excel-event-select');
+    const eventVal = eventSel ? eventSel.value : 'all';
+
     closeExcelModal();
-    if (selVal === 'all') {
-      exportToExcel(null);
-    } else {
-      exportToExcel(selVal);
-    }
+    exportToExcel(deptVal, eventVal);
   };
 }
 
-function openExcelModal() {
-  const sel = $('excel-dept-select');
-  if (sel) {
-    if (activeDept && ['events', 'regs'].includes(currentView)) {
-      sel.value = activeDept;
-    } else {
-      sel.value = 'all';
+function openExcelModal(defaultDept = 'all') {
+  syncLiveRegistrations();
+  const deptSel = $('excel-dept-select');
+  const deptLabel = $('excel-dept-label');
+  const modalHint = $('excel-modal-hint');
+
+  if (currentUser && currentUser.role === 'dept_admin') {
+    // Lock department to department admin's assigned department
+    if (deptSel) deptSel.value = currentUser.dept;
+    if (deptLabel) deptLabel.style.display = 'none';
+    if (modalHint) {
+      const deptObj = DEPTS.find(d => d.slug === currentUser.dept);
+      modalHint.textContent = `Export registrations for ${deptObj ? deptObj.name : currentUser.dept.toUpperCase()}. Choose all events or a specific event below.`;
     }
+    populateExcelEventOptions(currentUser.dept);
+  } else {
+    // Superadmin: allow choosing any department or all
+    if (deptLabel) deptLabel.style.display = 'block';
+    if (deptSel) {
+      deptSel.value = defaultDept || 'all';
+    }
+    if (modalHint) {
+      modalHint.textContent = 'Choose which department and specific event to export, or download a consolidated master file with all participants.';
+    }
+    populateExcelEventOptions(deptSel ? deptSel.value : 'all');
   }
+
   const modal = $('excel-modal');
   if (modal) {
     modal.classList.add('open');

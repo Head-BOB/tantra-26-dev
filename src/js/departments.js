@@ -1,210 +1,172 @@
 import { initLaunchCountdownAudio } from './clock-sound.js';
 
 export function initDepartments() {
-  const clamp = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   const $ = (x) => document.querySelector(x);
 
-  // ---- Pinned horizontal carousel ----
-  const dep   = $('#depts');
-  const rail  = $('#rail');
+  const rail = $('#rail');
   const cards = [...rail.children];
-  const dots  = $('#dots');
-  const pv    = $('.prev');
-  const nx    = $('.next');
+  const dots = $('#dots');
+  const pv = $('.prev');
+  const nx = $('.next');
 
-  const rtrack = document.createElement('div');
-  rtrack.className = 'rtrack';
-  cards.forEach((c) => rtrack.appendChild(c));
-  rail.appendChild(rtrack);
-
-  const LEAD = 0.06, SPAN = 0.88;
-  let maxT = 0, range = 1, top0 = 0, curX = 0, pad = 0;
-  let isManualDragging = false;
-
-  let lastDepW = 0, lastDepH = 0;
-  function measure(force = false) {
-    const nw = window.innerWidth || 1200;
-    const nh = window.innerHeight || 800;
-    if (!force && lastDepW > 0 && Math.abs(nw - lastDepW) === 0 && Math.abs(nh - lastDepH) < 160) return;
-    lastDepW = nw;
-    lastDepH = nh;
-    const vh = nh;
-    pad = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
-    maxT = Math.max(0, rtrack.scrollWidth + 2 * pad - rail.clientWidth);
-    dep.style.height = `${vh + Math.max(maxT * 1.05, vh * 0.8)}px`;
-    top0 = dep.getBoundingClientRect().top + (window.pageYOffset || 0);
-    range = Math.max(1, dep.offsetHeight - vh);
+  // Wrap cards in rtrack if not already wrapped
+  let rtrack = rail.querySelector('.rtrack');
+  if (!rtrack) {
+    rtrack = document.createElement('div');
+    rtrack.className = 'rtrack';
+    cards.forEach((c) => rtrack.appendChild(c));
+    rail.appendChild(rtrack);
   }
 
-  function scrollYForX(x) {
-    const p2 = maxT > 0 ? clamp(x / maxT) : 0;
-    return top0 + (LEAD + SPAN * p2) * range;
-  }
-
-  function xForScrollY(sc) {
-    const p = clamp((sc - top0) / range);
-    const p2 = clamp((p - LEAD) / SPAN);
-    return p2 * maxT;
-  }
-
+  // Generate pagination dots
+  dots.innerHTML = '';
   cards.forEach((c, i) => {
     const d = document.createElement('i');
-    d.onclick = () => go(i);
+    d.setAttribute('aria-label', `Department ${i + 1}`);
+    d.onclick = () => scrollToCard(i);
     dots.appendChild(d);
   });
 
-  function cardT(i) {
-    const c = cards[i];
-    return Math.max(0, Math.min(maxT, c.offsetLeft + pad + c.offsetWidth / 2 - rail.clientWidth / 2));
+  function getMaxScroll() {
+    const padRight = parseFloat(getComputedStyle(rail).paddingRight) || 0;
+    const lastCard = cards[cards.length - 1];
+    if (!lastCard) return Math.max(0, rail.scrollWidth - rail.clientWidth);
+    const lastCardEnd = lastCard.offsetLeft + lastCard.offsetWidth + padRight;
+    return Math.max(0, lastCardEnd - rail.clientWidth);
   }
 
-  function idx() {
-    let b = 0, bd = 1e9;
-    cards.forEach((c, i) => { const d = Math.abs(cardT(i) - curX); if (d < bd) { bd = d; b = i; } });
-    return b;
-  }
-
-  function go(i) {
+  // Calculate target scrollLeft for card i to align to the left side
+  // Clamped so it never scrolls past Mech (maxScroll)
+  function getCardScrollLeft(i) {
     i = Math.max(0, Math.min(cards.length - 1, i));
-    const targetY = scrollYForX(cardT(i));
-    scrollTo({ top: targetY, behavior: 'smooth' });
-  }
-
-  pv.onclick = () => go(idx() - 1);
-  nx.onclick = () => go(idx() + 1);
-
-  function tick() {
-    if (!isManualDragging) {
-      const sc = window.pageYOffset || 0;
-      const targetX = xForScrollY(sc);
-      curX += (targetX - curX) * 0.16;
-      if (Math.abs(targetX - curX) < 0.3) curX = targetX;
-      rtrack.style.transform = `translate3d(${-curX}px,0,0)`;
-      const i = idx();
-      [...dots.children].forEach((d, k) => { d.className = k === i ? 'on' : ''; });
-      pv.disabled = curX < 8;
-      nx.disabled = curX > maxT - 8;
+    const maxScroll = getMaxScroll();
+    if (i === cards.length - 1) {
+      return maxScroll;
     }
-    requestAnimationFrame(tick);
+    const padLeft = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
+    const c = cards[i];
+    const target = c.offsetLeft - padLeft;
+    return Math.min(maxScroll, Math.max(0, target));
   }
 
-  measure(true);
-  addEventListener('resize', () => measure(false));
-  addEventListener('orientationchange', () => {
-    lastDepW = 0;
-    setTimeout(() => measure(true), 250);
-  });
-  addEventListener('load', () => measure(true));
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => measure(true));
-  requestAnimationFrame(tick);
+  // Find index of card currently visible at the front
+  function getActiveIndex() {
+    const maxScroll = getMaxScroll();
+    if (rail.scrollLeft >= maxScroll - 15 || maxScroll <= 5) {
+      return cards.length - 1;
+    }
+    const padLeft = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
+    const target = rail.scrollLeft + padLeft + 20;
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    cards.forEach((c, i) => {
+      const dist = Math.abs(c.offsetLeft - target);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIdx = i;
+      }
+    });
+    return bestIdx;
+  }
 
-  // ---------- Touch & Pointer Dragging ----------
-  // Horizontal swipe: scrolls cards left/right freely at any speed to choose department,
-  // keeping the vertical page locked in place, and synchronizing vertical scroll
-  // so when vertical scrolling resumes, it continues seamlessly from that card to the end!
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchLastX = 0;
-  let isHorizSwipe = null;
-  let moved = false;
+  function scrollToCard(i) {
+    const targetLeft = getCardScrollLeft(i);
+    rail.scrollTo({ left: targetLeft, behavior: 'smooth' });
+  }
 
-  rail.addEventListener('touchstart', (e) => {
-    if (e.touches.length !== 1) return;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchLastX = touchStartX;
-    isHorizSwipe = null;
-    moved = false;
+  // Update dots and arrow buttons based on current scroll position
+  function updateState() {
+    const maxScroll = getMaxScroll();
+    const isAtStart = rail.scrollLeft <= 8;
+    const isAtEnd = rail.scrollLeft >= maxScroll - 12 || maxScroll <= 5;
+
+    const active = isAtEnd ? cards.length - 1 : getActiveIndex();
+    [...dots.children].forEach((d, k) => {
+      d.className = k === active ? 'on' : '';
+    });
+
+    if (pv) {
+      pv.disabled = isAtStart;
+      pv.classList.toggle('hidden', isAtStart);
+    }
+    if (nx) {
+      nx.disabled = isAtEnd;
+      nx.classList.toggle('hidden', isAtEnd);
+    }
+  }
+
+  rail.addEventListener('scroll', () => {
+    const maxScroll = getMaxScroll();
+    if (rail.scrollLeft > maxScroll + 1) {
+      rail.scrollLeft = maxScroll;
+    }
+    updateState();
   }, { passive: true });
+  window.addEventListener('resize', updateState, { passive: true });
 
-  rail.addEventListener('touchmove', (e) => {
-    if (e.touches.length !== 1) return;
-    const currentX = e.touches[0].clientX;
-    const currentY = e.touches[0].clientY;
-    const dx = currentX - touchLastX;
-    const totalDx = currentX - touchStartX;
-    const totalDy = currentY - touchStartY;
+  // Initial state check
+  updateState();
+  requestAnimationFrame(updateState);
+  setTimeout(updateState, 200);
 
-    if (isHorizSwipe === null) {
-      if (Math.abs(totalDx) > 6 && Math.abs(totalDx) >= Math.abs(totalDy)) {
-        isHorizSwipe = true;
-        isManualDragging = true;
-        rail.classList.add('drag');
-      } else if (Math.abs(totalDy) > 6) {
-        isHorizSwipe = false;
-        isManualDragging = false;
+  if (pv) pv.onclick = () => scrollToCard(getActiveIndex() - 1);
+  if (nx) {
+    nx.onclick = () => {
+      const maxScroll = getMaxScroll();
+      if (rail.scrollLeft >= maxScroll - 12) return;
+      const cur = getActiveIndex();
+      scrollToCard(Math.min(cards.length - 1, cur + 1));
+    };
+  }
+
+  // Desktop mouse click-and-drag
+  let isDown = false;
+  let startX = 0;
+  let scrollLeftStart = 0;
+  let hasDragged = false;
+
+  rail.addEventListener('mousedown', (e) => {
+    isDown = true;
+    hasDragged = false;
+    startX = e.pageX;
+    scrollLeftStart = rail.scrollLeft;
+    rail.classList.add('drag');
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    const dx = e.pageX - startX;
+    if (Math.abs(dx) > 5) {
+      hasDragged = true;
+    }
+    const maxScroll = getMaxScroll();
+    const newLeft = scrollLeftStart - dx;
+    rail.scrollLeft = Math.min(maxScroll, Math.max(0, newLeft));
+  });
+
+  function stopDrag() {
+    if (isDown) {
+      isDown = false;
+      rail.classList.remove('drag');
+      if (hasDragged) {
+        scrollToCard(getActiveIndex());
       }
     }
-
-    if (isHorizSwipe === true) {
-      // Free manual horizontal swipe on touch devices
-      if (e.cancelable) e.preventDefault();
-      moved = true;
-      touchLastX = currentX;
-
-      // Update card position directly under finger with responsive 1:1 feel
-      curX = clamp(curX - dx * 1.15, 0, maxT);
-      rtrack.style.transform = `translate3d(${-curX}px,0,0)`;
-
-      const i = idx();
-      [...dots.children].forEach((d, k) => { d.className = k === i ? 'on' : ''; });
-      pv.disabled = curX < 8;
-      nx.disabled = curX > maxT - 8;
-    }
-  }, { passive: false });
-
-  function endTouch() {
-    if (isManualDragging) {
-      isManualDragging = false;
-      rail.classList.remove('drag');
-      // Synchronize window vertical scroll position to this exact card
-      window.scrollTo(0, scrollYForX(curX));
-    }
-    isHorizSwipe = null;
-    setTimeout(() => { moved = false; }, 160);
   }
 
-  rail.addEventListener('touchend', endTouch, { passive: true });
-  rail.addEventListener('touchcancel', endTouch, { passive: true });
+  window.addEventListener('mouseup', stopDrag);
 
-  // Desktop mouse drag
-  let ptrDown = false, ptrLastX = 0;
-  rail.addEventListener('pointerdown', (e) => {
-    if (e.pointerType === 'touch') return;
-    ptrDown = true; moved = false; ptrLastX = e.clientX;
-  });
-  addEventListener('pointermove', (e) => {
-    if (!ptrDown) return;
-    const dx = e.clientX - ptrLastX;
-    if (!moved && Math.abs(dx) < 6) return;
-    moved = true;
-    ptrLastX = e.clientX;
-    isManualDragging = true;
-    rail.classList.add('drag');
-    curX = clamp(curX - dx, 0, maxT);
-    rtrack.style.transform = `translate3d(${-curX}px,0,0)`;
-    const i = idx();
-    [...dots.children].forEach((d, k) => { d.className = k === i ? 'on' : ''; });
-    pv.disabled = curX < 8;
-    nx.disabled = curX > maxT - 8;
-  });
-  function endPtr() {
-    if (ptrDown) {
-      ptrDown = false;
-      isManualDragging = false;
-      rail.classList.remove('drag');
-      window.scrollTo(0, scrollYForX(curX));
-    }
-    setTimeout(() => { moved = false; }, 160);
-  }
-  addEventListener('pointerup', endPtr);
-  addEventListener('pointercancel', endPtr);
+  // Prevent card navigation if the user was dragging
   rail.addEventListener('click', (e) => {
-    if (moved) {
+    if (hasDragged) {
       e.preventDefault();
       e.stopPropagation();
+      hasDragged = false;
     }
   }, true);
+
+  // Initial state
+  updateState();
 
   // ---- Countdown timer ----
   // EVENT_START: 7 October 2026, 9:00 AM IST (UTC+05:30)

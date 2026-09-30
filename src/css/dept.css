@@ -167,8 +167,63 @@ h1, h2, h3 {
 .others a[href*="aei"]   { --bg: #2b6a4d; --fg: #efe8da; }
 .others a[href*="civil"] { --bg: #e3a72f; --fg: #141414; }
 .others a[href*="eee"]   { --bg: #efe8da; --fg: #141414; }
+.others a[href*="ece"]   { --bg: #c23b22; --fg: #efe8da; }
 .others a[href="/"]      { --bg: #efe8da; --fg: #141414; }
-.credit { margin-top: 50px; font: 600 11px/1 'Inter'; letter-spacing: .32em; text-transform: uppercase; color: rgba(239,232,218,.6); }
+
+.f-institution {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  margin-top: 52px;
+}
+.f-college {
+  font: 400 clamp(1.2rem, 3.2vw, 1.95rem)/1.1 'Anton', Impact, sans-serif;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.6);
+}
+.f-tagline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font: 600 clamp(10px, 1.25vw, 11.5px)/1 'Inter', sans-serif;
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  clip-path: none;
+  box-shadow: none;
+  opacity: 0.9;
+}
+.f-tagline::before,
+.f-tagline::after {
+  content: '';
+  display: inline-block;
+  width: 22px;
+  height: 1px;
+  background: var(--gold);
+  opacity: 0.5;
+}
+.credit {
+  margin-top: 22px;
+  font: 600 11px/1.5 'Inter', sans-serif;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: rgba(239,232,218,.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.credit i { width: 5px; height: 5px; background: var(--red); border-radius: 50%; display: inline-block; }
 
 /* ── Registration dialog ── */
 .modal {
@@ -302,6 +357,26 @@ input:focus, textarea:focus {
 }
 .sub:hover { background: var(--gold); color: var(--ink); transform: translateY(-1px); }
 .sub:disabled { opacity: .5; pointer-events: none; }
+.btn-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(239, 232, 218, 0.35);
+  border-top-color: var(--cream);
+  border-radius: 50%;
+  animation: btnSpin 0.65s linear infinite;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+@keyframes btnSpin {
+  to { transform: rotate(360deg); }
+}
+
+.x.disabled {
+  opacity: 0.25 !important;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
 .cancel-btn {
   border: 2px solid var(--ink); background: transparent; color: var(--ink);
   cursor: pointer; font: 700 11px/1 'Inter'; letter-spacing: .18em; text-transform: uppercase;

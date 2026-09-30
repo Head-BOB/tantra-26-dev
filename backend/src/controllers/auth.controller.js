@@ -2,35 +2,35 @@ import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env.js';
 
 const AUTH_MAP = {
-  // Super Admin
-  'tantra26':       { role: 'superadmin', name: 'Central Admin' },
-  'tantra26-admin': { role: 'superadmin', name: 'Central Admin' },
-  'admin26':        { role: 'superadmin', name: 'Central Admin' },
+  // Super Admin (Central Admin)
+  'u9rcDp': { role: 'superadmin', name: 'Central Admin' },
 
-  // Computer Science
-  'cse26':        { role: 'dept_admin', dept: 'cse', name: 'Computer Science' },
-  'tantra-cse':   { role: 'dept_admin', dept: 'cse', name: 'Computer Science' },
-  'tantra26-cse': { role: 'dept_admin', dept: 'cse', name: 'Computer Science' },
+  // Computer Science & Engineering
+  'zWHCaX': { role: 'dept_admin', dept: 'cse', name: 'Computer Science & Engineering' },
 
-  // Artificial Intelligence
-  'ai26':         { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence' },
-  'tantra-ai':    { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence' },
-  'tantra26-ai':  { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence' },
+  // Artificial Intelligence & Data Science
+  'MhFbxq': { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence & Data Science' },
+
+  // Computer Science & Design
+  'gsGL3t': { role: 'dept_admin', dept: 'csd', name: 'Computer Science & Design' },
+
+  // Computer Science & Business Systems
+  'p6kjHf': { role: 'dept_admin', dept: 'csbs', name: 'Computer Science & Business Systems' },
+
+  // Electrical & Electronics Engineering
+  'RQKRk2': { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics Engineering' },
+
+  // Electronics & Communication Engineering
+  'BXJ8eu': { role: 'dept_admin', dept: 'ece', name: 'Electronics & Communication Engineering' },
+
+  // Applied Electronics & Instrumentation
+  'fRLYKh': { role: 'dept_admin', dept: 'aei', name: 'Applied Electronics & Instrumentation' },
 
   // Civil Engineering
-  'civil26':        { role: 'dept_admin', dept: 'civil', name: 'Civil Engineering' },
-  'tantra-civil':   { role: 'dept_admin', dept: 'civil', name: 'Civil Engineering' },
-  'tantra26-civil': { role: 'dept_admin', dept: 'civil', name: 'Civil Engineering' },
+  'F5TwfY': { role: 'dept_admin', dept: 'civil', name: 'Civil Engineering' },
 
   // Mechanical Engineering
-  'mech26':        { role: 'dept_admin', dept: 'mech', name: 'Mechanical' },
-  'tantra-mech':   { role: 'dept_admin', dept: 'mech', name: 'Mechanical' },
-  'tantra26-mech': { role: 'dept_admin', dept: 'mech', name: 'Mechanical' },
-
-  // Electrical & Electronics
-  'eee26':        { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics' },
-  'tantra-eee':   { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics' },
-  'tantra26-eee': { role: 'dept_admin', dept: 'eee', name: 'Electrical & Electronics' },
+  'zEzU6v': { role: 'dept_admin', dept: 'mech', name: 'Mechanical Engineering' },
 };
 
 export async function login(req, res) {
@@ -40,7 +40,7 @@ export async function login(req, res) {
       return res.status(400).json({ error: 'Password is required' });
     }
 
-    const cleanPw = String(password).trim().toLowerCase();
+    const cleanPw = String(password).trim();
     const user = AUTH_MAP[cleanPw];
 
     if (!user) {

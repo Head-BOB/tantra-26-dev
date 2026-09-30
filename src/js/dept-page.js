@@ -210,7 +210,10 @@ export function initDeptPage(CONFIG, EVENTS) {
     }, 60);
   }
 
+  let isProcessing = false;
+
   function closeModal() {
+    if (isProcessing) return;
     modal.classList.remove('open');
     document.body.style.overflow = '';
     draw();
@@ -228,12 +231,19 @@ export function initDeptPage(CONFIG, EVENTS) {
   const okClose = $('#ok-close');
   if (okClose) okClose.onclick = closeModal;
 
-  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-  addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+  modal.addEventListener('click', (e) => {
+    if (isProcessing) return;
+    if (e.target === modal) closeModal();
+  });
+  addEventListener('keydown', (e) => {
+    if (isProcessing) return;
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
 
   // ── Step 1: Participant details submit ──────────────────────
-  detailsForm.addEventListener('submit', (e) => {
+  detailsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (isProcessing) return;
     const f = detailsForm, err = $('#err');
     const d = {
       name:    f.elements.name.value.trim(),
@@ -264,7 +274,26 @@ export function initDeptPage(CONFIG, EVENTS) {
     curData = d;
 
     if (isFreeEvent) {
-      finalizeRegistration('FREE-REGISTRATION');
+      const subBtn = $('#sub');
+      isProcessing = true;
+      if (mx) mx.classList.add('disabled');
+      if (subBtn) {
+        subBtn.disabled = true;
+        subBtn.innerHTML = '<span class="btn-spinner"></span> Confirming Registration…';
+      }
+      try {
+        await new Promise((r) => setTimeout(r, 1000));
+        await finalizeRegistration('FREE-REGISTRATION');
+      } catch (submitErr) {
+        err.textContent = submitErr.message || 'Registration failed. Please try again.';
+      } finally {
+        isProcessing = false;
+        if (mx) mx.classList.remove('disabled');
+        if (subBtn) {
+          subBtn.disabled = false;
+          subBtn.textContent = 'Complete Free Registration ✓';
+        }
+      }
     } else {
       preparePaymentStep();
       setStep(2);
@@ -341,14 +370,15 @@ export function initDeptPage(CONFIG, EVENTS) {
 
   // Back to step 1 buttons
   const payBackBtn = $('#pay-back-btn');
-  if (payBackBtn) payBackBtn.onclick = () => setStep(1);
+  if (payBackBtn) payBackBtn.onclick = () => { if (!isProcessing) setStep(1); };
   const payCancelBtn = $('#pay-cancel-btn');
-  if (payCancelBtn) payCancelBtn.onclick = () => setStep(1);
+  if (payCancelBtn) payCancelBtn.onclick = () => { if (!isProcessing) setStep(1); };
 
   // ── Step 2: Payment submission (UPI Txn ID verification) ────
   if (payForm) {
-    payForm.addEventListener('submit', (e) => {
+    payForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isProcessing) return;
       const txnInput = $('#pay-txn-id');
       const payErr   = $('#pay-err');
       const txnId    = txnInput ? txnInput.value.trim() : '';
@@ -363,20 +393,47 @@ export function initDeptPage(CONFIG, EVENTS) {
         if (txnInput) txnInput.focus();
         return;
       }
+
+      // Check if this transaction ID was already used across all registrations
+      const cleanTxn = txnId.trim();
+      const isTxnUsed = loadRegs().some((r) =>
+        r.txnId &&
+        r.txnId.toUpperCase() !== 'FREE-REGISTRATION' &&
+        r.txnId.toLowerCase().trim() === cleanTxn.toLowerCase()
+      );
+      if (isTxnUsed) {
+        if (payErr) payErr.textContent = 'This UPI Transaction ID / UTR number has already been used for another registration.';
+        if (txnInput) txnInput.focus();
+        return;
+      }
+
       if (payErr) payErr.textContent = '';
 
       const payBtn = $('#pay-submit-btn');
+      isProcessing = true;
+      if (mx) mx.classList.add('disabled');
+      if (payBackBtn) payBackBtn.style.pointerEvents = 'none';
+      if (payCancelBtn) payCancelBtn.disabled = true;
       if (payBtn) {
         payBtn.disabled = true;
-        payBtn.textContent = 'Verifying…';
+        payBtn.innerHTML = '<span class="btn-spinner"></span> Verifying Transaction…';
       }
 
-      finalizeRegistration(txnId).finally(() => {
+      try {
+        await new Promise((r) => setTimeout(r, 1000));
+        await finalizeRegistration(txnId);
+      } catch (submitErr) {
+        if (payErr) payErr.textContent = submitErr.message || 'Verification failed. Please try again.';
+      } finally {
+        isProcessing = false;
+        if (mx) mx.classList.remove('disabled');
+        if (payBackBtn) payBackBtn.style.pointerEvents = '';
+        if (payCancelBtn) payCancelBtn.disabled = false;
         if (payBtn) {
           payBtn.disabled = false;
-          payBtn.textContent = 'Finish Transaction →';
+          payBtn.innerHTML = 'Finish Transaction &rarr;';
         }
-      });
+      }
     });
   }
 
@@ -403,11 +460,9 @@ export function initDeptPage(CONFIG, EVENTS) {
       }
     } catch (err) {
       if (err.message && err.message.includes('already registered')) {
-        const payErr = $('#pay-err');
-        if (payErr) payErr.textContent = err.message;
         throw err;
       }
-      console.warn('Backend unavailable, persisting registration locally:', err);
+      console.warn('Backend note:', err.message);
     }
 
     const regId = passRegId || ('T26-' + CONFIG.slug.toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase());
@@ -428,7 +483,7 @@ export function initDeptPage(CONFIG, EVENTS) {
     };
 
     const list = loadRegs();
-    list.push(rec);
+    list.unshift(rec);
     saveRegs(list);
 
     populatePass(rec);

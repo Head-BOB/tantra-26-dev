@@ -28,13 +28,10 @@
     <div class="gate-body">
       <form id="gate-form" novalidate>
         <label>Access Password
-          <input type="password" id="gate-pw" autocomplete="current-password" required placeholder="Enter password (e.g. cse26, ai26, tantra26)">
+          <input type="password" id="gate-pw" autocomplete="current-password" required placeholder="Enter access password">
         </label>
         <p class="gate-err" id="gate-err"></p>
         <button type="submit" class="gate-btn" id="gate-btn">Sign in &rarr;</button>
-        <div class="gate-hints">
-          <small>Dept heads: use your dept code (<code>cse26</code>, <code>ai26</code>, <code>csd26</code>, <code>csbs26</code>, <code>eee26</code>, <code>aei26</code>, <code>civil26</code>, <code>mech26</code>).</small>
-        </div>
       </form>
     </div>
   </div>
@@ -300,7 +297,7 @@
         <button class="x" id="excel-modal-close" aria-label="Close">&times;</button>
       </div>
       <div class="excel-modal-body">
-        <label>Select Department
+        <label id="excel-dept-label">Select Department
           <select id="excel-dept-select">
             <option value="all">All Departments (Master Spreadsheet)</option>
             <option value="cse">Computer Science &amp; Engineering</option>
@@ -308,12 +305,18 @@
             <option value="csd">Computer Science &amp; Design</option>
             <option value="csbs">Computer Science &amp; Business Systems</option>
             <option value="eee">Electrical &amp; Electronics Engineering</option>
+            <option value="ece">Electronics &amp; Communication Engineering</option>
             <option value="aei">Applied Electronics &amp; Instrumentation</option>
             <option value="civil">Civil Engineering</option>
             <option value="mech">Mechanical Engineering</option>
           </select>
         </label>
-        <p class="excel-modal-hint">Choose which department data to export, or download a consolidated master file with all participants and UPI transaction IDs.</p>
+        <label id="excel-event-label" style="display:none">Select Event
+          <select id="excel-event-select">
+            <option value="all">All Events in Department</option>
+          </select>
+        </label>
+        <p class="excel-modal-hint" id="excel-modal-hint">Choose which department and specific event to export, or download a consolidated master file with all participants and UPI transaction IDs.</p>
         <div class="form-actions">
           <button type="button" class="cancel-btn" id="excel-modal-cancel">Cancel</button>
           <button type="button" class="sub" id="excel-modal-download">Download .xlsx</button>
