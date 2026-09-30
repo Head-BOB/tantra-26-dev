@@ -32,6 +32,9 @@ export function initIntro() {
   const rk    = $('#rk');
   const rocket = $('#rocket');
   const fin   = $('#fin');
+  const logoEl = $('#logo');
+  const l26   = $('#logo26');
+  let logoAssembled = false;
 
   // Puff particles
   const puffs = [];
@@ -172,28 +175,51 @@ export function initIntro() {
     }
 
     // Final logo stage (seamless overlay on the same space background)
+    if (t >= 10950) {
+      logoAssembled = true;
+    } else if (t < 7500) {
+      logoAssembled = false;
+    }
+
     const finVis = t >= 7570;
     fin.style.visibility = finVis ? 'visible' : 'hidden';
     if (finVis) {
       fin.style.transform = 'translate3d(0,0,0)';
-      logoLetters.forEach((e, j) => {
-        const st2 = 8600 + j * 190;
-        const p = outX(seg(t, st2, 600));
-        e.style.opacity = p;
-        e.setAttribute('transform', `translate(0, ${-45 * (1 - p)})`);
-      });
+      if (logoAssembled) {
+        logoLetters.forEach((e) => {
+          e.style.opacity = 1;
+          e.setAttribute('transform', 'translate(0, 0)');
+        });
+        if (l26) {
+          l26.setAttribute('opacity', 1);
+          l26.setAttribute('transform', 'translate(0, 0)');
+        }
+      } else {
+        logoLetters.forEach((e, j) => {
+          const st2 = 8600 + j * 190;
+          const p = outX(seg(t, st2, 600));
+          e.style.opacity = p;
+          e.setAttribute('transform', `translate(0, ${-45 * (1 - p)})`);
+        });
+        if (l26) {
+          const p26 = outX(seg(t, 10250, 700));
+          l26.setAttribute('opacity', p26);
+          l26.setAttribute('transform', `translate(0, ${14 * (1 - p26)})`);
+        }
+      }
     } else {
       fin.style.transform = 'translate3d(0,0,0)';
       logoLetters.forEach((e) => {
         e.style.opacity = 0;
         e.setAttribute('transform', 'translate(0, -45)');
       });
+      if (l26) {
+        l26.setAttribute('opacity', 0);
+        l26.setAttribute('transform', 'translate(0, 14)');
+      }
     }
 
-    const l26 = $('#logo26');
-    l26.setAttribute('opacity', outX(seg(t, 10250, 700)));
-    l26.setAttribute('transform', `translate(0,${14 * (1 - outX(seg(t, 10250, 700)))})`);
-    hint.style.opacity = seg(t, 10900, 400) * (1 - clamp(sc0 / 60));
+    hint.style.opacity = (logoAssembled ? 1 : seg(t, 10900, 400)) * (1 - clamp(sc0 / 60));
 
     // Star field speeds on the single continuous canvas
     if (t >= 8350) {
@@ -449,8 +475,8 @@ export function initIntro() {
       cancelAutoScroll();
     }
 
-    // While inside the intro, prevent native momentum fling
-    if (sc < maxS - 15) {
+    // While in the initial countdown (Ready -> 3 -> 2 -> 1 -> Rocket), prevent inertial fling past the stages
+    if (sc < STAGE_SCROLLS[4] && !isAutoScrolling) {
       if (e.cancelable) e.preventDefault();
     }
   }, { passive: false });
@@ -460,8 +486,8 @@ export function initIntro() {
     touchActive = false;
     const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
 
-    // Once in the main site (below intro), do NOT intercept touches or force reverse scroll!
-    if (sc >= maxS - 15) {
+    // Once past the countdown stages, do NOT intercept touches or force reverse scroll!
+    if (sc >= STAGE_SCROLLS[4]) {
       return;
     }
 
@@ -490,7 +516,7 @@ export function initIntro() {
     dismissReadyHint();
     const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
 
-    if (sc < maxS - 15) {
+    if (sc < STAGE_SCROLLS[4]) {
       e.preventDefault();
       const now = performance.now();
 
@@ -581,7 +607,7 @@ export function initIntro() {
     sc0 = Math.max(0, sc - maxS - baseVh * 0.7);
     const pp = Math.min(sc0 / baseVh, 1);
     fin.style.opacity = 1 - pp * 0.75;
-    $('#logo').style.transform = `scale(${1 - pp * 0.12})`;
+    if (logoEl) logoEl.style.transform = pp > 0.01 ? `scale(${1 - pp * 0.12})` : 'none';
     render(cur);
 
     // Ready screen scroll hint: dismiss when user leaves screen 0, re-schedule if returning to top

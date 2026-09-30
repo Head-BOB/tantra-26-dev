@@ -196,19 +196,24 @@ canvas {
 .puff { position: absolute; border-radius: 50%; background: var(--cream); z-index: 1; opacity: 0; pointer-events: none; }
 
 /* ── Final logo stage ── */
-#fin { background: transparent; transform: translate3d(0,0,0); z-index: 6; visibility: hidden; }
+#fin {
+  background: transparent;
+  transform: translate3d(0,0,0);
+  z-index: 6;
+  visibility: hidden;
+}
 #logo {
   position: relative; z-index: 3;
   width: min(50vw, 580px); transform-origin: 50% 50%;
   display: flex; justify-content: center; align-items: center;
   pointer-events: none;
 }
-#tantra-svg { width: 100%; height: auto; max-height: 34vh; display: block; overflow: visible; }
+#tantra-svg { width: 100%; height: auto; max-height: 260px; display: block; overflow: visible; }
 .logo-let { will-change: transform, opacity; }
 
 /* ── Scroll hint ── */
 #hint {
-  position: fixed; left: 50%; bottom: 4vh; transform: translateX(-50%);
+  position: fixed; left: 50%; bottom: clamp(20px, 4vh, 36px); transform: translateX(-50%);
   z-index: 7; opacity: 0; pointer-events: none;
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   font: 600 11px/1 'Inter', sans-serif; letter-spacing: .35em;
