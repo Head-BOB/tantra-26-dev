@@ -83,24 +83,42 @@ ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE coordinators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE registrations ENABLE ROW LEVEL SECURITY;
 
--- Public can read departments, payments, active events, coordinators
+-- 1. DEPARTMENTS
 DROP POLICY IF EXISTS "Public can view departments" ON departments;
 CREATE POLICY "Public can view departments" ON departments FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Public can manage departments" ON departments;
+CREATE POLICY "Public can manage departments" ON departments FOR ALL USING (true) WITH CHECK (true);
+
+-- 2. DEPARTMENT PAYMENTS (UPI & QR)
 DROP POLICY IF EXISTS "Public can view department payments" ON department_payments;
 CREATE POLICY "Public can view department payments" ON department_payments FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Public can manage department payments" ON department_payments;
+CREATE POLICY "Public can manage department payments" ON department_payments FOR ALL USING (true) WITH CHECK (true);
+
+-- 3. EVENTS (Fest events, add/edit/delete by dept coordinators & admin)
 DROP POLICY IF EXISTS "Public can view active events" ON events;
 CREATE POLICY "Public can view active events" ON events FOR SELECT USING (is_active = true);
 
+DROP POLICY IF EXISTS "Public can manage events" ON events;
+CREATE POLICY "Public can manage events" ON events FOR ALL USING (true) WITH CHECK (true);
+
+-- 4. COORDINATORS / ORGANISERS (Add/edit/delete by dept staff & admin)
 DROP POLICY IF EXISTS "Public can view coordinators" ON coordinators;
 CREATE POLICY "Public can view coordinators" ON coordinators FOR SELECT USING (true);
 
--- Public can register (insert only)
+DROP POLICY IF EXISTS "Public can manage coordinators" ON coordinators;
+CREATE POLICY "Public can manage coordinators" ON coordinators FOR ALL USING (true) WITH CHECK (true);
+
+-- 5. REGISTRATIONS (Public can register, Admin can view)
 DROP POLICY IF EXISTS "Public can register" ON registrations;
 CREATE POLICY "Public can register" ON registrations FOR INSERT WITH CHECK (true);
 
--- Service role has full permissions for backend administration
+DROP POLICY IF EXISTS "Public can view registrations" ON registrations;
+CREATE POLICY "Public can view registrations" ON registrations FOR SELECT USING (true);
+
+-- 6. SERVICE ROLE FULL ACCESS (Backend server fallback)
 DROP POLICY IF EXISTS "Service role full access departments" ON departments;
 CREATE POLICY "Service role full access departments" ON departments FOR ALL USING (auth.role() = 'service_role');
 

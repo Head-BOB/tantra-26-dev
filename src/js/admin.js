@@ -17,6 +17,9 @@ import {
   apiDeleteEvent,
   apiSaveCoord,
   apiDeleteCoord,
+  apiSyncDeptCoords,
+  fetchDeptCoords,
+  fetchDeptEvents,
   apiSavePayment,
 } from './api.js';
 
@@ -351,6 +354,51 @@ function selectDept(slug) {
   renderCoords(slug);
   renderEvents(slug);
   refreshSidebar();
+
+  // Sync latest coordinators and events from Supabase in background
+  syncDeptDataFromCloud(slug);
+}
+
+async function syncDeptDataFromCloud(slug) {
+  try {
+    const [cloudCoords, cloudEvents] = await Promise.all([
+      fetchDeptCoords(slug),
+      fetchDeptEvents(slug),
+    ]);
+
+    if (cloudCoords && Array.isArray(cloudCoords) && cloudCoords.length > 0) {
+      const store = getAdminCoords();
+      store[slug] = cloudCoords.map(c => ({ name: c.name, phone: c.phone }));
+      setAdminCoords(store);
+      if (activeDept === slug) {
+        renderCoords(slug);
+      }
+    }
+
+    if (cloudEvents && Array.isArray(cloudEvents) && cloudEvents.length > 0) {
+      const evStore = getAdminEvents();
+      evStore[slug] = cloudEvents.map(e => ({
+        id: e.id,
+        type: e.type,
+        title: e.title,
+        date: '7 Oct',
+        time: e.time,
+        venue: e.venue,
+        team: e.team,
+        fee: e.fee,
+        desc: e.desc,
+        _source: 'admin',
+      }));
+      setAdminEvents(evStore);
+      if (activeDept === slug) {
+        renderStats(slug);
+        renderEvents(slug);
+        refreshSidebar();
+      }
+    }
+  } catch (err) {
+    console.warn('Could not sync dept data from cloud:', err);
+  }
 }
 
 // ─── Department Stats ─────────────────────────────────────────
@@ -510,13 +558,17 @@ function bindEventModal() {
 
     setAdminEvents(store);
 
-    // Sync with backend API
-    apiSaveEvent({ ...data, dept_slug: slug, id: finalId }, !!editingEventId).catch(() => {});
-
     closeEventModal();
     refreshSidebar();
     renderStats(slug);
     renderEvents(slug);
+
+    // Sync with backend API & Supabase
+    apiSaveEvent({ ...data, dept_slug: slug, id: finalId }, !!editingEventId).then(res => {
+      if (res) toast('Saved & synced to cloud ✓', 'info');
+    }).catch(err => {
+      console.error('Failed to sync event to cloud:', err);
+    });
   });
 }
 
@@ -585,9 +637,15 @@ function bindCoordModal() {
     }
 
     setAdminCoords(store);
-    apiSaveCoord({ dept_slug: slug, name, phone }, editingCoordIdx).catch(() => {});
     closeCoordModal();
     renderCoords(slug);
+
+    // Sync full department list to Supabase
+    apiSyncDeptCoords(slug, store[slug]).then(ok => {
+      if (ok) toast('Synced to cloud ✓', 'info');
+    }).catch(err => {
+      console.error('Failed to sync coordinators to Supabase:', err);
+    });
   });
 }
 
@@ -636,7 +694,9 @@ function bindDeleteModal() {
         delStore[activeDept].push(pendingDeleteId);
         setDeletedEvents(delStore);
       }
-      apiDeleteEvent(pendingDeleteId).catch(() => {});
+      apiDeleteEvent(pendingDeleteId).then(ok => {
+        if (ok) toast('Deleted from cloud ✓', 'info');
+      }).catch(() => {});
       toast('Event deleted', 'info');
       refreshSidebar();
       renderStats(activeDept);
@@ -647,9 +707,14 @@ function bindDeleteModal() {
       coords.splice(pendingDeleteId, 1);
       store[activeDept] = coords;
       setAdminCoords(store);
-      apiDeleteCoord(pendingDeleteId).catch(() => {});
       toast('Organiser removed', 'info');
       renderCoords(activeDept);
+
+      apiSyncDeptCoords(activeDept, coords).then(ok => {
+        if (ok) toast('Synced to cloud ✓', 'info');
+      }).catch(err => {
+        console.error('Failed to sync coordinators after delete:', err);
+      });
     }
     closeDelModal();
   };

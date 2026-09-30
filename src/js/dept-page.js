@@ -23,7 +23,29 @@ export function initDeptPage(CONFIG, EVENTS) {
       return [];
     }
   })();
-  let allEvents = [...EVENTS, ...adminEvents];
+  const deletedEvents = (() => {
+    try {
+      const store = JSON.parse(localStorage.getItem('tantra26:admin:deleted_events') || '{}');
+      return store[CONFIG.slug] || [];
+    } catch {
+      return [];
+    }
+  })();
+
+  let allEvents = (() => {
+    const base = EVENTS
+      .filter(e => !deletedEvents.includes(e.id))
+      .map(e => {
+        const override = adminEvents.find(a => a.id === e.id);
+        if (override) return { ...e, ...override, date: '7 Oct' };
+        return { ...e, date: '7 Oct' };
+      });
+    const custom = adminEvents
+      .filter(a => !EVENTS.some(s => s.id === a.id))
+      .filter(a => !deletedEvents.includes(a.id))
+      .map(e => ({ ...e, date: '7 Oct' }));
+    return [...base, ...custom];
+  })();
 
   let coordinators = (() => {
     try {
@@ -34,28 +56,32 @@ export function initDeptPage(CONFIG, EVENTS) {
     }
   })();
 
-  // ---- Hero chips ----
-  const types = {};
-  allEvents.forEach((e) => { types[e.type] = 1; });
-  $('#chips').innerHTML = [
-    `<span class="chip">${allEvents.length} events</span>`,
-    ...Object.keys(types).map((t) => `<span class="chip">${esc(t)}s</span>`),
-  ].join('');
-
-  // ---- Filter buttons ----
+  // ---- Hero chips & Filter buttons ----
   let filt = 'All';
   const fl = $('#filters');
-  ['All', ...Object.keys(types)].forEach((t) => {
-    const b = document.createElement('button');
-    b.className = 'fb' + (t === 'All' ? ' on' : '');
-    b.textContent = t === 'All' ? 'All' : t + 's';
-    b.onclick = () => {
-      filt = t;
-      [...fl.children].forEach((x) => x.classList.toggle('on', x === b));
-      draw();
-    };
-    fl.appendChild(b);
-  });
+
+  function updateChipsAndFilters() {
+    const types = {};
+    allEvents.forEach((e) => { types[e.type] = 1; });
+    $('#chips').innerHTML = [
+      `<span class="chip">${allEvents.length} events</span>`,
+      ...Object.keys(types).map((t) => `<span class="chip">${esc(t)}s</span>`),
+    ].join('');
+
+    fl.innerHTML = '';
+    ['All', ...Object.keys(types)].forEach((t) => {
+      const b = document.createElement('button');
+      b.className = 'fb' + (t === filt ? ' on' : '');
+      b.textContent = t === 'All' ? 'All' : t + 's';
+      b.onclick = () => {
+        filt = t;
+        [...fl.children].forEach((x) => x.classList.toggle('on', x === b));
+        draw();
+      };
+      fl.appendChild(b);
+    });
+  }
+  updateChipsAndFilters();
 
   // ---- Registrations storage helpers ----
   const KEY = 'tantra26:registrations';
@@ -106,7 +132,13 @@ export function initDeptPage(CONFIG, EVENTS) {
   fetchDeptEvents(CONFIG.slug).then((backendEvents) => {
     if (backendEvents && Array.isArray(backendEvents) && backendEvents.length > 0) {
       allEvents = backendEvents;
+      updateChipsAndFilters();
       draw();
+      try {
+        const store = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
+        store[CONFIG.slug] = backendEvents;
+        localStorage.setItem('tantra26:admin:events', JSON.stringify(store));
+      } catch {}
     }
   });
   fetchDeptCoords(CONFIG.slug).then((backendCoords) => {
@@ -115,6 +147,11 @@ export function initDeptPage(CONFIG, EVENTS) {
       $('#coord').innerHTML = coordinators
         .map((c) => `<div><b>${esc(c.name)}</b>${esc(c.phone)}</div>`)
         .join('');
+      try {
+        const store = JSON.parse(localStorage.getItem('tantra26:admin:coords') || '{}');
+        store[CONFIG.slug] = backendCoords.map(c => ({ name: c.name, phone: c.phone }));
+        localStorage.setItem('tantra26:admin:coords', JSON.stringify(store));
+      } catch {}
     }
   });
 

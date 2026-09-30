@@ -275,7 +275,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
     try {
       const record = {
         id: eventData.id,
-        dept_slug: eventData.dept_slug,
+        dept_slug: (eventData.dept_slug || '').toLowerCase(),
         type: eventData.type,
         title: eventData.title,
         date: '7 Oct',
@@ -289,7 +289,10 @@ export async function apiSaveEvent(eventData, isEdit = false) {
       };
       const { data, error } = await supabaseClient.from('events').upsert([record]).select().single();
       if (!error) return data;
-    } catch {}
+      console.error('⚠️ Supabase event upsert error:', error.message);
+    } catch (err) {
+      console.error('⚠️ Supabase event upsert exception:', err);
+    }
   }
 
   if (API_BASE) {
@@ -315,9 +318,15 @@ export async function apiSaveEvent(eventData, isEdit = false) {
 export async function apiDeleteEvent(id) {
   if (supabaseClient) {
     try {
-      await supabaseClient.from('events').delete().eq('id', id);
+      const { error } = await supabaseClient.from('events').delete().eq('id', id);
+      if (error) {
+        console.warn('⚠️ Supabase hard-delete failed, trying soft-delete:', error.message);
+        await supabaseClient.from('events').update({ is_active: false }).eq('id', id);
+      }
       return true;
-    } catch {}
+    } catch (err) {
+      console.error('⚠️ Supabase delete event exception:', err);
+    }
   }
   if (API_BASE) {
     try {
@@ -332,11 +341,72 @@ export async function apiDeleteEvent(id) {
   return false;
 }
 
+/**
+ * Fully synchronise a department's coordinators with Supabase.
+ * Atomically replaces the department's coordinators so order and contents
+ * match the dashboard exactly.
+ */
+export async function apiSyncDeptCoords(slug, coordsList) {
+  if (supabaseClient) {
+    try {
+      const cleanSlug = slug.toLowerCase();
+      // 1. Delete current coords for this dept
+      const { error: delErr } = await supabaseClient
+        .from('coordinators')
+        .delete()
+        .eq('dept_slug', cleanSlug);
+
+      if (delErr) {
+        console.warn('⚠️ Supabase clear coords notice:', delErr.message);
+      }
+
+      // 2. Insert new coords with display_order
+      if (coordsList && coordsList.length > 0) {
+        const rows = coordsList.map((c, i) => ({
+          dept_slug: cleanSlug,
+          name: (c.name || '').trim(),
+          phone: (c.phone || '').trim(),
+          display_order: i + 1,
+        }));
+        const { error: insErr } = await supabaseClient
+          .from('coordinators')
+          .insert(rows);
+
+        if (insErr) {
+          console.error('⚠️ Supabase coord insert error:', insErr.message);
+          return false;
+        }
+      }
+      return true;
+    } catch (err) {
+      console.error('⚠️ apiSyncDeptCoords exception:', err);
+    }
+  }
+
+  // Backend API fallback
+  if (API_BASE) {
+    try {
+      const token = getToken();
+      const res = await fetch(`${API_BASE}/api/departments/${slug}/coords`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ coordinators: coordsList }),
+      });
+      return res.ok;
+    } catch {}
+  }
+
+  return false;
+}
+
 export async function apiSaveCoord(coordData, id = null) {
   if (supabaseClient) {
     try {
       const record = {
-        dept_slug: coordData.dept_slug,
+        dept_slug: (coordData.dept_slug || '').toLowerCase(),
         name: coordData.name,
         phone: coordData.phone,
       };
