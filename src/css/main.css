@@ -10,6 +10,7 @@ html {
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: none;
+  overflow-anchor: none;
 }
 html::-webkit-scrollbar { display: none; }
 body {
@@ -20,15 +21,16 @@ body {
   margin: 0;
   padding: 0;
   overscroll-behavior-y: none;
+  overflow-anchor: none;
 }
 
 /* ── Scroll-driven stage system ── */
 .stage {
   position: fixed;
-  inset: 0;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0; left: 0; right: 0;
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100svh;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   will-change: transform, visibility;
@@ -180,7 +182,8 @@ canvas {
   z-index: 5;
   visibility: hidden;
   bottom: -120px;
-  min-height: calc(100dvh + 120px);
+  min-height: calc(100vh + 120px);
+  min-height: calc(100svh + 120px);
 }
 #rocket {
   position: absolute; bottom: 14%; left: 50%;
@@ -236,10 +239,8 @@ canvas {
   box-shadow: 0 -30px 60px rgba(0,0,0,.45);
   position: relative;
   overflow: hidden;
-  height: 100vh;
-  height: 100dvh;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -252,7 +253,7 @@ canvas {
   justify-content: center;
   box-sizing: border-box;
   width: 100%;
-  height: 100%;
+  flex: 1;
   padding: clamp(24px, 4vh, 48px) 0 clamp(16px, 2.5vh, 28px);
 }
 #depts::before {
@@ -393,10 +394,8 @@ canvas {
 /* ── Countdown section ── */
 #launch {
   position: relative;
-  height: 100vh;
-  height: 100dvh;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
   min-height: 520px;
   display: flex;
   flex-direction: column;
@@ -437,10 +436,8 @@ canvas {
 #foot {
   position: relative;
   background: #080c18;
-  height: 100vh;
-  height: 100dvh;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   justify-content: center;

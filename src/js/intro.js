@@ -175,7 +175,7 @@ export function initIntro() {
     }
 
     // Final logo stage (seamless overlay on the same space background)
-    if (t >= 10950) {
+    if (t >= 10750) {
       logoAssembled = true;
     } else if (t < 7500) {
       logoAssembled = false;
