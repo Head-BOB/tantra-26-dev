@@ -111,12 +111,15 @@ CREATE POLICY "Public can view coordinators" ON coordinators FOR SELECT USING (t
 DROP POLICY IF EXISTS "Public can manage coordinators" ON coordinators;
 CREATE POLICY "Public can manage coordinators" ON coordinators FOR ALL USING (true) WITH CHECK (true);
 
--- 5. REGISTRATIONS (Public can register, Admin can view)
+-- 5. REGISTRATIONS (Public can register, Admin can view & manage)
 DROP POLICY IF EXISTS "Public can register" ON registrations;
 CREATE POLICY "Public can register" ON registrations FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public can view registrations" ON registrations;
 CREATE POLICY "Public can view registrations" ON registrations FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public can manage registrations" ON registrations;
+CREATE POLICY "Public can manage registrations" ON registrations FOR ALL USING (true) WITH CHECK (true);
 
 -- 6. SERVICE ROLE FULL ACCESS (Backend server fallback)
 DROP POLICY IF EXISTS "Service role full access departments" ON departments;
