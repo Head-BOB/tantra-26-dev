@@ -40,6 +40,32 @@ export function initDepartments() {
     return Math.min(maxScroll, Math.max(0, c.offsetLeft));
   }
 
+  // Find target scrollLeft to step one card to the left
+  function getPrevScrollLeft() {
+    const currentScroll = rail.scrollLeft;
+    const maxScroll = getMaxScroll();
+    for (let i = cards.length - 1; i >= 0; i--) {
+      const target = i === 0 ? 0 : Math.min(maxScroll, cards[i].offsetLeft);
+      if (target < currentScroll - 20) {
+        return target;
+      }
+    }
+    return 0;
+  }
+
+  // Find target scrollLeft to step one card to the right
+  function getNextScrollLeft() {
+    const currentScroll = rail.scrollLeft;
+    const maxScroll = getMaxScroll();
+    for (let i = 0; i < cards.length; i++) {
+      const target = i === cards.length - 1 ? maxScroll : Math.min(maxScroll, cards[i].offsetLeft);
+      if (target > currentScroll + 20) {
+        return target;
+      }
+    }
+    return maxScroll;
+  }
+
   function getActiveIndex() {
     const maxScroll = getMaxScroll();
     if (rail.scrollLeft <= 12) return 0;
@@ -49,7 +75,8 @@ export function initDepartments() {
     let bestIdx = 0;
     let minDiff = Infinity;
     for (let i = 0; i < cards.length; i++) {
-      const diff = Math.abs(cards[i].offsetLeft - currentScroll);
+      const target = i === 0 ? 0 : Math.min(maxScroll, cards[i].offsetLeft);
+      const diff = Math.abs(target - currentScroll);
       if (diff < minDiff) {
         minDiff = diff;
         bestIdx = i;
@@ -58,11 +85,7 @@ export function initDepartments() {
     return bestIdx;
   }
 
-  let targetIdx = 0;
-
   function scrollToCard(i) {
-    i = Math.max(0, Math.min(cards.length - 1, i));
-    targetIdx = i;
     const targetLeft = getCardScrollLeft(i);
     rail.scrollTo({ left: targetLeft, behavior: 'smooth' });
   }
@@ -102,9 +125,8 @@ export function initDepartments() {
     pv.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const active = getActiveIndex();
-      const base = (targetIdx < active && rail.scrollLeft > getCardScrollLeft(targetIdx) + 8) ? targetIdx : active;
-      scrollToCard(Math.max(0, base - 1));
+      const target = getPrevScrollLeft();
+      rail.scrollTo({ left: target, behavior: 'smooth' });
     };
   }
 
@@ -112,11 +134,8 @@ export function initDepartments() {
     nx.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const maxScroll = getMaxScroll();
-      if (rail.scrollLeft >= maxScroll - 12) return;
-      const active = getActiveIndex();
-      const base = (targetIdx > active && rail.scrollLeft < getCardScrollLeft(targetIdx) - 8) ? targetIdx : active;
-      scrollToCard(Math.min(cards.length - 1, base + 1));
+      const target = getNextScrollLeft();
+      rail.scrollTo({ left: target, behavior: 'smooth' });
     };
   }
 
