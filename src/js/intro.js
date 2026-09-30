@@ -402,26 +402,29 @@ export function initIntro() {
   }
 
   function goToPrevStage() {
+    if (isTransitioning) return;
     cancelAutoScroll();
     dismissReadyHint();
     const idx = getCurrentStageIndex();
-    if (idx === 5) {
-      // From logo reveal: step back to Number 1
-      smoothScrollTo(STAGE_SCROLLS[3], 480);
+    if (idx >= 5) {
+      smoothScrollTo(STAGE_SCROLLS[4], 420);
     } else if (idx === 4) {
-      // From rocket pad: step back to Number 1
-      smoothScrollTo(STAGE_SCROLLS[3], 440);
-    } else if (idx > 0) {
-      // 3 -> Ready?, 2 -> 3, 1 -> 2
-      smoothScrollTo(STAGE_SCROLLS[idx - 1], 440);
+      smoothScrollTo(STAGE_SCROLLS[3], 420);
+    } else if (idx === 3) {
+      smoothScrollTo(STAGE_SCROLLS[2], 420);
+    } else if (idx === 2) {
+      smoothScrollTo(STAGE_SCROLLS[1], 420);
+    } else if (idx === 1) {
+      smoothScrollTo(STAGE_SCROLLS[0], 380);
     } else {
-      smoothScrollTo(0, 320);
+      smoothScrollTo(0, 300);
     }
   }
 
   // Touch handling on mobile (prevents inertial fling past the intro to the footer)
   let touchStartY = 0;
   let touchActive = false;
+  let lastTouchActionTime = 0;
 
   window.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
@@ -433,20 +436,19 @@ export function initIntro() {
   window.addEventListener('touchmove', (e) => {
     if (!touchActive || e.touches.length !== 1) return;
     const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
-
-    // If user swipes downward (reversing), cancel any running auto-countdown immediately
     const currentY = e.touches[0].clientY;
     const dy = touchStartY - currentY;
-    if (Math.abs(dy) > 8) {
+
+    if (Math.abs(dy) > 10) {
       dismissReadyHint();
     }
-    if (dy < -25 && (isAutoScrolling || countdownTimer)) {
+
+    // If user swipes downward during auto-countdown, cancel the auto-scroll without jumping backwards
+    if (dy < -35 && (isAutoScrolling || countdownTimer)) {
       cancelAutoScroll();
-      goToPrevStage();
-      touchStartY = currentY;
     }
 
-    // While inside the intro, cancel native momentum fling
+    // While inside the intro, prevent native momentum fling
     if (sc < maxS - 15) {
       if (e.cancelable) e.preventDefault();
     }
@@ -456,21 +458,26 @@ export function initIntro() {
     if (!touchActive) return;
     touchActive = false;
     const sc = window.pageYOffset || document.documentElement.scrollTop || 0;
-    const touchEndY = e.changedTouches[0].clientY;
-    const dy = touchStartY - touchEndY; // positive = swipe up = scroll down
 
-    // In main site (below intro): allow reverse scroll back into intro if at the very top
+    // Once in the main site (below intro), do NOT intercept touches or force reverse scroll!
     if (sc >= maxS - 15) {
-      if (dy < -30 && sc <= maxS + 40) {
-        goToPrevStage();
-      }
       return;
     }
 
-    if (Math.abs(dy) > 25) {
+    const touchEndY = e.changedTouches[0].clientY;
+    const dy = touchStartY - touchEndY; // positive = swipe up = scroll down
+
+    const now = performance.now();
+    if (now - lastTouchActionTime < 450 || isTransitioning) {
+      return;
+    }
+
+    // Require intentional swipe distance (50px) to prevent accidental micro-movements
+    if (Math.abs(dy) > 50) {
+      lastTouchActionTime = now;
       if (dy > 0) {
         goToNextStage();
-      } else {
+      } else if (sc > 30) {
         goToPrevStage();
       }
     }
