@@ -14,13 +14,19 @@
 }
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
 }
 body {
   background: var(--navy);
   color: var(--cream);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
   min-height: 100vh;
+  position: relative;
 }
 [hidden] {
   display: none !important;
@@ -42,6 +48,11 @@ h1, h2, h3 {
   padding: 130px max(5vw, 20px) 64px;
   border-bottom: 6px solid var(--ink);
   overflow: hidden;
+  overflow: clip;
+  contain: paint;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 .ghost {
   position: absolute;
@@ -141,6 +152,10 @@ h1, h2, h3 {
 section {
   position: relative;
   padding: clamp(56px, 9vh, 96px) max(5vw, 20px);
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
 }
 section::before {
   content: "";
@@ -169,6 +184,8 @@ section::before {
 .next {
   position: relative;
   max-width: 1240px;
+  width: 100%;
+  min-width: 0;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -186,6 +203,9 @@ section::before {
   flex-direction: column;
   gap: 16px;
   justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .tag {
   align-self: flex-start;
@@ -310,6 +330,8 @@ dd {
 .list {
   position: relative;
   max-width: 1240px;
+  width: 100%;
+  min-width: 0;
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr));
@@ -325,6 +347,10 @@ dd {
   opacity: 0;
   transform: translateY(30px);
   transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s, border-color 0.35s;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .tk.in {
   opacity: 1;
@@ -493,7 +519,9 @@ dd {
   justify-content: center;
   gap: 10px;
   max-width: 1000px;
+  width: 100%;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 .others a {
   font: 700 12px/1 'Inter', sans-serif;
@@ -505,6 +533,8 @@ dd {
   padding: 15px 20px;
   clip-path: polygon(3% 0, 100% 8%, 97% 100%, 0 92%);
   transition: transform 0.3s, filter 0.3s;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 .others a:hover {
   transform: translateY(-4px);
@@ -515,6 +545,7 @@ dd {
   font: 400 clamp(1.05rem, 2.4vw, 1.5rem)/1.2 'Anton', Impact, sans-serif;
   letter-spacing: 0.22em;
   text-transform: uppercase;
+  word-break: break-word;
 }
 .credit {
   margin-top: 14px;
@@ -522,6 +553,7 @@ dd {
   letter-spacing: 0.32em;
   text-transform: uppercase;
   color: rgba(239, 232, 218, 0.6);
+  word-break: break-word;
 }
 .demo {
   position: fixed;
@@ -537,17 +569,208 @@ dd {
   padding: 12px 18px;
   clip-path: polygon(3% 0, 100% 8%, 97% 100%, 0 92%);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
 }
 
 @media (max-width: 860px) {
   .next { grid-template-columns: 1fr; }
   .hero { padding-top: 110px; }
 }
-@media (max-width: 520px) {
-  .tk { grid-template-columns: 92px 1fr; }
-  .stub .code { font-size: 1.6rem; }
-  .body { padding: 18px 16px 16px; }
+
+@media (max-width: 600px) {
+  section {
+    padding: 44px 16px;
+  }
+  .hero {
+    padding: 88px 16px 40px;
+  }
+  .top {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+  .pill {
+    padding: 9px 12px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .ghost {
+    right: 0;
+    bottom: 0;
+    font-size: min(34vw, 36vh);
+  }
+  .hero h1 {
+    font-size: clamp(2.8rem, 14vw, 4.4rem);
+    word-break: break-word;
+  }
+  .greet {
+    font-size: 0.95rem;
+    margin-top: 16px;
+    max-width: 100%;
+  }
+  .chips {
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .chip {
+    font-size: 10px;
+    padding: 9px 12px;
+    letter-spacing: 0.14em;
+  }
+  .sh {
+    margin-bottom: 24px;
+  }
+  .sh h2 {
+    font-size: clamp(2rem, 9vw, 3rem);
+    word-break: break-word;
+  }
+  .ncard {
+    padding: 20px 16px;
+    box-shadow: 5px 5px 0 var(--gold);
+    gap: 12px;
+  }
+  .ncard h2 {
+    font-size: clamp(1.8rem, 7.5vw, 2.6rem);
+    word-break: break-word;
+  }
+  .ncard dl, .tk dl {
+    grid-template-columns: auto 1fr;
+    gap: 6px 10px;
+    font-size: 0.84rem;
+    word-break: break-word;
+  }
+  .slabs {
+    gap: 10px;
+  }
+  .sl {
+    padding: 16px 6px;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .sl b {
+    font-size: clamp(2.2rem, 10vw, 3.2rem);
+  }
+  .fl {
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .fb {
+    padding: 10px 14px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+  .list {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .tk {
+    grid-template-columns: 78px 1fr;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .tk.in:hover {
+    transform: none;
+    box-shadow: 4px 4px 0 var(--ink);
+    border-color: var(--ink);
+  }
+  .stub {
+    padding: 16px 4px;
+    gap: 8px;
+  }
+  .stub .code {
+    font-size: 1.45rem;
+  }
+  .st {
+    font-size: 8px;
+    letter-spacing: 0.08em;
+    padding: 6px 4px;
+  }
+  .body {
+    padding: 16px 14px 14px;
+    gap: 10px;
+    min-width: 0;
+  }
+  .body h3 {
+    font-size: 1.4rem;
+    word-break: break-word;
+  }
+  .foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .rid {
+    align-self: flex-start;
+    font-size: 0.92rem;
+    padding: 7px 11px;
+    letter-spacing: 0.1em;
+  }
+  .acts {
+    width: 100%;
+  }
+  .ab {
+    width: 100%;
+    text-align: center;
+    padding: 11px 12px;
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+  }
+  .info h2 {
+    font-size: clamp(1.6rem, 6.5vw, 2.2rem);
+    margin-bottom: 18px;
+  }
+  .others {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+  }
+  .others a {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    padding: 14px 10px;
+    text-align: center;
+    word-break: break-word;
+    white-space: normal;
+  }
+  .college {
+    margin-top: 36px;
+    font-size: 1.1rem;
+    letter-spacing: 0.12em;
+  }
+  .credit {
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+  }
 }
+
+@media (max-width: 360px) {
+  .tk {
+    grid-template-columns: 68px 1fr;
+  }
+  .stub .code {
+    font-size: 1.25rem;
+  }
+  .st {
+    font-size: 7.5px;
+    padding: 5px 2px;
+  }
+  .body {
+    padding: 12px 10px;
+  }
+  .body h3 {
+    font-size: 1.25rem;
+  }
+  .pill {
+    padding: 8px 10px;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;
