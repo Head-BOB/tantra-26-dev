@@ -1,0 +1,56 @@
+export const CONFIG = {
+  dept: 'Cyber Security',
+  slug: 'cscy',
+  endpoint: '',
+  coordinators: [
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+  ],
+};
+
+export const EVENTS = [
+  {
+    id: 'capture-flag',
+    type: 'Competition',
+    title: 'Capture the Flag',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'CS Lab 1',
+    team: 3,
+    fee: '₹150',
+    desc: 'Team-based hacking challenges across web, crypto and forensics. Capture the most flags before time runs out.',
+  },
+  {
+    id: 'cipher-break',
+    type: 'Competition',
+    title: 'Cipher Break',
+    date: '7 Oct',
+    time: '2:30 PM',
+    venue: 'CS Lab 2',
+    team: 2,
+    fee: '₹100',
+    desc: 'Decode layered ciphers and puzzles. First to the final plaintext wins.',
+  },
+  {
+    id: 'ethical-hacking',
+    type: 'Workshop',
+    title: 'Ethical Hacking 101',
+    date: '8 Oct',
+    time: '11:00 AM',
+    venue: 'Seminar Hall',
+    team: 1,
+    fee: 'Free',
+    desc: 'How attackers think and how defenders stop them, with live demos on a safe practice lab.',
+  },
+  {
+    id: 'forensics-talk',
+    type: 'Talk',
+    title: 'Digital Forensics in Action',
+    date: '9 Oct',
+    time: '10:30 AM',
+    venue: 'Main Auditorium',
+    team: 1,
+    fee: 'Free',
+    desc: 'A look at how investigators trace what happened after a breach.',
+  },
+];

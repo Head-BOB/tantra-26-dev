@@ -27,6 +27,7 @@ export default defineConfig({
         deptEee:   resolve(__dirname, 'departments/eee.html'),
         deptEce:   resolve(__dirname, 'departments/ece.html'),
         deptAei:   resolve(__dirname, 'departments/aei.html'),
+        deptCscy:  resolve(__dirname, 'departments/cscy.html'),
         // Admin dashboard
         admin: resolve(__dirname, 'admin/index.html'),
       },

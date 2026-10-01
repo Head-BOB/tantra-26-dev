@@ -12,9 +12,11 @@ import { EVENTS as ECE_EVENTS } from './events/ece.js';
 import { EVENTS as AEI_EVENTS } from './events/aei.js';
 import { EVENTS as CIVIL_EVENTS } from './events/civil.js';
 import { EVENTS as MECH_EVENTS } from './events/mech.js';
+import { EVENTS as CSCY_EVENTS } from './events/cscy.js';
 
 const DEPT_MAP = {
   cse:   { name: 'Computer Science & Engineering', events: CSE_EVENTS },
+  cscy:  { name: 'Cyber Security', events: CSCY_EVENTS },
   ai:    { name: 'Artificial Intelligence & Data Science', events: AI_EVENTS },
   csd:   { name: 'Computer Science & Design', events: CSD_EVENTS },
   csbs:  { name: 'Computer Science & Business Systems', events: CSBS_EVENTS },
