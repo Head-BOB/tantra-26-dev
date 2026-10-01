@@ -541,18 +541,6 @@ canvas {
 .fdept-btn:hover b {
   transform: translateX(5px);
 }
-.fdept-btn.my-events-btn {
-  background: #000;
-  color: var(--cream);
-  border: 1.5px solid rgba(227, 167, 47, 0.4);
-  box-shadow: 4px 4px 0 var(--gold);
-}
-.fdept-btn.my-events-btn:hover {
-  background: var(--gold);
-  color: var(--ink);
-  border-color: var(--gold);
-  box-shadow: 6px 6px 0 #000;
-}
 .social {
   display: flex;
   gap: 14px;
