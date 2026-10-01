@@ -6,6 +6,7 @@
 
 import QRCode from 'qrcode';
 import { fetchDeptEvents, fetchDeptCoords, fetchDeptPayment, submitRegistration } from './api.js';
+import { getEventMetadata } from '../data/all-events.js';
 
 export function initDeptPage(CONFIG, EVENTS) {
   const $ = (x) => document.querySelector(x);
@@ -214,10 +215,192 @@ export function initDeptPage(CONFIG, EVENTS) {
     if (d3) d3.className = 'step-indicator' + (stepNum === 3 ? ' active' : '');
   }
 
+  // ── Schedule conflict detection ─────────────────────────────
+  const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+
+  function parseEventTime(dateStr, timeStr) {
+    if (!dateStr || !timeStr) return null;
+    const d = /(\d{1,2})\s*([A-Za-z]{3})/i.exec(dateStr);
+    const t = /(\d{1,2}):(\d{2})\s*(AM|PM)/i.exec(timeStr);
+    if (!d || !t) return null;
+    const m = MON[d[2].toLowerCase()];
+    if (!m) return null;
+    const h = (+t[1] % 12) + (/pm/i.test(t[3]) ? 12 : 0);
+    const pad = (n) => (n < 10 ? '0' : '') + n;
+    return new Date(`2026-${pad(m)}-${pad(+d[1])}T${pad(h)}:${t[2]}:00+05:30`).getTime();
+  }
+
+  function getEventDurationHours(ev) {
+    const id = (ev.id || ev.eventId || '').toLowerCase();
+    const type = (ev.type || ev.etype || '').toLowerCase();
+    const title = (ev.title || ev.event || '').toLowerCase();
+    if (id.includes('hack') || title.includes('hack') || type.includes('hack')) return 6;
+    if (type.includes('workshop')) return 2.5;
+    return 2;
+  }
+
+  function formatTime12(h, m) {
+    const ampm = (h >= 12 && h < 24) || h === 12 ? 'PM' : 'AM';
+    const h12 = (h % 12) === 0 ? 12 : (h % 12);
+    const mStr = (m < 10 ? '0' : '') + m;
+    return `${h12}:${mStr} ${ampm}`;
+  }
+
+  function getTimeRangeString(dateStr, timeStr, durationHours) {
+    const start = parseEventTime(dateStr, timeStr);
+    if (!start) return timeStr || '';
+    const d = new Date(start);
+    const startH = d.getHours();
+    const startM = d.getMinutes();
+    const endTotalM = startH * 60 + startM + Math.round(durationHours * 60);
+    const endH = Math.floor(endTotalM / 60);
+    const endM = endTotalM % 60;
+    return `${formatTime12(startH, startM)} – ${formatTime12(endH, endM)}`;
+  }
+
+  function findScheduleConflicts(targetEvent, userEmail, userPhone) {
+    const allRegs = loadRegs();
+    if (!allRegs.length) return [];
+
+    const cleanEmail = (userEmail || '').toLowerCase().trim();
+    const cleanPhone = (userPhone || '').replace(/\D/g, '');
+
+    const userRegs = allRegs.filter((r) => {
+      if (cleanEmail && r.email && r.email.toLowerCase().trim() === cleanEmail) return true;
+      if (cleanPhone && r.phone && r.phone.replace(/\D/g, '') === cleanPhone) return true;
+      return false;
+    });
+
+    const candidateRegs = userRegs.length > 0 ? userRegs : allRegs;
+    const targetStart = parseEventTime(targetEvent.date, targetEvent.time);
+    if (!targetStart) return [];
+    const targetDurHours = getEventDurationHours(targetEvent);
+    const targetEnd = targetStart + targetDurHours * 3600000;
+
+    const conflicts = [];
+    candidateRegs.forEach((r) => {
+      const regEventId = r.eventId || r.event_id;
+      if (regEventId === targetEvent.id && r.slug === CONFIG.slug) return;
+
+      const meta = getEventMetadata(regEventId, r.event || r.event_title, r.slug);
+      const rDate = (r.date && !r.date.includes('T')) ? r.date : (meta ? meta.date : '7 Oct');
+      const rTime = (r.time && /(AM|PM)/i.test(r.time)) ? r.time : (meta ? meta.time : '10:00 AM');
+      const rStart = parseEventTime(rDate, rTime);
+      if (!rStart) return;
+
+      const rDurHours = getEventDurationHours(meta || r);
+      const rEnd = rStart + rDurHours * 3600000;
+
+      // Interval overlap: targetStart < rEnd && targetEnd > rStart
+      if (targetStart < rEnd && targetEnd > rStart) {
+        conflicts.push({
+          event: r.event || (meta ? meta.title : 'Registered Event'),
+          dept: r.dept || (meta ? meta.dept : (r.slug ? r.slug.toUpperCase() : 'Event')),
+          slug: r.slug,
+          date: rDate,
+          time: rTime,
+          start: rStart,
+          end: rEnd,
+          timeRange: getTimeRangeString(rDate, rTime, rDurHours),
+          regId: r.regId,
+        });
+      }
+    });
+
+    return conflicts;
+  }
+
+  let conflictConfirmed = false;
+
+  function clearConflictWarning() {
+    const existing = $('#conflict-overlay') || $('#crossover-box');
+    if (existing) existing.remove();
+  }
+
+  function renderConflictWarning(conflicts, onConfirm) {
+    clearConflictWarning();
+    const targetDurHours = getEventDurationHours(curEvent);
+    const curTimeRange = getTimeRangeString(curEvent.date, curEvent.time, targetDurHours);
+
+    const warn = document.createElement('div');
+    warn.className = 'conflict-overlay';
+    warn.id = 'conflict-overlay';
+
+    warn.innerHTML =
+      `<div class="co-header">` +
+        `<div>` +
+          `<div class="co-header-tag">Schedule Conflict</div>` +
+          `<h3>Time Clash Detected</h3>` +
+        `</div>` +
+        `<button type="button" class="co-close-btn" id="co-x-btn" aria-label="Dismiss">&times;</button>` +
+      `</div>` +
+      `<div class="co-body">` +
+        `<div class="co-event-card">` +
+          `<span class="co-badge">Registering For</span>` +
+          `<h4>${esc(curEvent.title)}</h4>` +
+          `<p>${esc(CONFIG.dept)} &middot; ${esc(curEvent.date)} &middot; ${esc(curTimeRange)}</p>` +
+        `</div>` +
+        `<div class="co-clash-header">` +
+          `Overlaps with ${conflicts.length} registered event${conflicts.length > 1 ? 's' : ''}:` +
+        `</div>` +
+        `<div class="co-clash-list">` +
+          conflicts.map((c) =>
+            `<div class="co-clash-item">` +
+              `<div class="co-clash-info">` +
+                `<span class="co-clash-dept">${esc(c.dept)}</span>` +
+                `<div class="co-clash-title">${esc(c.event)}</div>` +
+                `<span class="co-clash-time">${esc(c.date)} &middot; ${esc(c.timeRange)}</span>` +
+              `</div>` +
+              `<span class="co-clash-tag">Clashes</span>` +
+            `</div>`
+          ).join('') +
+        `</div>` +
+      `</div>` +
+      `<div class="co-actions">` +
+        `<button type="button" class="co-btn-back" id="co-back-btn">&larr; Review / Go Back</button>` +
+        `<button type="button" class="co-btn-confirm" id="co-confirm-btn">Confirm &amp; Proceed &rarr;</button>` +
+      `</div>`;
+
+    const sheet = modal ? modal.querySelector('.reg-sheet') : null;
+    if (sheet) {
+      sheet.appendChild(warn);
+    } else {
+      detailsForm.appendChild(warn);
+    }
+
+    const dismiss = () => {
+      clearConflictWarning();
+      // If user hasn't filled form yet (i.e. warned right on clicking register), close modal
+      const hasName = detailsForm.elements.name && detailsForm.elements.name.value.trim();
+      const hasEmail = detailsForm.elements.email && detailsForm.elements.email.value.trim();
+      if (!conflictConfirmed && !hasName && !hasEmail) {
+        closeModal();
+      }
+    };
+
+    const xBtn = warn.querySelector('#co-x-btn');
+    if (xBtn) xBtn.onclick = dismiss;
+
+    const backBtn = warn.querySelector('#co-back-btn');
+    if (backBtn) backBtn.onclick = dismiss;
+
+    const confirmBtn = warn.querySelector('#co-confirm-btn');
+    if (confirmBtn) {
+      confirmBtn.onclick = () => {
+        conflictConfirmed = true;
+        clearConflictWarning();
+        onConfirm();
+      };
+    }
+  }
+
   function openModal(ev) {
     if (!ev) return;
     curEvent = ev;
     curData  = null;
+    conflictConfirmed = false;
+    clearConflictWarning();
+
     const feeRaw = String(ev.fee || '').trim();
     isFreeEvent  = /free|^₹?0$/i.test(feeRaw);
 
@@ -242,6 +425,7 @@ export function initDeptPage(CONFIG, EVENTS) {
     const subBtn = $('#sub');
     if (subBtn) {
       subBtn.disabled = false;
+      subBtn.style.display = '';
       subBtn.textContent = isFreeEvent ? 'Complete Free Registration ✓' : 'Proceed to Payment →';
     }
 
@@ -254,15 +438,28 @@ export function initDeptPage(CONFIG, EVENTS) {
     setStep(1);
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
-    setTimeout(() => {
-      if (detailsForm.elements.name) detailsForm.elements.name.focus();
-    }, 60);
+
+    // Check immediately for conflicts before user fills anything
+    const earlyConflicts = findScheduleConflicts(curEvent);
+    if (earlyConflicts.length > 0) {
+      renderConflictWarning(earlyConflicts, () => {
+        setTimeout(() => {
+          if (detailsForm.elements.name) detailsForm.elements.name.focus();
+        }, 60);
+      });
+    } else {
+      setTimeout(() => {
+        if (detailsForm.elements.name) detailsForm.elements.name.focus();
+      }, 60);
+    }
   }
 
   let isProcessing = false;
 
   function closeModal() {
     if (isProcessing) return;
+    conflictConfirmed = false;
+    clearConflictWarning();
     modal.classList.remove('open');
     document.body.style.overflow = '';
     draw();
@@ -287,6 +484,12 @@ export function initDeptPage(CONFIG, EVENTS) {
   addEventListener('keydown', (e) => {
     if (isProcessing) return;
     if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  // Reset conflict confirmation when form input changes
+  detailsForm.addEventListener('input', () => {
+    conflictConfirmed = false;
+    clearConflictWarning();
   });
 
   // ── Step 1: Participant details submit ──────────────────────
@@ -322,30 +525,45 @@ export function initDeptPage(CONFIG, EVENTS) {
     err.textContent = '';
     curData = d;
 
-    if (isFreeEvent) {
-      const subBtn = $('#sub');
-      isProcessing = true;
-      if (mx) mx.classList.add('disabled');
-      if (subBtn) {
-        subBtn.disabled = true;
-        subBtn.innerHTML = '<span class="btn-spinner"></span> Confirming Registration…';
+    // Check for crossover / schedule conflict with already registered events
+    if (!conflictConfirmed) {
+      const conflicts = findScheduleConflicts(curEvent, d.email, d.phone);
+      if (conflicts.length > 0) {
+        renderConflictWarning(conflicts, () => {
+          proceedAfterDetails();
+        });
+        return;
       }
-      try {
-        await new Promise((r) => setTimeout(r, 1000));
-        await finalizeRegistration('FREE-REGISTRATION');
-      } catch (submitErr) {
-        err.textContent = submitErr.message || 'Registration failed. Please try again.';
-      } finally {
-        isProcessing = false;
-        if (mx) mx.classList.remove('disabled');
+    }
+
+    proceedAfterDetails();
+
+    async function proceedAfterDetails() {
+      if (isFreeEvent) {
+        const subBtn = $('#sub');
+        isProcessing = true;
+        if (mx) mx.classList.add('disabled');
         if (subBtn) {
-          subBtn.disabled = false;
-          subBtn.textContent = 'Complete Free Registration ✓';
+          subBtn.disabled = true;
+          subBtn.innerHTML = '<span class="btn-spinner"></span> Confirming Registration…';
         }
+        try {
+          await new Promise((r) => setTimeout(r, 1000));
+          await finalizeRegistration('FREE-REGISTRATION');
+        } catch (submitErr) {
+          err.textContent = submitErr.message || 'Registration failed. Please try again.';
+        } finally {
+          isProcessing = false;
+          if (mx) mx.classList.remove('disabled');
+          if (subBtn) {
+            subBtn.disabled = false;
+            subBtn.textContent = 'Complete Free Registration ✓';
+          }
+        }
+      } else {
+        preparePaymentStep();
+        setStep(2);
       }
-    } else {
-      preparePaymentStep();
-      setStep(2);
     }
   });
 
@@ -520,6 +738,10 @@ export function initDeptPage(CONFIG, EVENTS) {
       dept:    CONFIG.dept,
       eventId: curEvent.id,
       event:   curEvent.title,
+      etype:   curEvent.type || 'Event',
+      date:    curEvent.date || '7 Oct',
+      time:    curEvent.time || '10:00 AM',
+      venue:   curEvent.venue || 'Campus',
       fee:     curEvent.fee || 'Free',
       name:    curData.name,
       email:   curData.email,
@@ -528,12 +750,13 @@ export function initDeptPage(CONFIG, EVENTS) {
       team:    curData.team,
       txnId:   txnId,
       regId:   regId,
-      time:    new Date().toISOString(),
+      regTime: new Date().toISOString(),
     };
 
     const list = loadRegs();
     list.unshift(rec);
     saveRegs(list);
+    try { localStorage.setItem('tantra26:last_user_name', curData.name); } catch (_) {}
 
     populatePass(rec);
     setStep(3);

@@ -15,6 +15,8 @@ export default defineConfig({
       input: {
         // Landing page
         main: resolve(__dirname, 'index.html'),
+        // My Events page
+        myEvents: resolve(__dirname, 'my-events.html'),
         // Department pages
         deptAi:    resolve(__dirname, 'departments/ai.html'),
         deptCse:   resolve(__dirname, 'departments/cse.html'),

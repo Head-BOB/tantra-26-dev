@@ -33,6 +33,10 @@
   ],
   "rewrites": [
     {
+      "source": "/my-events",
+      "destination": "/my-events.html"
+    },
+    {
       "source": "/admin",
       "destination": "/admin/index.html"
     },

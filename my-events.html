@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Events · Tantra 26 · Vimal Jyothi Engineering College</title>
+<meta name="description" content="View your registered events, live countdown to your next event, tickets, and calendar passes for Tantra 26 at Vimal Jyothi Engineering College.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<script type="module" src="/src/js/entries/my-events.js"></script>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<header class="hero">
+  <nav class="top">
+    <a class="pill" href="/">&larr; Tantra 26</a>
+    <a class="pill" href="#departments" style="color:var(--gold)">Departments</a>
+  </nav>
+  <span class="ghost" aria-hidden="true">26</span>
+  <div class="hero-in">
+    <p class="eye">Tantra 26 &middot; Your schedule</p>
+    <h1><span class="ln"><span>My</span></span><span class="ln"><span>Events</span></span></h1>
+    <p class="greet" id="greet"></p>
+    <div class="chips" id="chips"></div>
+  </div>
+</header>
+
+<!-- ===== NEXT UP (countdown to the next registered event; falls back to fest launch) ===== -->
+<section id="nextsec">
+  <div class="sh"><p id="next-eyebrow">Next up</p><h2 id="next-h">Coming soon</h2></div>
+  <div class="next">
+    <div class="ncard" id="ncard"></div>
+    <div class="slabs" id="slabs">
+      <div class="sl" style="--bg:#c23b22;--fg:#efe8da"><b data-u="d">00</b><span>Days</span></div>
+      <div class="sl" style="--bg:#e3a72f;--fg:#141414"><b data-u="h">00</b><span>Hours</span></div>
+      <div class="sl" style="--bg:#2b6a4d;--fg:#efe8da"><b data-u="m">00</b><span>Minutes</span></div>
+      <div class="sl" style="--bg:#efe8da;--fg:#141414"><b data-u="s">00</b><span>Seconds</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== ALL REGISTRATIONS ===== -->
+<section id="mine">
+  <div class="sh"><p>Your tickets</p><h2>Registered</h2></div>
+  <div class="fl" id="fl"></div>
+  <div class="list" id="list"></div>
+  <div class="empty" id="empty" hidden>
+    <h3>Nothing here yet</h3>
+    <p>You haven't registered for any events. Pick a department, choose an event and hit Register &mdash; it will show up here.</p>
+    <a class="pill" href="#departments" style="background:var(--gold);color:var(--ink)">Browse departments</a>
+  </div>
+</section>
+
+<!-- ===== DEPARTMENTS + CREDITS ===== -->
+<section class="info" id="departments">
+  <h2>Find more events</h2>
+  <div class="others" id="others"></div>
+  <p class="college">Vimal Jyothi Engineering College</p>
+  <p class="credit">Tantra 26 &middot; National Level Techfest</p>
+</section>
+
+</body>
+</html>
+<!-- #TECHNOBLADENEVERDIES -->
