@@ -9,19 +9,12 @@
 
 @import './tokens.css';
 
-html {
-  scroll-behavior: smooth;
-  overflow-x: hidden;
-  max-width: 100%;
-  width: 100%;
-}
+html { scroll-behavior: smooth; }
 body {
   background: var(--navy);
   color: var(--cream);
   font-family: 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
-  max-width: 100%;
-  width: 100%;
 }
 a { color: inherit; }
 [hidden] { display: none !important; }
