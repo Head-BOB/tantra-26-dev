@@ -202,6 +202,18 @@ export function initMyEvents() {
     renderChips();
   }
 
+  // Top navigation "← Tantra 26" goes back to previous page if navigated from site
+  const backLink = document.querySelector('.top a[href="/"]');
+  if (backLink) {
+    backLink.addEventListener('click', (e) => {
+      const hasLocalReferrer = document.referrer && document.referrer.includes(window.location.host);
+      if (hasLocalReferrer || window.history.length > 1) {
+        e.preventDefault();
+        window.history.back();
+      }
+    });
+  }
+
   // Render department links at the bottom
   const othersEl = $('#others');
   if (othersEl) {

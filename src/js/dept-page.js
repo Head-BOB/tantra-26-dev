@@ -84,6 +84,31 @@ export function initDeptPage(CONFIG, EVENTS) {
   }
   updateChipsAndFilters();
 
+  // ---- Top navigation bar handlers ----
+  const backLink = document.querySelector('.top a.back');
+  if (backLink) {
+    backLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const hasLocalReferrer = document.referrer && document.referrer.includes(window.location.host);
+      if (hasLocalReferrer || window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = '/#depts';
+      }
+    });
+  }
+
+  const crumbLink = document.querySelector('.top a.crumb');
+  if (crumbLink) {
+    crumbLink.addEventListener('click', (e) => {
+      const ref = document.referrer || '';
+      if (ref.includes(window.location.host) && !ref.includes('/departments/')) {
+        e.preventDefault();
+        window.history.back();
+      }
+    });
+  }
+
   // ---- Registrations storage helpers ----
   const KEY = 'tantra26:registrations';
   function loadRegs() {

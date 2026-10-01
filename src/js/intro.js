@@ -625,8 +625,34 @@ export function initIntro() {
     requestAnimationFrame(loop);
   }
 
-  scrollTo(0, 0);
-  render(0);
-  scheduleReadyHint();
-  requestAnimationFrame(loop);
+  function scrollToDepts(smooth = false) {
+    const depts = document.querySelector('#depts');
+    if (depts) {
+      cur = T;
+      render(T);
+      const top = depts.getBoundingClientRect().top + (window.pageYOffset || document.documentElement.scrollTop || 0);
+      window.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
+    }
+  }
+
+  window.addEventListener('hashchange', () => {
+    if (location.hash === '#depts' || location.hash === '#departments') {
+      scrollToDepts(true);
+    }
+  });
+
+  const isDeptsHash = location.hash === '#depts' || location.hash === '#departments';
+  if (isDeptsHash) {
+    cur = T;
+    render(T);
+    requestAnimationFrame(() => {
+      scrollToDepts(false);
+      requestAnimationFrame(loop);
+    });
+  } else {
+    scrollTo(0, 0);
+    render(0);
+    scheduleReadyHint();
+    requestAnimationFrame(loop);
+  }
 }

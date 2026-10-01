@@ -35,9 +35,11 @@ h1, h2, h3 {
   text-decoration: none;
   clip-path: polygon(2% 8%,100% 0,97% 92%,0 100%);
   transition: background .3s, color .3s, transform .3s;
+  cursor: pointer;
 }
 .back:hover { background: var(--gold); color: var(--ink); transform: translateX(-3px); }
 .crumb { color: var(--gold); }
+.crumb:hover { background: var(--gold); color: var(--ink); transform: translateY(-3px); }
 
 /* ── Hero section ── */
 .hero {
@@ -750,12 +752,19 @@ input:focus, textarea:focus {
 /* ── Responsive ── */
 @media (max-width: 820px) {
   .hero h1 { font-size: clamp(2.4rem,10.5vw,5rem); }
-  .hero-in { padding-top: 40px; }
+  .hero-in { padding-top: 100px; }
   .hero { align-items: flex-start; }
   .row { grid-template-columns: 1fr; }
 
-  /* Hide back/crumb nav on phones — users have OS back gesture/button */
-  .top { display: none; }
+  .top {
+    padding: 14px 16px;
+    gap: 8px;
+  }
+  .back, .crumb {
+    padding: 9px 12px;
+    font-size: 10px;
+    letter-spacing: .14em;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
