@@ -394,8 +394,8 @@ if (!ev) {
 
   const handleShare = async () => {
     const shareData = {
-      title: `${ev.title} · Tantra 26 | National Level Techfest`,
-      text: `Check out ${ev.title} (${D[0]}) at Tantra 26 - National Level Techfest!${prizePool ? ` Prize Pool: ${prizePool.text}.` : ''} 7-8 October 2026:`,
+      title: `${ev.title} · Tantra 26`,
+      text: `${ev.title} · Tantra 26`,
       url: shareUrl,
     };
 
@@ -419,7 +419,7 @@ if (!ev) {
         document.execCommand('copy');
         document.body.removeChild(inp);
       }
-      showToast('Event link copied! Preview banner & details ready to share 📋');
+      showToast('Link copied to clipboard');
     } catch {
       prompt('Copy event link:', shareUrl);
     }
