@@ -442,9 +442,17 @@ canvas {
 #foot {
   position: relative;
   background: #0a0e1c;
-  padding: clamp(80px, 13vh, 140px) 6vw 56px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100lvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(50px, 8vh, 90px) 6vw clamp(32px, 5vh, 60px);
   text-align: center;
   overflow: hidden;
+  box-sizing: border-box;
 }
 .fstars {
   position: absolute;
@@ -601,6 +609,12 @@ canvas {
   #s1 .wrap { padding: 0 5vw; }
   .slabs { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
   .cd-u b { font-size: min(20vh,36vw); }
+  #foot {
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-height: 100lvh;
+    justify-content: center;
+  }
 }
 @media (max-width: 380px) {
   .line { font-size: clamp(2.8rem,17vw,5rem); }

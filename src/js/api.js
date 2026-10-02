@@ -1001,6 +1001,19 @@ export async function apiFetchFeaturedEvents() {
           const b = ev.banners || {};
           return Boolean(b.featured_desktop && b.featured_mobile);
         });
+        unpacked.sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0));
+        const seenSlots = new Set();
+        let curSlot = 1;
+        unpacked.forEach(e => {
+          let o = parseInt(e.featured_order, 10) || curSlot;
+          if (seenSlots.has(o)) {
+            while (seenSlots.has(curSlot)) curSlot++;
+            o = curSlot;
+          }
+          e.featured_order = o;
+          seenSlots.add(o);
+        });
+        unpacked.sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0));
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify(unpacked));
         } catch {}
@@ -1035,6 +1048,18 @@ export async function apiFetchFeaturedEvents() {
     }
 
     if (list.length > 0) {
+      list.sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0));
+      const seenSlots = new Set();
+      let curSlot = 1;
+      list.forEach(e => {
+        let o = parseInt(e.featured_order, 10) || curSlot;
+        if (seenSlots.has(o)) {
+          while (seenSlots.has(curSlot)) curSlot++;
+          o = curSlot;
+        }
+        e.featured_order = o;
+        seenSlots.add(o);
+      });
       list.sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0));
       return list;
     }

@@ -1461,6 +1461,18 @@ function renderCentralFeatured() {
     };
   }
 
+  // Calculate currently occupied slots across active featured events
+  const occupiedSlots = new Set(
+    allCandidateEvents
+      .filter(e => e.is_featured)
+      .map(e => parseInt(e.featured_order, 10) || 1)
+  );
+
+  let nextFreeSlot = 1;
+  while (occupiedSlots.has(nextFreeSlot)) {
+    nextFreeSlot++;
+  }
+
   filtered.forEach(ev => {
     const b = ev.banners || {};
     const hasFeatDesktop = isValidImageUrl(b.featured_desktop);
@@ -1470,6 +1482,11 @@ function renderCentralFeatured() {
     const cfg            = deptConfigMap[ev.deptSlug] || {};
     const deptBg         = cfg.heroBg || '#182338';
     const deptFg         = cfg.heroFg || '#efe8da';
+
+    const slotVal = isFeat ? (parseInt(ev.featured_order, 10) || 1) : nextFreeSlot;
+    const isDuplicateSlot = isFeat && allCandidateEvents.some(
+      x => x.is_featured && x.id !== ev.id && (parseInt(x.featured_order, 10) || 1) === (parseInt(ev.featured_order, 10) || 1)
+    );
 
     const card = document.createElement('div');
     card.className = `feat-card ${isFeat ? 'is-featured' : ''}`;
@@ -1487,7 +1504,9 @@ function renderCentralFeatured() {
         </div>
 
         ${isFeat
-          ? `<div><span class="feat-status-badge active-featured">★ Featured on Homepage (Slot #${ev.featured_order || 1})</span></div>`
+          ? isDuplicateSlot
+            ? `<div><span class="feat-status-badge" style="background:#c23b22;color:#efe8da;font-weight:700">⚠️ Conflict: Slot #${ev.featured_order || 1} already in use!</span></div>`
+            : `<div><span class="feat-status-badge active-featured">★ Featured on Homepage (Slot #${ev.featured_order || 1})</span></div>`
           : isReady
             ? `<div><span class="feat-status-badge ready">✓ Ready to Feature</span></div>`
             : ''
@@ -1513,7 +1532,7 @@ function renderCentralFeatured() {
         <div class="feat-card-actions">
           <div style="display: flex; align-items: center; gap: 8px;">
             <label style="font: 700 10px/1 'Inter'; letter-spacing: .12em; text-transform: uppercase; color: rgba(239,232,218,.6);">Order:</label>
-            <input type="number" min="1" max="99" class="feat-order-input" value="${ev.featured_order || 1}" ${!isReady && !isFeat ? 'disabled' : ''}>
+            <input type="number" min="1" max="99" class="feat-order-input" value="${slotVal}" ${!isReady && !isFeat ? 'disabled' : ''}>
           </div>
           <div>
             ${isFeat
@@ -1531,7 +1550,23 @@ function renderCentralFeatured() {
     const orderInput = card.querySelector('.feat-order-input');
     if (orderInput) {
       orderInput.onchange = async () => {
-        const newOrder = parseInt(orderInput.value, 10) || 1;
+        const newOrder = parseInt(orderInput.value, 10);
+        if (isNaN(newOrder) || newOrder < 1) {
+          toast('Slot number must be at least 1', 'error');
+          orderInput.value = isFeat ? (parseInt(ev.featured_order, 10) || 1) : nextFreeSlot;
+          return;
+        }
+
+        // Prevent two events from having the exact same slot
+        const conflict = allCandidateEvents.find(
+          x => x.is_featured && x.id !== ev.id && (parseInt(x.featured_order, 10) || 1) === newOrder
+        );
+        if (conflict) {
+          toast(`Slot #${newOrder} is already in use by "${conflict.title}". Each featured event must have a distinct slot.`, 'error');
+          orderInput.value = isFeat ? (parseInt(ev.featured_order, 10) || 1) : nextFreeSlot;
+          return;
+        }
+
         ev.featured_order = newOrder;
 
         // Update local store
@@ -1545,7 +1580,7 @@ function renderCentralFeatured() {
         if (isFeat) {
           const res = await apiSetEventFeatured(ev.id, true, newOrder);
           if (res.ok) {
-            toast(`Order updated for ${ev.title} ✓`);
+            toast(`Order updated for ${ev.title} (Slot #${newOrder}) ✓`);
             renderCentralFeatured();
           } else {
             toast(res.error || 'Failed to update order', 'error');
@@ -1558,9 +1593,21 @@ function renderCentralFeatured() {
     const toggleBtn = card.querySelector('.feat-toggle-btn');
     if (toggleBtn && !toggleBtn.disabled) {
       toggleBtn.onclick = async () => {
+        const targetOrder = parseInt(orderInput.value, 10) || slotVal;
+
+        if (!isFeat) {
+          // Check conflict before featuring
+          const conflict = allCandidateEvents.find(
+            x => x.is_featured && x.id !== ev.id && (parseInt(x.featured_order, 10) || 1) === targetOrder
+          );
+          if (conflict) {
+            toast(`Cannot feature in Slot #${targetOrder}: already occupied by "${conflict.title}". Pick an unused slot.`, 'error');
+            return;
+          }
+        }
+
         toggleBtn.disabled = true;
         toggleBtn.textContent = isFeat ? 'Unfeaturing…' : 'Featuring…';
-        const targetOrder = parseInt(orderInput.value, 10) || 1;
 
         const res = await apiSetEventFeatured(ev.id, !isFeat, targetOrder);
         if (res.ok) {
@@ -1579,7 +1626,7 @@ function renderCentralFeatured() {
           target.featured_order = targetOrder;
           setAdminEvents(adminEvents);
 
-          toast(isFeat ? `Removed ${ev.title} from featured events` : `★ ${ev.title} is now featured on the homepage!`);
+          toast(isFeat ? `Removed ${ev.title} from featured events` : `★ ${ev.title} is now featured in Slot #${targetOrder}!`);
           renderCentralFeatured();
           refreshSidebar();
         } else {

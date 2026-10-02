@@ -122,6 +122,23 @@ export async function initFeaturedShowcase() {
     }
   }
 
+  // Ensure unique distinct order
+  if (featuredEvents && featuredEvents.length > 0) {
+    featuredEvents.sort((a, b) => (a.featured_order || 1) - (b.featured_order || 1));
+    const seenSlots = new Set();
+    let curSlot = 1;
+    featuredEvents.forEach(e => {
+      let o = parseInt(e.featured_order, 10) || curSlot;
+      if (seenSlots.has(o)) {
+        while (seenSlots.has(curSlot)) curSlot++;
+        o = curSlot;
+      }
+      e.featured_order = o;
+      seenSlots.add(o);
+    });
+    featuredEvents.sort((a, b) => (a.featured_order || 1) - (b.featured_order || 1));
+  }
+
   // If still zero featured events, keep section hidden
   if (!featuredEvents || featuredEvents.length === 0) {
     featSec.hidden = true;
@@ -150,6 +167,8 @@ export async function initFeaturedShowcase() {
     const timeStr = f.time || '';
     const venueStr = f.venue || 'Campus';
     const dept = (f.deptSlug || f.slug || '').toLowerCase();
+    let prizePool = f.prize_pool || (Array.isArray(f.prizes) && f.prizes.length > 0 ? (f.prizes[0]?.reward || f.prizes[0]?.amount) : '');
+    if (typeof prizePool === 'string') prizePool = prizePool.replace(/^₹\s*/, '');
     const targetUrl = isDemo
       ? `/departments/${dept}.html#events`
       : `/event.html?d=${encodeURIComponent(dept)}&e=${encodeURIComponent(f.id)}`;

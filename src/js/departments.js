@@ -322,4 +322,14 @@ export function initDepartments() {
       }
     };
   }
+  const fve = $('#f-view-events');
+  if (fve) {
+    fve.onclick = (e) => {
+      e.preventDefault();
+      const depts = $('#depts');
+      if (depts) {
+        depts.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+  }
 }
