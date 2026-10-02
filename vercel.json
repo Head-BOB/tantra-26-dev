@@ -33,6 +33,25 @@
   ],
   "rewrites": [
     {
+      "source": "/event(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|WhatsApp|TelegramBot|Twitterbot|Discordbot|Slackbot|LinkedInBot|bot|crawler|spider|Googlebot|bingbot|SkypeUriPreview).*"
+        }
+      ],
+      "destination": "/api/event"
+    },
+    {
+      "source": "/share/event",
+      "destination": "/api/event"
+    },
+    {
+      "source": "/event",
+      "destination": "/event.html"
+    },
+    {
       "source": "/my-events",
       "destination": "/my-events.html"
     },

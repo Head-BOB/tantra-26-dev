@@ -6,7 +6,37 @@ import { resolve } from 'path';
  * Each HTML file in the `input` map is an independent entry point.
  * Vite will tree-shake and bundle only what each page actually uses.
  */
+function devEmbedPlugin() {
+  return {
+    name: 'dev-embed-plugin',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const url = new URL(req.url, 'http://localhost:5173');
+        const isEmbedReq = url.pathname === '/api/event' || url.pathname === '/share/event';
+        const ua = req.headers['user-agent'] || '';
+        const isBot = /facebookexternalhit|WhatsApp|TelegramBot|Twitterbot|Discordbot|Slackbot|LinkedInBot|SkypeUriPreview|Googlebot|bingbot|crawler|spider|bot/i.test(ua);
+        const isEventHtml = url.pathname === '/event.html' || url.pathname === '/event';
+
+        if (isEmbedReq || (isBot && isEventHtml)) {
+          try {
+            const { default: handler } = await import('./api/event.js');
+            req.query = Object.fromEntries(url.searchParams.entries());
+            res.status = (code) => { res.statusCode = code; return res; };
+            res.send = (body) => { res.end(body); return res; };
+            return await handler(req, res);
+          } catch (e) {
+            console.error('dev-embed-plugin error:', e);
+            return next();
+          }
+        }
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig({
+  plugins: [devEmbedPlugin()],
   root: '.',
   base: '/',
 

@@ -3,7 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Event · Tantra 26 · Vimal Jyothi Engineering College</title>
+<title>Event · Tantra 26 | National Level Techfest</title>
+<meta name="description" id="meta-desc" content="Tantra 26 — National Level Techfest at Vimal Jyothi Engineering College.">
+
+<!-- Open Graph / WhatsApp / Discord / Facebook -->
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Tantra 26 | National Level Techfest">
+<meta property="og:title" id="og-title" content="Event · Tantra 26 | National Level Techfest">
+<meta property="og:description" id="og-desc" content="Tantra 26 — National Level Techfest at Vimal Jyothi Engineering College.">
+<meta property="og:image" id="og-image" content="">
+<meta property="og:url" id="og-url" content="">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" id="tw-title" content="Event · Tantra 26 | National Level Techfest">
+<meta name="twitter:description" id="tw-desc" content="Tantra 26 — National Level Techfest at Vimal Jyothi Engineering College.">
+<meta name="twitter:image" id="tw-image" content="">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
@@ -28,6 +44,10 @@ h1,h2,h3{font-family:'Anton',Impact,'Arial Narrow Bold',sans-serif;font-weight:4
 a{color:inherit}
 .pill{font:700 12px/1 'Inter';letter-spacing:.24em;text-transform:uppercase;background:#000;color:var(--cream);padding:13px 20px;text-decoration:none;clip-path:polygon(2% 8%,100% 0,97% 92%,0 100%);transition:background .3s,color .3s,transform .3s;border:0;cursor:pointer;display:inline-block}
 .pill:hover{background:var(--gold);color:var(--ink);transform:translateY(-3px)}
+.share-pill{display:inline-flex;align-items:center;gap:8px;background:#182338;border:1px solid rgba(239,232,218,.2);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.share-pill:hover{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.share-toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#e3a72f;color:#141414;font:700 12px/1.3 'Inter',sans-serif;letter-spacing:.08em;padding:12px 24px;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.16,1,.3,1);z-index:9999;max-width:90vw;text-align:center}
+.share-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ---------- hero ---------- */
 .hero{position:relative;background:var(--c,#e3a72f);color:var(--t,#141414);min-height:100vh;min-height:100dvh;display:flex;align-items:flex-end;overflow:hidden;border-bottom:6px solid var(--ink)}
@@ -147,7 +167,16 @@ input:focus,textarea:focus{outline:none;box-shadow:3px 3px 0 var(--gold)}
 
 <div id="app" hidden>
 <header class="hero" id="hero">
-  <nav class="top"><a class="pill" id="back" href="/#departments">&larr; Department</a><a class="pill" href="/my-events.html" style="color:var(--gold)">My Events</a></nav>
+  <nav class="top">
+    <a class="pill" id="back" href="/#departments">&larr; Department</a>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="pill share-pill" id="share-btn" type="button" aria-label="Share Event">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+        <span>Share</span>
+      </button>
+      <a class="pill" href="/my-events.html" style="color:var(--gold)">My Events</a>
+    </div>
+  </nav>
   <span class="ghost" id="ghost" aria-hidden="true"></span>
   <div class="hero-in">
     <div class="chips" id="chips"></div>
@@ -201,7 +230,16 @@ input:focus,textarea:focus{outline:none;box-shadow:3px 3px 0 var(--gold)}
 
 <footer class="foot"><a class="pill" id="back2" href="/#departments">Explore all departments</a><p class="college">Vimal Jyothi Engineering College</p><p class="credit">Tantra 26 &middot; National Level Techfest</p></footer>
 
-<div class="bar"><div><b id="bar-t"></b><span id="bar-s"></span></div><span id="bar-act"></span></div>
+<div class="bar">
+  <div><b id="bar-t"></b><span id="bar-s"></span></div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button class="pill share-pill" id="bar-share-btn" type="button" aria-label="Share Event" style="padding:13px 16px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+    </button>
+    <span id="bar-act"></span>
+  </div>
+</div>
+<div class="share-toast" id="share-toast" role="status" aria-live="polite"></div>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
   <div class="reg-sheet">

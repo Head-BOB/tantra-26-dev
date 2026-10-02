@@ -1,7 +1,7 @@
 {
   "name": "tantra-26",
   "version": "1.0.0",
-  "description": "Tantra 26 – National Techfest website",
+  "description": "Tantra 26 – National Level Techfest website",
   "private": true,
   "scripts": {
     "dev": "vite",

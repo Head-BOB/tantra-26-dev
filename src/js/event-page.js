@@ -344,6 +344,90 @@ if (!ev) {
   $('#chips').innerHTML = chipsHtml;
   $('#eye').textContent = `Tantra 26 · ${D[0]}`;
 
+  // Update document title & Open Graph tags for rich previews
+  document.title = `${ev.title} · Tantra 26 | National Level Techfest`;
+
+  const bannerImg = deskUrl || mobUrl || '';
+  const metaDesc = `${D[0]} · ${ev.date} · ${ev.time} at ${ev.venue}.${prizePool ? ` Prize Pool: ${prizePool.text}.` : ''} ${ev.desc || ev.details || ''}`.trim();
+
+  const updateMetaTag = (selector, attr, val) => {
+    let el = document.querySelector(selector);
+    if (!el && val) {
+      el = document.createElement('meta');
+      if (selector.includes('property=')) {
+        const m = selector.match(/property="([^"]+)"/);
+        if (m) el.setAttribute('property', m[1]);
+      } else if (selector.includes('name=')) {
+        const m = selector.match(/name="([^"]+)"/);
+        if (m) el.setAttribute('name', m[1]);
+      }
+      document.head.appendChild(el);
+    }
+    if (el) el.setAttribute(attr, val);
+  };
+
+  updateMetaTag('meta[name="description"]', 'content', metaDesc);
+  updateMetaTag('meta[property="og:title"]', 'content', `${ev.title} | Tantra 26 - National Level Techfest`);
+  updateMetaTag('meta[property="og:description"]', 'content', metaDesc);
+  if (bannerImg) updateMetaTag('meta[property="og:image"]', 'content', bannerImg);
+  updateMetaTag('meta[property="og:url"]', 'content', window.location.href);
+  updateMetaTag('meta[name="twitter:title"]', 'content', `${ev.title} | Tantra 26 - National Level Techfest`);
+  updateMetaTag('meta[name="twitter:description"]', 'content', metaDesc);
+  if (bannerImg) updateMetaTag('meta[name="twitter:image"]', 'content', bannerImg);
+
+  // Toast notification for sharing
+  let toastTimer = null;
+  function showToast(msg) {
+    const t = $('#share-toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  // Setup Share Buttons (Top Nav and Bottom Action Bar)
+  const shareBtn = $('#share-btn');
+  const barShareBtn = $('#bar-share-btn');
+  const deptParam = (ev.slug || ev.deptSlug || D[0] || '').toLowerCase();
+  const shareUrl = `${window.location.origin}/event.html?d=${encodeURIComponent(deptParam)}&e=${encodeURIComponent(ev.id)}`;
+
+  const handleShare = async () => {
+    const shareData = {
+      title: `${ev.title} · Tantra 26 | National Level Techfest`,
+      text: `Check out ${ev.title} (${D[0]}) at Tantra 26 - National Level Techfest!${prizePool ? ` Prize Pool: ${prizePool.text}.` : ''} 7-8 October 2026:`,
+      url: shareUrl,
+    };
+
+    if (navigator.share && /mobile|android|iphone|ipad/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const inp = document.createElement('input');
+        inp.value = shareUrl;
+        document.body.appendChild(inp);
+        inp.select();
+        document.execCommand('copy');
+        document.body.removeChild(inp);
+      }
+      showToast('Event link copied! Preview banner & details ready to share 📋');
+    } catch {
+      prompt('Copy event link:', shareUrl);
+    }
+  };
+
+  if (shareBtn) shareBtn.onclick = handleShare;
+  if (barShareBtn) barShareBtn.onclick = handleShare;
+
   function formatTitleSpan(text) {
     const symRe = /([µμΩωπΠλΛθΘαβγδΔσΣ∞≈≠≤≥±√∫°])/g;
     return esc(text).replace(symRe, '<span class="sym" style="text-transform:none;font-family:\'Inter\',system-ui,sans-serif;display:inline-block">$1</span>');
