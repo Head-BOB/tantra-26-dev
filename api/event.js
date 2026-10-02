@@ -86,6 +86,7 @@ async function fetchEventData(deptSlug, eventId) {
           venue: row.venue || 'Campus',
           fee: row.fee || 'Free',
           description: row.description || '',
+          banner: row.banner || '',
           banners,
           prizes,
         };
@@ -126,7 +127,6 @@ export default async function handler(req, res) {
   if (!event) {
     const defaultTitle = 'Tantra 26 | National Level Techfest';
     const defaultDesc = 'Tantra 26 — the annual national level techfest at Vimal Jyothi Engineering College. 7-8 October 2026.';
-    const defaultBanner = `${baseUrl}/images/banners/default.png`;
     const defaultRedirect = `${baseUrl}/#departments`;
 
     const html = `<!DOCTYPE html>
@@ -139,13 +139,10 @@ export default async function handler(req, res) {
   <meta property="og:site_name" content="Tantra 26 | National Level Techfest">
   <meta property="og:title" content="${escapeHtml(defaultTitle)}">
   <meta property="og:description" content="${escapeHtml(defaultDesc)}">
-  <meta property="og:image" content="${defaultBanner}">
-  <meta property="og:image:secure_url" content="${defaultBanner}">
   <meta property="og:url" content="${baseUrl}/">
-  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${escapeHtml(defaultTitle)}">
   <meta name="twitter:description" content="${escapeHtml(defaultDesc)}">
-  <meta name="twitter:image" content="${defaultBanner}">
   <meta http-equiv="refresh" content="0;url=${defaultRedirect}">
 </head>
 <body>
@@ -160,13 +157,16 @@ export default async function handler(req, res) {
   // Extract metadata details
   const deptName = DEPT_NAMES[event.dept_slug] || 'Tantra 26';
   const b = event.banners || {};
-  let customBanner = b.featured_desktop || b.event_desktop || b.featured_mobile || b.event_mobile || '';
+  const rawBanner = b.featured_desktop || b.event_desktop || b.featured_mobile || b.event_mobile || event.banner || '';
+
   let bannerUrl = '';
-  if (customBanner && /^https?:\/\//i.test(customBanner)) {
-    bannerUrl = customBanner;
-  } else {
-    // Serve binary image via /api/banner (handles base64 decoding & department fallback)
-    bannerUrl = `${baseUrl}/api/banner?e=${encodeURIComponent(event.id)}&d=${encodeURIComponent(event.dept_slug || deptSlug)}`;
+  if (rawBanner && typeof rawBanner === 'string' && rawBanner.trim()) {
+    if (/^https?:\/\//i.test(rawBanner.trim())) {
+      bannerUrl = rawBanner.trim();
+    } else {
+      // Decode Base64 or serve via binary endpoint
+      bannerUrl = `${baseUrl}/api/banner?e=${encodeURIComponent(event.id)}`;
+    }
   }
 
   // Calculate prize pool if present

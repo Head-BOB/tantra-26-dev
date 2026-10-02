@@ -1,27 +1,16 @@
 /**
  * api/banner.js — Dynamic Social Share Banner Image Endpoint
- * Serves real binary JPEG/PNG banner images for Discord, WhatsApp, Twitter, and Facebook.
- * If the event has a custom uploaded banner (including Base64), serves it directly as binary image.
- * If no custom banner exists, serves the official 1200x630 department banner.
+ * Serves real binary JPEG/PNG/WebP banner images for Discord, WhatsApp, Twitter, and Facebook.
+ * Only serves an image if an actual event banner has been uploaded.
+ * If no banner has been uploaded, returns 404 (does NOT show any random placeholders).
  */
-
-import fs from 'fs';
-import path from 'path';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://hdclbulbjmntzjssynwc.supabase.co';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkY2xidWxiam1udHpqc3N5bndjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5Mzg2NzEsImV4cCI6MjEwNjUxNDY3MX0.YWw8Zqxm6iUTZ3j5Fw-LY5_5r6FemkFcX-N_zQar0jA';
 
-function getFallbackBanner(deptSlug) {
-  const slug = (deptSlug || 'default').toLowerCase();
-  const candidate = path.join(process.cwd(), 'public', 'images', 'banners', `${slug}.png`);
-  if (fs.existsSync(candidate)) return candidate;
-  return path.join(process.cwd(), 'public', 'images', 'banners', 'default.png');
-}
-
 export default async function handler(req, res) {
   const query = req.query || {};
   const eventId = (query.e || query.id || query.eventId || '').trim();
-  const deptSlug = (query.d || query.dept || query.slug || '').toLowerCase();
 
   let bannerRaw = '';
 
@@ -33,7 +22,7 @@ export default async function handler(req, res) {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         },
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(4000),
       });
 
       if (sRes.ok) {
@@ -78,22 +67,6 @@ export default async function handler(req, res) {
     return res.status(302).end();
   }
 
-  // 3. Fallback to pre-generated 1200x630 official department banner
-  try {
-    const fallbackPath = getFallbackBanner(deptSlug);
-    if (fs.existsSync(fallbackPath)) {
-      const fileBuf = fs.readFileSync(fallbackPath);
-      res.setHeader('Content-Type', 'image/png');
-      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800');
-      return res.status(200).send(fileBuf);
-    }
-  } catch {}
-
-  // Minimal 1x1 transparent pixel if everything else fails
-  const transparentPng = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-    'base64'
-  );
-  res.setHeader('Content-Type', 'image/png');
-  return res.status(200).send(transparentPng);
+  // 3. No banner uploaded -> return 404 (do not show any random image)
+  return res.status(404).send('No banner uploaded');
 }
