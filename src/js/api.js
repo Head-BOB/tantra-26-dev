@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { generatePassId } from './access-code.js';
 
 const RAW_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '';
 const RAW_KEY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || '';
@@ -39,6 +40,45 @@ export function setToken(token) {
 // ─── Direct Supabase & Backend Helper ──────────────────────────
 
 /**
+ * Normalizes an event record from Supabase/Backend, extracting native columns
+ * or unpacking the JSON metadata envelope if columns are not yet migrated in PostgreSQL.
+ */
+export function unpackEventRecord(ev) {
+  if (!ev) return null;
+  let envelope = {};
+  if (typeof ev.description === 'string' && ev.description.startsWith('{"_meta":true')) {
+    try {
+      envelope = JSON.parse(ev.description);
+    } catch {}
+  }
+
+  const desc = envelope.desc || ev.desc || (envelope._meta ? '' : ev.description) || '';
+  const details = ev.details || envelope.details || desc || '';
+  const accessCode = (ev.access_code || ev.accessCode || envelope.accessCode || '').toUpperCase();
+  const banner = ev.banner || envelope.banner || '';
+  const steps = Array.isArray(ev.steps) ? ev.steps : (Array.isArray(envelope.steps) ? envelope.steps : []);
+  const rules = Array.isArray(ev.rules) ? ev.rules : (Array.isArray(envelope.rules) ? envelope.rules : []);
+  const coord = (ev.coord && typeof ev.coord === 'object') ? ev.coord : ((envelope.coord && typeof envelope.coord === 'object') ? envelope.coord : { name: '', phone: '', email: '' });
+
+  return {
+    ...ev,
+    slug: (ev.dept_slug || ev.slug || '').toLowerCase(),
+    dept_slug: (ev.dept_slug || ev.slug || '').toLowerCase(),
+    desc,
+    description: desc,
+    details,
+    accessCode,
+    access_code: accessCode,
+    banner,
+    steps,
+    rules,
+    coord,
+    team: ev.team_size ?? ev.team ?? 1,
+    team_size: ev.team_size ?? ev.team ?? 1,
+  };
+}
+
+/**
  * Fetch active events for a department
  */
 export async function fetchDeptEvents(slug) {
@@ -52,13 +92,7 @@ export async function fetchDeptEvents(slug) {
         .eq('is_active', true)
         .order('created_at', { ascending: true });
       if (!error && data && data.length > 0) {
-        return data.map(ev => ({
-          ...ev,
-          desc: ev.description || ev.desc || '',
-          description: ev.description || ev.desc || '',
-          team: ev.team_size ?? ev.team ?? 1,
-          team_size: ev.team_size ?? ev.team ?? 1,
-        }));
+        return data.map(unpackEventRecord);
       }
     } catch (err) {
       console.warn('fetchDeptEvents Supabase error:', err);
@@ -71,13 +105,7 @@ export async function fetchDeptEvents(slug) {
       const res = await fetch(`${API_BASE}/api/departments/${slug}/events`);
       if (res.ok) {
         const events = await res.json();
-        return events.map(ev => ({
-          ...ev,
-          desc: ev.description || ev.desc || '',
-          description: ev.description || ev.desc || '',
-          team: ev.team_size ?? ev.team ?? 1,
-          team_size: ev.team_size ?? ev.team ?? 1,
-        }));
+        return events.map(unpackEventRecord);
       }
     } catch {}
   }
@@ -213,8 +241,22 @@ export async function submitRegistration(payload) {
         }]);
       }
 
-      // Generate Pass ID
-      const regId = 'T26-' + payload.dept_slug.toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      // Generate guaranteed unique 4-character suffix Pass ID (e.g. 'T26-CSE-7ZWP')
+      let regId = '';
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const candidate = generatePassId(payload.dept_slug);
+        const { data: existingReg } = await supabaseClient
+          .from('registrations')
+          .select('id')
+          .eq('reg_id', candidate)
+          .maybeSingle();
+        if (!existingReg) {
+          regId = candidate;
+          break;
+        }
+      }
+      if (!regId) regId = generatePassId(payload.dept_slug);
+
       const insertRecord = {
         reg_id: regId,
         dept_slug: payload.dept_slug.toLowerCase(),
@@ -339,11 +381,20 @@ export async function fetchAdminRegistrations(dept = '') {
 }
 
 export async function apiSaveEvent(eventData, isEdit = false) {
+  const accessCode = (eventData.accessCode || eventData.access_code || '').trim().toUpperCase();
+  const desc = eventData.desc || eventData.description || '';
+  const details = eventData.details || desc || '';
+  const banner = eventData.banner || '';
+  const steps = Array.isArray(eventData.steps) ? eventData.steps : [];
+  const rules = Array.isArray(eventData.rules) ? eventData.rules : [];
+  const coord = (eventData.coord && typeof eventData.coord === 'object') ? eventData.coord : { name: '', phone: '', email: '' };
+
   if (supabaseClient) {
     try {
-      const record = {
+      // 1. First attempt: Native schema columns (access_code, details, banner, steps, rules, coord)
+      const nativeRecord = {
         id: eventData.id,
-        dept_slug: (eventData.dept_slug || '').toLowerCase(),
+        dept_slug: (eventData.dept_slug || eventData.slug || '').toLowerCase(),
         type: eventData.type || 'Competition',
         title: eventData.title || 'Event',
         date: '7 Oct',
@@ -351,13 +402,52 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         venue: eventData.venue || 'Campus',
         team_size: parseInt(eventData.team_size || eventData.team || 1, 10) || 1,
         fee: eventData.fee || 'Free',
-        description: eventData.desc || eventData.description || 'Tantra 26 event details',
+        description: desc,
+        access_code: accessCode,
+        details,
+        banner,
+        steps,
+        rules,
+        coord,
         is_active: true,
         updated_at: new Date().toISOString(),
       };
-      const { data, error } = await supabaseClient.from('events').upsert([record]).select().single();
-      if (!error) return data;
-      console.error('⚠️ Supabase event upsert error:', error.message);
+
+      const { data, error } = await supabaseClient.from('events').upsert([nativeRecord]).select().single();
+      if (!error && data) return unpackEventRecord(data);
+
+      // 2. Second attempt: Fallback metadata envelope if database columns not migrated yet
+      if (error && error.message && error.message.includes('does not exist')) {
+        const envelope = JSON.stringify({
+          _meta: true,
+          desc,
+          details,
+          accessCode,
+          banner,
+          steps,
+          rules,
+          coord,
+        });
+        const fallbackRecord = {
+          id: eventData.id,
+          dept_slug: (eventData.dept_slug || eventData.slug || '').toLowerCase(),
+          type: eventData.type || 'Competition',
+          title: eventData.title || 'Event',
+          date: '7 Oct',
+          time: eventData.time || '10:00 AM',
+          venue: eventData.venue || 'Campus',
+          team_size: parseInt(eventData.team_size || eventData.team || 1, 10) || 1,
+          fee: eventData.fee || 'Free',
+          description: envelope,
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        };
+        const { data: fbData, error: fbErr } = await supabaseClient.from('events').upsert([fallbackRecord]).select().single();
+        if (!fbErr && fbData) return unpackEventRecord(fbData);
+        if (fbErr) console.warn('⚠️ Supabase fallback event save error:', fbErr.message);
+      } else if (error) {
+        console.warn('⚠️ Supabase event upsert error:', error.message);
+      }
     } catch (err) {
       console.error('⚠️ Supabase event upsert exception:', err);
     }
@@ -374,9 +464,144 @@ export async function apiSaveEvent(eventData, isEdit = false) {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(eventData),
+        body: JSON.stringify({
+          ...eventData,
+          access_code: accessCode,
+          accessCode,
+          details,
+          banner,
+          steps,
+          rules,
+          coord,
+        }),
       });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const json = await res.json();
+        return unpackEventRecord(json.event || json);
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
+/**
+ * Organiser saving event guide, rules, detailed description, banner & contact
+ */
+export async function apiSaveOrganiserEvent(eventData) {
+  const code = (eventData.code || eventData.accessCode || eventData.access_code || '').trim().toUpperCase();
+
+  // Try backend endpoint first if API_BASE is active
+  if (API_BASE && code) {
+    try {
+      const res = await fetch(`${API_BASE}/api/events/code/${encodeURIComponent(code)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          details: eventData.details,
+          banner: eventData.banner,
+          steps: eventData.steps,
+          rules: eventData.rules,
+          coord: eventData.coord,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return unpackEventRecord(json.event || json);
+      }
+    } catch {}
+  }
+
+  // Save via direct Supabase upsert
+  return await apiSaveEvent({
+    ...eventData,
+    accessCode: code,
+    access_code: code,
+  }, true);
+}
+
+/**
+ * Fetch a single event by its 6-digit organiser passcode from Supabase or Backend API
+ */
+export async function apiFetchEventByCode(rawCode) {
+  const code = String(rawCode || '').trim().toUpperCase();
+  if (!code || code.length !== 6) return null;
+
+  // 1. Direct Supabase Query
+  if (supabaseClient) {
+    try {
+      // First attempt: query native access_code column
+      const { data, error } = await supabaseClient
+        .from('events')
+        .select('*')
+        .eq('access_code', code)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!error && data) {
+        return unpackEventRecord(data);
+      }
+
+      // Second attempt: scan active events for unpacked accessCode
+      const { data: allEvs } = await supabaseClient
+        .from('events')
+        .select('*')
+        .eq('is_active', true);
+
+      if (allEvs && allEvs.length > 0) {
+        for (const ev of allEvs) {
+          const unpacked = unpackEventRecord(ev);
+          if (unpacked && unpacked.accessCode === code) {
+            return unpacked;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('apiFetchEventByCode Supabase error:', err);
+    }
+  }
+
+  // 2. Backend API
+  if (API_BASE) {
+    try {
+      const res = await fetch(`${API_BASE}/api/events/code/${encodeURIComponent(code)}`);
+      if (res.ok) {
+        const data = await res.json();
+        return unpackEventRecord(data);
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
+/**
+ * Fetch a single event by ID directly from cloud
+ */
+export async function apiFetchSingleEvent(slug, id) {
+  if (!id) return null;
+
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from('events')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (!error && data) {
+        return unpackEventRecord(data);
+      }
+    } catch {}
+  }
+
+  if (API_BASE) {
+    try {
+      const res = await fetch(`${API_BASE}/api/events/${encodeURIComponent(id)}`);
+      if (res.ok) {
+        const data = await res.json();
+        return unpackEventRecord(data);
+      }
     } catch {}
   }
 

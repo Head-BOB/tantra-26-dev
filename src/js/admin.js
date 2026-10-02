@@ -23,8 +23,11 @@ import {
   apiSavePayment,
   fetchAllDeptPayments,
 } from './api.js';
+import { generateRandomCode, generateUniqueAccessCode, getEventAccessCode } from './access-code.js';
+import { SlopGuard } from './slop-guard.js';
 
 import { EVENTS as CSE_EV }   from '../data/events/cse.js';
+import { EVENTS as CSCY_EV }  from '../data/events/cscy.js';
 import { EVENTS as AI_EV }    from '../data/events/ai.js';
 import { EVENTS as CSD_EV }   from '../data/events/csd.js';
 import { EVENTS as CSBS_EV }  from '../data/events/csbs.js';
@@ -35,6 +38,7 @@ import { EVENTS as CIVIL_EV } from '../data/events/civil.js';
 import { EVENTS as MECH_EV }  from '../data/events/mech.js';
 
 import { CONFIG as CSE_CFG }   from '../data/events/cse.js';
+import { CONFIG as CSCY_CFG }  from '../data/events/cscy.js';
 import { CONFIG as AI_CFG }    from '../data/events/ai.js';
 import { CONFIG as CSD_CFG }   from '../data/events/csd.js';
 import { CONFIG as CSBS_CFG }  from '../data/events/csbs.js';
@@ -44,6 +48,48 @@ import { CONFIG as AEI_CFG }   from '../data/events/aei.js';
 import { CONFIG as CIVIL_CFG } from '../data/events/civil.js';
 import { CONFIG as MECH_CFG }  from '../data/events/mech.js';
 
+// ─── Mathematical & Greek Symbols Support ─────────────────────
+export function expandMathShortcuts(str) {
+  if (!str) return '';
+  return str
+    .replace(/\\mu|&mu;|&micro;/gi, 'µ')
+    .replace(/\\pi|&pi;/gi, 'π')
+    .replace(/\\omega|&omega;/gi, 'ω')
+    .replace(/\\ohm|\\Omega|&Omega;/gi, 'Ω')
+    .replace(/\\lambda|&lambda;/gi, 'λ')
+    .replace(/\\theta|&theta;/gi, 'θ')
+    .replace(/\\alpha|&alpha;/gi, 'α')
+    .replace(/\\beta|&beta;/gi, 'β')
+    .replace(/\\gamma|&gamma;/gi, 'γ')
+    .replace(/\\delta|&delta;/gi, 'δ')
+    .replace(/\\Delta|&Delta;/gi, 'Δ')
+    .replace(/\\sigma|&sigma;/gi, 'σ')
+    .replace(/\\Sigma|&Sigma;/gi, 'Σ')
+    .replace(/\\sum/gi, '∑')
+    .replace(/\\infty|\\infin|&infin;/gi, '∞')
+    .replace(/\\approx|&asymp;/gi, '≈')
+    .replace(/\\neq|\\ne\b|&ne;/gi, '≠')
+    .replace(/\\pm|&plusmn;/gi, '±')
+    .replace(/\\times|&times;/gi, '×')
+    .replace(/\\sqrt|&radic;/gi, '√')
+    .replace(/\\deg|&deg;/gi, '°');
+}
+
+export function matchEventTitle(t1, t2) {
+  if (!t1 || !t2) return false;
+  const s1 = String(t1).trim().toLowerCase();
+  const s2 = String(t2).trim().toLowerCase();
+  if (s1 === s2) return true;
+  const k1 = s1.replace(/[µμ]/g, 'mu').replace(/[^\p{L}\p{N}]/gu, '');
+  const k2 = s2.replace(/[µμ]/g, 'mu').replace(/[^\p{L}\p{N}]/gu, '');
+  return Boolean(k1 && k1 === k2);
+}
+
+export function formatTitleSpan(text) {
+  const symRe = /([µμΩωπΠλΛθΘαβγδΔσΣ∞≈≠≤≥±√∫°])/g;
+  return esc(text).replace(symRe, '<span class="sym" style="text-transform:none;font-family:\'Inter\',system-ui,sans-serif;display:inline-block">$1</span>');
+}
+
 // ─── Password & Role Mapping ───────────────────────────────────
 // No usernames required — entering password immediately routes user
 const AUTH_MAP = {
@@ -52,6 +98,9 @@ const AUTH_MAP = {
 
   // Computer Science & Engineering
   'zWHCaX': { role: 'dept_admin', dept: 'cse', name: 'Computer Science & Engineering' },
+
+  // Cyber Security
+  'kY8sNw': { role: 'dept_admin', dept: 'cscy', name: 'Cyber Security' },
 
   // Artificial Intelligence & Data Science
   'MhFbxq': { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence & Data Science' },
@@ -80,6 +129,7 @@ const AUTH_MAP = {
 
 const DEPTS = [
   { slug: 'cse',   name: 'Computer Science & Engineering',         color: '#2b6a4d', fg: '#efe8da' },
+  { slug: 'cscy',  name: 'Cyber Security',                         color: '#141414', fg: '#efe8da' },
   { slug: 'ai',    name: 'Artificial Intelligence & Data Science',  color: '#c23b22', fg: '#efe8da' },
   { slug: 'csd',   name: 'Computer Science & Design',              color: '#e3a72f', fg: '#141414' },
   { slug: 'csbs',  name: 'Computer Science & Business Systems',     color: '#182338', fg: '#efe8da' },
@@ -91,10 +141,10 @@ const DEPTS = [
 ];
 
 const STATIC_EVENTS = {
-  cse: CSE_EV, ai: AI_EV, csd: CSD_EV, csbs: CSBS_EV, eee: EEE_EV, ece: ECE_EV, aei: AEI_EV, civil: CIVIL_EV, mech: MECH_EV,
+  cse: CSE_EV, cscy: CSCY_EV, ai: AI_EV, csd: CSD_EV, csbs: CSBS_EV, eee: EEE_EV, ece: ECE_EV, aei: AEI_EV, civil: CIVIL_EV, mech: MECH_EV,
 };
 const STATIC_COORDS = {
-  cse: CSE_CFG.coordinators, ai: AI_CFG.coordinators, csd: CSD_CFG.coordinators, csbs: CSBS_CFG.coordinators,
+  cse: CSE_CFG.coordinators, cscy: CSCY_CFG.coordinators, ai: AI_CFG.coordinators, csd: CSD_CFG.coordinators, csbs: CSBS_CFG.coordinators,
   eee: EEE_CFG.coordinators, ece: ECE_CFG.coordinators, aei: AEI_CFG.coordinators, civil: CIVIL_CFG.coordinators, mech: MECH_CFG.coordinators,
 };
 
@@ -127,14 +177,17 @@ function allEventsFor(slug) {
     .filter(e => !deleted.includes(e.id))
     .map(e => {
       const override = admin.find(a => a.id === e.id);
-      if (override) return { ...e, ...override, date: '7 Oct', _source: 'admin' };
-      return { ...e, date: '7 Oct', _source: 'default' };
+      const ev = override ? { ...e, ...override, date: '7 Oct', _source: 'admin' } : { ...e, date: '7 Oct', _source: 'default' };
+      return { ...ev, accessCode: getEventAccessCode(ev) };
     });
 
   const custom = admin
     .filter(a => !STATIC_EVENTS[slug]?.some(s => s.id === a.id))
     .filter(a => !deleted.includes(a.id))
-    .map(e => ({ ...e, date: '7 Oct', _source: 'admin' }));
+    .map(e => {
+      const ev = { ...e, date: '7 Oct', _source: 'admin' };
+      return { ...ev, accessCode: getEventAccessCode(ev) };
+    });
 
   return [...base, ...custom];
 }
@@ -409,6 +462,12 @@ async function syncDeptDataFromCloud(slug) {
         team: e.team_size || e.team || 1,
         fee: e.fee,
         desc: e.description || e.desc || '',
+        details: e.details || '',
+        banner: e.banner || '',
+        steps: e.steps || [],
+        rules: e.rules || [],
+        coord: e.coord || {},
+        accessCode: e.accessCode || e.access_code || '',
         _source: 'admin',
       }));
       setAdminEvents(evStore);
@@ -522,13 +581,20 @@ function renderEvents(slug) {
         <span class="ev-fee">${esc(ev.fee)}</span>
       </div>
       <div class="ev-admin-body">
-        <h3>${esc(ev.title)}</h3>
+        <h3>${formatTitleSpan(ev.title)}</h3>
         <p class="ev-desc">${esc(ev.desc)}</p>
         <dl class="ev-meta">
           <dt>When</dt><dd>${esc(ev.date || '7 Oct')} · ${esc(ev.time)}</dd>
           <dt>Where</dt><dd>${esc(ev.venue)}</dd>
           <dt>Team</dt><dd>${ev.team > 1 ? 'Up to ' + ev.team : 'Individual'}</dd>
         </dl>
+        <div class="ev-code-banner">
+          <div>
+            <span class="ev-code-lbl">Organiser Code</span>
+            <code class="ev-code-val">${esc(ev.accessCode)}</code>
+          </div>
+          <button type="button" class="ev-code-copy" data-code="${esc(ev.accessCode)}" title="Copy code for event coordinators">Copy</button>
+        </div>
       </div>
       <div class="ev-admin-footer">
         <button class="ev-edit-btn" title="Edit event details">Edit</button>
@@ -537,43 +603,129 @@ function renderEvents(slug) {
 
     card.querySelector('.ev-edit-btn').onclick = () => openEventModal(ev.id);
     card.querySelector('.ev-del-btn').onclick  = () => confirmDelete('event', ev.id, ev.title);
+    const copyBtn = card.querySelector('.ev-code-copy');
+    if (copyBtn) {
+      copyBtn.onclick = () => {
+        navigator.clipboard.writeText(ev.accessCode).then(() => {
+          toast(`Organiser Code ${ev.accessCode} copied! Give this to event coordinators ✓`);
+        }).catch(() => {
+          prompt('Organiser Access Code:', ev.accessCode);
+        });
+      };
+    }
     eventsList.appendChild(card);
   });
 }
 
 // ─── Event Modal (Hardcoded 7 Oct Fest Date & Clean Time) ─────
+function updateEventDescCounter() {
+  const cnt = $('em-desc-count');
+  if (!cnt || !eventForm || !eventForm.desc) return;
+  const len = eventForm.desc.value.length;
+  cnt.textContent = `${len} / 120`;
+  cnt.style.color = len >= 120 ? 'var(--red, #c23b22)' : 'rgba(239,232,218,0.6)';
+}
+
 function bindEventModal() {
   $('em-close').onclick = closeEventModal;
   $('em-cancel').onclick = closeEventModal;
+  const regenBtn = $('em-regen-code');
+  if (regenBtn) {
+    regenBtn.onclick = () => {
+      if (eventForm.accessCode) {
+        eventForm.accessCode.value = generateRandomCode();
+        toast('New 6-digit passcode generated ✓', 'info');
+      }
+    };
+  }
   eventModal.addEventListener('click', e => { if (e.target === eventModal) closeEventModal(); });
   addEventListener('keydown', e => { if (e.key === 'Escape' && eventModal.classList.contains('open')) closeEventModal(); });
   addBtn.onclick = () => openEventModal(null);
 
+  if (eventForm.desc) {
+    eventForm.desc.addEventListener('input', updateEventDescCounter);
+  }
+
+  if (eventForm.title) {
+    eventForm.title.addEventListener('input', () => {
+      const orig = eventForm.title.value;
+      const converted = expandMathShortcuts(orig);
+      if (converted !== orig) {
+        const start = eventForm.title.selectionStart;
+        const diff = converted.length - orig.length;
+        eventForm.title.value = converted;
+        try {
+          eventForm.title.setSelectionRange(start + diff, start + diff);
+        } catch {}
+      }
+    });
+  }
+
   eventForm.addEventListener('submit', e => {
     e.preventDefault();
+    if (!SlopGuard.check(eventForm)) return;
     const f = eventForm;
     const err = $('em-err');
+    const rawCode = (f.accessCode ? f.accessCode.value.trim() : '') || generateUniqueAccessCode();
+    const accessCode = rawCode.toUpperCase();
+    const title = expandMathShortcuts(f.title.value.trim());
+    const desc = f.desc.value.trim();
+
+    if (desc.length > 120) {
+      err.textContent = 'Preview description cannot exceed 120 characters.';
+      f.desc.focus();
+      return;
+    }
+
     const data = {
-      title: f.title.value.trim(),
+      title,
       type:  f.type.value,
       fee:   f.fee.value.trim(),
       date:  '7 Oct', // Fest date is strictly October 7
       time:  f.time.value.trim(),
       venue: f.venue.value.trim(),
       team:  parseInt(f.team.value) || 1,
-      desc:  f.desc.value.trim(),
+      desc:  desc.slice(0, 120),
+      accessCode,
     };
     if (!data.title || !data.fee || !data.time || !data.venue || !data.desc) {
       err.textContent = 'Please fill in all required fields.';
       return;
     }
-    err.textContent = '';
+    if (accessCode.length !== 6) {
+      err.textContent = 'Organiser access code must be exactly 6 characters.';
+      return;
+    }
 
     const store = getAdminEvents();
     const slug  = activeDept;
     if (!store[slug]) store[slug] = [];
 
     const finalId = editingEventId || uid();
+
+    // Verify access code is globally unique
+    let codeDuplicate = false;
+    let dupEventTitle = '';
+    for (const [deptKey, evList] of Object.entries(store)) {
+      if (Array.isArray(evList)) {
+        for (const evItem of evList) {
+          if (evItem.id !== finalId) {
+            const existingCode = (evItem.accessCode || evItem.access_code || getEventAccessCode(evItem) || '').toUpperCase();
+            if (existingCode === accessCode) {
+              codeDuplicate = true;
+              dupEventTitle = evItem.title;
+              break;
+            }
+          }
+        }
+      }
+      if (codeDuplicate) break;
+    }
+    if (codeDuplicate) {
+      err.textContent = `Access code "${accessCode}" is already in use by "${dupEventTitle}". Please generate a unique code.`;
+      return;
+    }
+    err.textContent = '';
     if (editingEventId) {
       const idx = store[slug].findIndex(e => e.id === editingEventId);
       if (idx !== -1) {
@@ -596,7 +748,8 @@ function bindEventModal() {
     renderEvents(slug);
 
     // Sync with backend API & Supabase
-    apiSaveEvent({ ...data, dept_slug: slug, id: finalId }, !!editingEventId).then(res => {
+    const fullSavedEv = store[slug].find(e => e.id === finalId) || { ...data, dept_slug: slug, id: finalId };
+    apiSaveEvent({ ...fullSavedEv, dept_slug: slug, id: finalId }, !!editingEventId).then(res => {
       if (res) toast('Saved & synced to cloud ✓', 'info');
     }).catch(err => {
       console.error('Failed to sync event to cloud:', err);
@@ -623,14 +776,17 @@ function openEventModal(id) {
       f.venue.value = ev.venue || '';
       f.team.value  = ev.team || 1;
       f.desc.value  = ev.desc || '';
+      if (f.accessCode) f.accessCode.value = ev.accessCode || getEventAccessCode(ev);
     }
   } else {
     $('em-mode').textContent  = 'Add Event';
     $('em-title').textContent = 'New Event';
     f.date.value = '7 Oct';
     f.time.value = '10:00 AM';
+    if (f.accessCode) f.accessCode.value = generateUniqueAccessCode();
   }
 
+  updateEventDescCounter();
   eventModal.classList.add('open');
   document.body.style.overflow = 'hidden';
   setTimeout(() => f.title.focus(), 60);
@@ -651,6 +807,7 @@ function bindCoordModal() {
 
   $('coord-form').addEventListener('submit', e => {
     e.preventDefault();
+    if (!SlopGuard.check($('coord-form'))) return;
     const name  = $('cm-name').value.trim();
     const phone = $('cm-phone').value.trim();
     if (!name || !phone) { $('cm-err').textContent = 'Please fill in both fields.'; return; }
@@ -1125,7 +1282,7 @@ function populateExcelEventOptions(deptSlug) {
   events.forEach(ev => {
     const count = allRegs.filter(r => {
       const matchId = r.eventId && (r.eventId === ev.id);
-      const matchTitle = r.event && (r.event.trim().toLowerCase() === ev.title.trim().toLowerCase());
+      const matchTitle = matchEventTitle(r.event, ev.title);
       return matchId || matchTitle;
     }).length;
     html += `<option value="${esc(ev.id || ev.title)}">${esc(ev.title)} (${count} registered)</option>`;
@@ -1150,7 +1307,7 @@ function exportToExcel(slug, eventIdentifier = 'all') {
 
     regs = regs.filter(r => {
       const matchId = r.eventId && (r.eventId === targetId);
-      const matchTitle = r.event && (r.event.trim().toLowerCase() === targetTitle);
+      const matchTitle = matchEventTitle(r.event, targetTitle);
       return matchId || matchTitle;
     });
   }
@@ -1215,7 +1372,7 @@ function exportToExcel(slug, eventIdentifier = 'all') {
   let filename = 'Tantra26_Master_Registrations.xlsx';
   if (slug && slug !== 'all') {
     if (eventObj) {
-      const safeEvent = eventObj.title.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
+      const safeEvent = eventObj.title.replace(/[µμ]/g, 'mu').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
       filename = `Tantra26_${slug.toUpperCase()}_${safeEvent}_Registrations.xlsx`;
     } else {
       filename = `Tantra26_${slug.toUpperCase()}_Registrations.xlsx`;

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event · Tantra 26 · Vimal Jyothi Engineering College</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/css/dept.css">
+<!--
+  ============================================================
+  TANTRA 26: PUBLIC EVENT PAGE  (event.html)
+  Full page for one event. Opened from a department page:  event.html?d=cse&e=code-rush
+    d = department slug, e = event id.
+  Shows everything the organiser added:
+    banner, detailed description, how it works (competitions), rules (competitions),
+    event coordinator contact, live countdown to THIS event, and registration.
+  ============================================================
+-->
+<style>
+:root{--cream:#efe8da;--ink:#141414;--red:#c23b22;--gold:#e3a72f;--green:#2b6a4d;--navy:#182338;box-sizing:border-box}
+*{margin:0;padding:0;box-sizing:inherit}
+html{scroll-behavior:smooth}
+body{background:var(--navy);color:var(--cream);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;padding-bottom:84px}
+[hidden]{display:none!important}
+h1,h2,h3{font-family:'Anton',Impact,'Arial Narrow Bold',sans-serif;font-weight:400;text-transform:uppercase}
+a{color:inherit}
+.pill{font:700 12px/1 'Inter';letter-spacing:.24em;text-transform:uppercase;background:#000;color:var(--cream);padding:13px 20px;text-decoration:none;clip-path:polygon(2% 8%,100% 0,97% 92%,0 100%);transition:background .3s,color .3s,transform .3s;border:0;cursor:pointer;display:inline-block}
+.pill:hover{background:var(--gold);color:var(--ink);transform:translateY(-3px)}
+
+/* ---------- hero ---------- */
+.hero{position:relative;background:var(--c,#e3a72f);color:var(--t,#141414);min-height:92vh;min-height:92svh;display:flex;align-items:flex-end;overflow:hidden;border-bottom:6px solid var(--ink)}
+.hero.img{color:var(--cream);background-size:cover;background-position:center}
+.hero.img::before{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(8,12,24,.92),rgba(8,12,24,.45) 55%,rgba(8,12,24,.2))}
+.ghost{position:absolute;right:-2vw;top:50%;translate:0 -50%;font:400 min(54vw,78vh)/1 'Anton',Impact,sans-serif;opacity:.1;pointer-events:none;white-space:nowrap}
+.top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;gap:10px;padding:20px max(5vw,20px);z-index:3}
+.hero-in{position:relative;z-index:2;width:100%;margin:0;padding:130px max(5vw,20px) clamp(36px,7vh,70px)}
+.eye{font:700 12px/1.6 'Inter';letter-spacing:.3em;text-transform:uppercase;opacity:.8;margin-bottom:18px}
+.hero h1{font-size:clamp(3rem,10.5vw,9rem);line-height:.93;letter-spacing:.01em}
+.ln{display:block;overflow:hidden}.ln span{display:block;animation:up .9s cubic-bezier(.16,1,.3,1) both}
+@keyframes up{from{transform:translate3d(0,110%,0)}to{transform:none}}
+.lead{margin-top:22px;max-width:80ch;font-size:clamp(1rem,1.7vw,1.25rem);line-height:1.55;opacity:.9;animation:fade 1s .4s both}
+@keyframes fade{from{opacity:0;transform:translateY(14px)}}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
+.chip{font:700 11px/1 'Inter';letter-spacing:.2em;text-transform:uppercase;background:var(--ink);color:var(--cream);padding:11px 16px;clip-path:polygon(3% 0,100% 8%,97% 100%,0 92%)}
+.chip.g{background:var(--gold);color:var(--ink)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:34px;width:100%;max-width:1400px;animation:fade 1s .6s both}
+.facts div{background:var(--ink);color:var(--cream);padding:16px 18px;clip-path:polygon(2% 0,100% 5%,98% 100%,0 95%)}
+.facts dt{font:700 10px/1 'Inter';letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.facts dd{font-weight:600;line-height:1.35}
+
+/* ---------- countdown slabs ---------- */
+#cd{display:grid;grid-template-columns:repeat(4,1fr);height:clamp(220px,42vh,380px)}
+.cu{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;background:var(--bg);color:var(--fg)}
+.cu b{font:400 min(24vh,12vw)/1 'Anton',Impact,sans-serif;font-variant-numeric:tabular-nums}
+.cu b.tick{animation:tick .45s cubic-bezier(.16,1,.3,1)}
+@keyframes tick{from{transform:translateY(-14%);opacity:.2}to{transform:none;opacity:1}}
+.cu span{font:400 clamp(.85rem,1.8vw,1.4rem)/1 'Anton',Impact,sans-serif;letter-spacing:.32em;text-transform:uppercase;padding-left:.32em}
+.big{grid-column:1/-1;display:grid;place-items:center;background:var(--bg);color:var(--fg);font:400 min(22vh,13vw)/1 'Anton',Impact,sans-serif;text-transform:uppercase;letter-spacing:.06em}
+
+/* ---------- content sections ---------- */
+section.sec{position:relative;padding:clamp(60px,10vh,110px) max(5vw,20px)}
+section.sec::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(239,232,218,.09) 1px,transparent 1.5px);background-size:26px 26px;pointer-events:none}
+.wrap{position:relative;width:100%;margin:0}
+.sh{text-align:left!important;margin-bottom:34px}
+.sh p{font:700 12px/1 'Inter';letter-spacing:.32em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;text-align:left!important}
+.sh h2{font-size:clamp(2.4rem,7vw,5rem);line-height:.95;color:var(--cream);text-align:left!important}
+.about{display:grid;grid-template-columns:.7fr 1.5fr;gap:clamp(24px,5vw,70px);width:100%}
+.about .txt p{font-size:clamp(1rem,1.5vw,1.18rem);line-height:1.85;color:rgba(239,232,218,.88);margin-bottom:1.15em}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:clamp(18px,2.4vw,28px);counter-reset:s;width:100%}
+.step{background:#101a2d;border:2px solid rgba(239,232,218,.15);border-radius:14px;box-shadow:6px 6px 0 #000;padding:26px;display:grid;gap:12px;align-content:start;transition:transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s,border-color .35s}
+.step:hover{transform:translate(-4px,-6px);box-shadow:10px 12px 0 var(--gold);border-color:var(--gold)}
+.step i{font:400 4.2rem/1 'Anton',Impact,sans-serif;font-style:normal;color:var(--gold)}
+.step h3{font-size:1.7rem;line-height:1.05;color:var(--cream)}
+.step p{line-height:1.65;color:rgba(239,232,218,.8);font-size:.95rem}
+.rules{background:transparent;color:var(--cream);border:0;border-radius:0;box-shadow:none;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:16px 24px;width:100%}
+.rules li{display:grid;grid-template-columns:46px 1fr;gap:16px;align-items:start;line-height:1.65;background:#101a2d;border:2px solid rgba(239,232,218,.12);border-radius:12px;padding:18px 20px;box-shadow:4px 4px 0 #000;transition:border-color .3s,transform .3s}
+.rules li:hover{border-color:var(--gold);transform:translateY(-2px)}
+.rules b{font:400 1.5rem/1 'Anton',Impact,sans-serif;background:#000;color:var(--gold);text-align:center;padding:10px 0;clip-path:polygon(8% 0,100% 6%,92% 100%,0 94%)}
+.coord{background:#101a2d;color:var(--cream);border:2px solid rgba(239,232,218,.12);border-radius:14px;box-shadow:6px 6px 0 #000;padding:clamp(24px,4vw,38px);display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between;align-items:center;width:100%}
+.coord small{font:700 11px/1 'Inter';letter-spacing:.26em;text-transform:uppercase;color:var(--gold)}
+.coord h3{font-size:clamp(2rem,5vw,3.2rem);line-height:1;margin-top:10px;color:var(--cream)}
+.cb{font:700 12px/1 'Inter';letter-spacing:.18em;text-transform:uppercase;text-decoration:none;background:var(--gold);color:var(--ink);border:2px solid var(--gold);padding:16px 26px;clip-path:polygon(3% 0,100% 6%,97% 100%,0 94%);transition:background .3s,color .3s,transform .3s,border-color .3s;display:inline-flex;align-items:center;gap:8px}
+.cb:hover{background:var(--cream);color:var(--ink);border-color:var(--cream);transform:translateY(-2px)}
+.foot{position:relative;background:#0a0e1c;text-align:center;padding:60px 5vw 40px}
+.foot .college{font:400 clamp(1.05rem,2.4vw,1.5rem)/1.2 'Anton',Impact,sans-serif;letter-spacing:.22em;text-transform:uppercase;margin-top:30px}
+.foot .credit{margin-top:12px;font:600 11px/1 'Inter';letter-spacing:.32em;text-transform:uppercase;color:rgba(239,232,218,.6)}
+.reveal{opacity:0;transform:translateY(34px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1)}.reveal.in{opacity:1;transform:none}
+
+/* ---------- sticky register bar ---------- */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0a0e1c;border-top:3px solid var(--gold);padding:12px max(5vw,20px);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.bar b{display:block;font:400 1.3rem/1.1 'Anton',Impact,sans-serif;text-transform:uppercase;letter-spacing:.03em}
+.bar span{font:600 12px/1.4 'Inter';opacity:.75}
+.reg{border:0;cursor:pointer;font:700 12px/1 'Inter';letter-spacing:.22em;text-transform:uppercase;background:var(--gold);color:var(--ink);padding:17px 26px;clip-path:polygon(4% 0,100% 6%,96% 100%,0 92%);transition:background .3s,gap .3s;display:inline-flex;gap:8px;text-decoration:none;white-space:nowrap}
+.reg:hover{background:var(--cream);gap:14px}.reg.done{background:var(--green);color:var(--cream)}.reg:disabled{background:#444;color:#999;cursor:default}
+
+/* ---------- registration dialog ---------- */
+.modal{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(6,9,18,.84)}
+.modal.open{display:flex}
+.sheet{width:min(100%,520px);max-height:92vh;overflow:auto;background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:14px;box-shadow:10px 10px 0 var(--gold);animation:sh .5s cubic-bezier(.16,1,.3,1)}
+@keyframes sh{from{transform:translateY(40px);opacity:0}}
+.sheet-h{background:var(--c,#e3a72f);color:var(--t,#141414);padding:20px 22px;border-bottom:3px solid var(--ink);display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.sheet-h small{display:block;font:700 10px/1 'Inter';letter-spacing:.28em;text-transform:uppercase;opacity:.8;margin-bottom:8px}
+.sheet-h h3{font-size:1.9rem;line-height:1}
+.x{border:0;background:var(--ink);color:var(--cream);width:36px;height:36px;font-size:18px;cursor:pointer;flex:none;clip-path:polygon(8% 0,100% 8%,92% 100%,0 92%)}
+form{padding:22px;display:grid;gap:14px}
+label{display:grid;gap:6px;font:700 10px/1 'Inter';letter-spacing:.22em;text-transform:uppercase}
+input,textarea{font:500 15px/1.3 'Inter';padding:13px 14px;border:2px solid var(--ink);border-radius:6px;background:#fff8;color:var(--ink);width:100%}
+input:focus,textarea:focus{outline:none;box-shadow:3px 3px 0 var(--gold)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sub{border:0;cursor:pointer;font:700 13px/1 'Inter';letter-spacing:.22em;text-transform:uppercase;background:var(--ink);color:var(--cream);padding:18px;clip-path:polygon(2% 0,100% 6%,98% 100%,0 94%);transition:background .3s,color .3s;text-decoration:none;text-align:center;display:block}
+.sub:hover{background:var(--gold);color:var(--ink)}.sub:disabled{opacity:.5}
+.err{color:var(--red);font-size:.85rem;min-height:1em}
+.ok{padding:34px 24px 30px;text-align:center;display:grid;gap:12px}.ok h3{font-size:2.4rem}.ok p{line-height:1.6}
+.rid{font:400 1.6rem/1 'Anton',Impact,sans-serif;letter-spacing:.14em;background:var(--ink);color:var(--gold);padding:14px;clip-path:polygon(2% 0,100% 8%,98% 100%,0 92%)}
+.gate{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px;gap:18px;align-content:center}
+.gate h1{font-size:clamp(2.4rem,7vw,4.5rem)}
+
+@media(max-width:820px){.about{grid-template-columns:1fr}#cd{grid-template-columns:1fr 1fr;height:auto}.cu{padding:30px 0}.cu b{font-size:min(22vw,5rem)}.row{grid-template-columns:1fr}.bar b{font-size:1.05rem}.reg{padding:15px 18px}.hero{min-height:88vh}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate" hidden>
+  <h1>Event not found</h1>
+  <p>We could not find that event. Head back to the departments and pick one.</p>
+  <a class="pill" href="/" style="background:var(--gold);color:var(--ink)">Back to Tantra 26</a>
+</div>
+
+<div id="app" hidden>
+<header class="hero" id="hero">
+  <nav class="top"><a class="pill" id="back" href="/#departments">&larr; Department</a><a class="pill" href="/my-events.html" style="color:var(--gold)">My Events</a></nav>
+  <span class="ghost" id="ghost" aria-hidden="true"></span>
+  <div class="hero-in">
+    <div class="chips" id="chips"></div>
+    <p class="eye" id="eye"></p>
+    <h1 id="title"></h1>
+    <p class="lead" id="lead"></p>
+    <dl class="facts" id="facts"></dl>
+  </div>
+</header>
+
+<!-- COUNTDOWN to this event (before / live / ended) -->
+<section id="cd" aria-label="Countdown to the event">
+  <div class="cu" style="--bg:#c23b22;--fg:#efe8da"><b data-u="d">00</b><span>Days</span></div>
+  <div class="cu" style="--bg:#e3a72f;--fg:#141414"><b data-u="h">00</b><span>Hours</span></div>
+  <div class="cu" style="--bg:#2b6a4d;--fg:#efe8da"><b data-u="m">00</b><span>Minutes</span></div>
+  <div class="cu" style="--bg:#182338;--fg:#efe8da"><b data-u="s">00</b><span>Seconds</span></div>
+</section>
+
+<!-- ABOUT (organiser's detailed description) -->
+<section class="sec" id="s-about"><div class="wrap about reveal">
+  <div class="sh"><p id="about-eye">Overview</p><h2 id="about-h">About</h2></div>
+  <div class="txt" id="about-t"></div>
+</div></section>
+
+<!-- HOW IT WORKS (competitions only) -->
+<section class="sec" id="s-steps" hidden><div class="wrap">
+  <div class="sh reveal"><p>Step by step</p><h2>How it works</h2></div>
+  <div class="steps" id="steps"></div>
+</div></section>
+
+<!-- RULES (competitions only) -->
+<section class="sec" id="s-rules" hidden><div class="wrap">
+  <div class="sh reveal"><p>Play fair</p><h2>Rules</h2></div>
+  <ol class="rules reveal" id="rules"></ol>
+</div></section>
+
+<!-- EVENT COORDINATOR -->
+<section class="sec" id="s-coord" hidden><div class="wrap">
+  <div class="sh reveal"><p>Got a question?</p><h2>Event coordinator</h2></div>
+  <div class="coord reveal"><div><small>Contact for this event</small><h3 id="c-name"></h3></div><div class="acts" id="c-acts"></div></div>
+</div></section>
+
+<footer class="foot"><a class="pill" id="back2" href="/#departments">Explore all departments</a><p class="college">Vimal Jyothi Engineering College</p><p class="credit">Tantra 26 &middot; National Level Techfest</p></footer>
+
+<div class="bar"><div><b id="bar-t"></b><span id="bar-s"></span></div><span id="bar-act"></span></div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+  <div class="reg-sheet">
+    <div class="sheet-h">
+      <div><small id="m-type">Register</small><h3 id="m-title">Event</h3></div>
+      <button class="x" id="m-x" aria-label="Close">&times;</button>
+    </div>
+
+    <!-- Stepper indicator -->
+    <div class="modal-steps" id="m-steps">
+      <div class="step-indicator active" id="step-dot-1"><span>1</span> Details</div>
+      <div class="step-line" id="step-line-1"></div>
+      <div class="step-indicator" id="step-dot-2"><span>2</span> Pay UPI</div>
+      <div class="step-line" id="step-line-2"></div>
+      <div class="step-indicator" id="step-dot-3"><span>3</span> Pass</div>
+    </div>
+
+    <!-- Sliding Viewport -->
+    <div class="modal-viewport">
+      <div class="modal-slider" id="modal-slider">
+
+        <!-- PANEL 1: Details -->
+        <div class="modal-panel" id="panel-details">
+          <form id="form" novalidate>
+            <div class="panel-fee-badge">
+              <span>Entry Fee: <strong id="m-fee-display">₹100</strong></span>
+              <span class="team-badge" id="m-team-display">Individual</span>
+            </div>
+            <label>Full name<input name="name" required autocomplete="name" placeholder="e.g. Alex Morgan"></label>
+            <div class="row">
+              <label>Email<input name="email" type="email" required autocomplete="email" placeholder="alex@college.edu"></label>
+              <label>Phone<input name="phone" type="tel" required autocomplete="tel" placeholder="10-digit number"></label>
+            </div>
+            <label>College / Institution<input name="college" required placeholder="e.g. Institute of Technology"></label>
+            <label id="team-l" style="display:none">Team members (names, comma separated)<textarea name="team" rows="2" placeholder="e.g. Member 2, Member 3"></textarea></label>
+            <p class="err" id="err"></p>
+            <div class="panel-actions">
+              <button class="sub" id="sub" type="submit">Proceed to Payment &rarr;</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PANEL 2: UPI Payment -->
+        <div class="modal-panel" id="panel-payment">
+          <div class="pay-wrap">
+            <div class="pay-header">
+              <button type="button" class="back-link" id="pay-back-btn">&larr; Edit details</button>
+              <span class="pay-amount-tag">Amount: <strong id="pay-amount-val">₹100</strong></span>
+            </div>
+
+            <div class="qr-section">
+              <div class="qr-frame">
+                <canvas id="pay-qr" width="135" height="135"></canvas>
+                <img id="pay-qr-img" width="135" height="135" style="display:none;object-fit:contain;border-radius:4px" alt="UPI QR">
+                <div class="qr-brand">TANTRA 26 &middot; UPI</div>
+              </div>
+              <div class="upi-details">
+                <div class="upi-id-box">
+                  <span class="upi-id-label">UPI ID</span>
+                  <div class="upi-id-val-row">
+                    <code id="upi-id-text">tantra26@okhdfcbank</code>
+                    <button type="button" class="upi-copy-btn" id="upi-copy-btn">Copy</button>
+                  </div>
+                </div>
+                <div class="pay-apps-row">
+                  <span>Pay via:</span>
+                  <span class="app-chip">GPay</span>
+                  <span class="app-chip">PhonePe</span>
+                  <span class="app-chip">Paytm</span>
+                  <span class="app-chip">BHIM</span>
+                </div>
+              </div>
+            </div>
+
+            <ol class="pay-instructions">
+              <li>Scan the QR code or pay to the UPI ID: exact amount <strong id="instr-amount">₹100</strong>.</li>
+              <li>After payment, copy the <strong>12-digit UPI Reference / UTR Number</strong> from your payment receipt.</li>
+              <li>Paste the Transaction ID below to confirm your registration.</li>
+            </ol>
+
+            <form id="pay-form" novalidate>
+              <label>UPI Transaction ID / UTR Number
+                <input id="pay-txn-id" name="txnId" required autocomplete="off" placeholder="e.g. 428190348210 (12 digits)">
+              </label>
+              <p class="err" id="pay-err"></p>
+              <div class="panel-actions">
+                <button type="button" class="cancel-btn" id="pay-cancel-btn">Back</button>
+                <button type="submit" class="sub" id="pay-submit-btn">Finish Transaction &rarr;</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- PANEL 3: Confirmation Ticket -->
+        <div class="modal-panel" id="panel-confirm">
+          <div class="ok" id="ok">
+            <div class="ok-badge">Registration Confirmed ✓</div>
+            <h3>You're in!</h3>
+            <p id="ok-msg"></p>
+            <div class="ticket-card">
+              <div class="ticket-head">
+                <span class="ticket-event" id="ticket-event-name">Event</span>
+                <span class="ticket-tag" id="ticket-dept-tag">DEPT</span>
+              </div>
+              <div class="rid" id="rid">T26-XXXX</div>
+              <div class="ticket-meta">
+                <div><span>Participant</span><strong id="ticket-name"></strong></div>
+                <div><span>College</span><strong id="ticket-college"></strong></div>
+                <div><span>Entry Fee</span><strong id="ticket-amount"></strong></div>
+                <div><span>UPI Txn ID</span><strong id="ticket-txnid"></strong></div>
+              </div>
+            </div>
+            <p class="ticket-note">Save your Registration ID or take a screenshot. Present it at the desk on fest day.</p>
+            <button class="sub" id="ok-close" type="button">Done</button>
+          </div>
+        </div>
+
+      </div><!-- /modal-slider -->
+    </div><!-- /modal-viewport -->
+  </div><!-- /reg-sheet -->
+</div>
+</div>
+
+<script type="module" src="/src/js/event-page.js"></script>
+</body>
+</html>
+<!-- #TECHNOBLADENEVERDIES -->

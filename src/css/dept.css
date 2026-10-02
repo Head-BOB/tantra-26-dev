@@ -130,6 +130,8 @@ h1, h2, h3 {
 .ev-top b, .ev-top span { font: 400 1rem/1 'Anton', Impact, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
 .ev-body { flex: 1; display: flex; flex-direction: column; padding: 20px 20px 22px; gap: 14px; }
 .ev h3 { font-size: 1.75rem; line-height: 1.05; letter-spacing: .02em; }
+.ev-card-title-link:hover { color: var(--gold) !important; }
+.ev-details-link:hover { background: var(--gold) !important; color: var(--ink) !important; transform: translateY(-2px); }
 .ev .desc { font-size: .93rem; line-height: 1.6; color: rgba(239,232,218,.75); }
 .meta { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: .88rem; margin-top: auto; padding-top: 6px; }
 .meta dt { font: 700 10px/1.9 'Inter'; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); }

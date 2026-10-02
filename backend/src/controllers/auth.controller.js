@@ -8,6 +8,9 @@ const AUTH_MAP = {
   // Computer Science & Engineering
   'zWHCaX': { role: 'dept_admin', dept: 'cse', name: 'Computer Science & Engineering' },
 
+  // Cyber Security
+  'kY8sNw': { role: 'dept_admin', dept: 'cscy', name: 'Cyber Security' },
+
   // Artificial Intelligence & Data Science
   'MhFbxq': { role: 'dept_admin', dept: 'ai', name: 'Artificial Intelligence & Data Science' },
 

@@ -30,11 +30,24 @@ function saveLocalRegs(regs) {
   }
 }
 
-// Helper to generate a sleek, unique pass ID
-function generateRegId(deptSlug) {
+// Helper to generate a sleek, unique pass ID with 4 characters on the right side
+const CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+function generateRegId(deptSlug, existingSet = null) {
   const code = (deptSlug || 'GEN').toUpperCase();
-  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `T26-${code}-${rand}`;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    let rand = '';
+    for (let i = 0; i < 4; i++) {
+      rand += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+    }
+    const candidate = `T26-${code}-${rand}`;
+    if (!existingSet || !existingSet.has(candidate)) {
+      if (existingSet) existingSet.add(candidate);
+      return candidate;
+    }
+  }
+  const hex = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0').toUpperCase();
+  return `T26-${code}-${hex}`;
 }
 
 // POST /api/registrations (Public registration submission)
@@ -156,8 +169,22 @@ export async function createRegistration(req, res) {
       }
     }
 
-    // 3. Generate Pass ID & Insert record
-    const regId = generateRegId(dept_slug);
+    // 3. Generate Pass ID with real-time collision check & Insert record
+    let regId = '';
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const candidate = generateRegId(dept_slug);
+      const { data: dup } = await supabase
+        .from('registrations')
+        .select('id')
+        .eq('reg_id', candidate)
+        .maybeSingle();
+      if (!dup) {
+        regId = candidate;
+        break;
+      }
+    }
+    if (!regId) regId = generateRegId(dept_slug);
+
     const newRecord = {
       reg_id: regId,
       dept_slug: dept_slug.toLowerCase(),

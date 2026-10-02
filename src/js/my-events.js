@@ -6,6 +6,7 @@
  */
 
 import { getEventMetadata } from '../data/all-events.js';
+import { generatePassId } from './access-code.js';
 
 const KEY = 'tantra26:registrations';
 // Fest start: 7 October 2026, 9:00 AM IST (UTC+05:30)
@@ -104,7 +105,7 @@ function normalizeRecord(r) {
     email: r.email || '',
     phone: r.phone || '',
     college: r.college || 'Vimal Jyothi Engineering College',
-    regId: r.regId || r.reg_id || ('T26-' + slug.toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase()),
+    regId: r.regId || r.reg_id || generatePassId(slug),
     regTime: r.regTime || (r.time && r.time.includes('T') ? r.time : new Date().toISOString()),
   };
 }
@@ -309,6 +310,7 @@ export function initMyEvents() {
           `<div class="foot">` +
             `<span class="rid">${esc(r.regId)}</span>` +
             `<div class="acts">` +
+              `<a href="/event.html?d=${encodeURIComponent(r.slug)}&e=${encodeURIComponent(r.eventId)}" class="ab" style="text-decoration:none;display:inline-flex;align-items:center;background:var(--gold);color:var(--ink)">View Event &rarr;</a>` +
               (r._s ? `<button type="button" class="ab" data-act="ics">Add to calendar</button>` : '') +
             `</div>` +
           `</div>` +

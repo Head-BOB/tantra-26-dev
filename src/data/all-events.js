@@ -56,23 +56,49 @@ export function getEventMetadata(id = '', title = '', slug = '') {
   if (cleanId && EVENTS_BY_ID[cleanId]) return EVENTS_BY_ID[cleanId];
   if (cleanTitle && EVENTS_BY_TITLE[cleanTitle.toLowerCase()]) return EVENTS_BY_TITLE[cleanTitle.toLowerCase()];
 
-  // Normalized matching (ignoring punctuation and whitespace)
-  const normId = cleanId.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const normTitle = cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Unicode-aware key generation (preserving letters/numbers, equating µ/μ with mu)
+  const toKey = (s) => String(s || '').toLowerCase()
+    .replace(/[µμ]/g, 'mu')
+    .replace(/[^\p{L}\p{N}]/gu, '');
+
+  const normId = toKey(cleanId);
+  const normTitle = toKey(cleanTitle);
 
   if (normId || normTitle) {
     const match = ALL_EVENTS.find((e) => {
-      const eNormId = e.id.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const eNormTitle = e.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const eNormId = toKey(e.id);
+      const eNormTitle = toKey(e.title);
       return (normId && (eNormId === normId || eNormTitle === normId)) ||
              (normTitle && (eNormTitle === normTitle || eNormId === normTitle));
     });
     if (match) return match;
   }
 
+  // Check dynamic admin-created events from localStorage
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const adminStore = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
+      const delStore = JSON.parse(localStorage.getItem('tantra26:admin:deleted_events') || '{}');
+      for (const dSlug in adminStore) {
+        if (slug && dSlug !== slug.toLowerCase()) continue;
+        const list = adminStore[dSlug] || [];
+        const dels = delStore[dSlug] || [];
+        for (const ev of list) {
+          if (dels.includes(ev.id)) continue;
+          if (cleanId && (ev.id === cleanId || toKey(ev.id) === normId)) {
+            return { ...ev, slug: dSlug, dept: DEPT_MAP[dSlug]?.name || dSlug.toUpperCase() };
+          }
+          if (cleanTitle && (ev.title.toLowerCase() === cleanTitle.toLowerCase() || toKey(ev.title) === normTitle)) {
+            return { ...ev, slug: dSlug, dept: DEPT_MAP[dSlug]?.name || dSlug.toUpperCase() };
+          }
+        }
+      }
+    } catch {}
+  }
+
   if (slug && DEPT_MAP[slug.toLowerCase()]) {
     const deptEvents = DEPT_MAP[slug.toLowerCase()].events;
-    const match = deptEvents.find((e) => e.id === cleanId || e.title.toLowerCase() === cleanTitle.toLowerCase());
+    const match = deptEvents.find((e) => e.id === cleanId || e.title.toLowerCase() === cleanTitle.toLowerCase() || toKey(e.title) === normTitle);
     if (match) return { ...match, slug: slug.toLowerCase(), dept: DEPT_MAP[slug.toLowerCase()].name };
   }
   return null;

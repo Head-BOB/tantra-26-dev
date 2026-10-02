@@ -187,26 +187,32 @@ export function initDepartments() {
   // Desktop mouse click-and-drag
   let isDown = false;
   let startX = 0;
+  let startY = 0;
   let scrollLeftStart = 0;
   let hasDragged = false;
+  const DRAG_THRESHOLD = 15;
 
   rail.addEventListener('mousedown', (e) => {
     isDown = true;
     hasDragged = false;
     startX = e.pageX;
+    startY = e.pageY;
     scrollLeftStart = rail.scrollLeft;
-    rail.classList.add('drag');
   });
 
   window.addEventListener('mousemove', (e) => {
     if (!isDown) return;
     const dx = e.pageX - startX;
-    if (Math.abs(dx) > 5) {
+    const dy = e.pageY - startY;
+    if (Math.abs(dx) > DRAG_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
       hasDragged = true;
+      rail.classList.add('drag');
     }
-    const maxScroll = getMaxScroll();
-    const newLeft = scrollLeftStart - dx;
-    rail.scrollLeft = Math.min(maxScroll, Math.max(0, newLeft));
+    if (hasDragged) {
+      const maxScroll = getMaxScroll();
+      const newLeft = scrollLeftStart - dx;
+      rail.scrollLeft = Math.min(maxScroll, Math.max(0, newLeft));
+    }
   });
 
   function stopDrag() {
@@ -218,13 +224,14 @@ export function initDepartments() {
         const maxScroll = getMaxScroll();
         const target = active === 0 ? 0 : (active === cards.length - 1 ? maxScroll : Math.min(maxScroll, Math.max(0, getCardScrollTarget(cards[active]))));
         scrollToPosition(target);
+        setTimeout(() => { hasDragged = false; }, 60);
       }
     }
   }
 
   window.addEventListener('mouseup', stopDrag);
 
-  // Prevent card navigation if the user was dragging
+  // Prevent card navigation ONLY if user actually dragged
   rail.addEventListener('click', (e) => {
     if (hasDragged) {
       e.preventDefault();
@@ -232,6 +239,30 @@ export function initDepartments() {
       hasDragged = false;
     }
   }, true);
+
+  // Ensure clicking anywhere on each department card navigates reliably
+  cards.forEach((card) => {
+    card.addEventListener('click', (e) => {
+      if (hasDragged) {
+        e.preventDefault();
+        return;
+      }
+      const href = card.getAttribute('href');
+      if (href) {
+        window.location.href = href;
+      }
+    });
+  });
+
+  // Support direct jump to #departments from other pages
+  if (location.hash === '#departments' || location.hash === '#depts') {
+    setTimeout(() => {
+      const targetSec = document.getElementById('departments') || document.getElementById('depts');
+      if (targetSec) {
+        targetSec.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 200);
+  }
 
   // Initial state
   updateState();

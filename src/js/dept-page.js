@@ -7,6 +7,7 @@
 import QRCode from 'qrcode';
 import { fetchDeptEvents, fetchDeptCoords, fetchDeptPayment, submitRegistration } from './api.js';
 import { getEventMetadata } from '../data/all-events.js';
+import { generatePassId } from './access-code.js';
 
 export function initDeptPage(CONFIG, EVENTS) {
   const $ = (x) => document.querySelector(x);
@@ -127,6 +128,11 @@ export function initDeptPage(CONFIG, EVENTS) {
     { threshold: 0.12 }
   );
 
+  function formatTitleSpan(text) {
+    const symRe = /([µμΩωπΠλΛθΘαβγδΔσΣ∞≈≠≤≥±√∫°])/g;
+    return esc(text).replace(symRe, '<span class="sym" style="text-transform:none;font-family:\'Inter\',system-ui,sans-serif;display:inline-block">$1</span>');
+  }
+
   function draw() {
     const g = $('#grid');
     g.innerHTML = '';
@@ -135,14 +141,24 @@ export function initDeptPage(CONFIG, EVENTS) {
       a.className = 'ev';
       a.style.transitionDelay = `${(i % 3) * 0.08}s`;
       const done = isReg(e.id);
-      const regBtn = `<button class="reg${done ? ' done' : ''}" data-id="${esc(e.id)}"${done ? ' disabled' : ''}>${done ? 'Registered &#10003;' : 'Register <b>&rarr;</b>'}</button>`;
+      const eventUrl = `/event.html?d=${encodeURIComponent(CONFIG.slug)}&e=${encodeURIComponent(e.id)}`;
+      let actionBtn;
+      if (done) {
+        actionBtn =
+          `<div class="ev-btn-row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">` +
+            `<button class="reg done" disabled>Registered &#10003;</button>` +
+            `<a href="${eventUrl}" class="reg" data-id="${esc(e.id)}">View Event <b>&rarr;</b></a>` +
+          `</div>`;
+      } else {
+        actionBtn = `<a href="${eventUrl}" class="reg" data-id="${esc(e.id)}">${'View Event <b>&rarr;</b>'}</a>`;
+      }
       a.innerHTML =
         `<div class="ev-top"><b>${esc(e.type)}</b><span>${esc(e.fee)}</span></div>` +
-        `<div class="ev-body"><h3>${esc(e.title)}</h3><p class="desc">${esc(e.desc)}</p>` +
+        `<div class="ev-body"><h3><a href="${eventUrl}" class="ev-card-title-link" style="text-decoration:none;color:inherit;transition:color .2s">${formatTitleSpan(e.title)}</a></h3><p class="desc">${esc(e.desc)}</p>` +
         `<dl class="meta"><dt>When</dt><dd>${esc(e.date)} &middot; ${esc(e.time)}</dd>` +
         `<dt>Where</dt><dd>${esc(e.venue)}</dd>` +
         `<dt>Team</dt><dd>${e.team > 1 ? 'Up to ' + e.team + ' members' : 'Individual'}</dd></dl>` +
-        regBtn + `</div>`;
+        actionBtn + `</div>`;
       g.appendChild(a);
       io.observe(a);
     });
@@ -757,7 +773,7 @@ export function initDeptPage(CONFIG, EVENTS) {
       console.warn('Backend note:', err.message);
     }
 
-    const regId = passRegId || ('T26-' + CONFIG.slug.toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase());
+    const regId = passRegId || generatePassId(CONFIG.slug);
     const rec = {
       slug:    CONFIG.slug,
       dept:    CONFIG.dept,

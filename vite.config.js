@@ -30,6 +30,11 @@ export default defineConfig({
         deptCscy:  resolve(__dirname, 'departments/cscy.html'),
         // Admin dashboard
         admin: resolve(__dirname, 'admin/index.html'),
+        // Organisers portal & Event management
+        organisers: resolve(__dirname, 'organisers.html'),
+        organiserEvent: resolve(__dirname, 'organiser-event.html'),
+        // Public full client event page
+        event: resolve(__dirname, 'event.html'),
       },
       output: {
         // Group all shared chunks under assets/

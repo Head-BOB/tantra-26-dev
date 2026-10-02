@@ -31,10 +31,25 @@ CREATE TABLE IF NOT EXISTS events (
     team_size INT NOT NULL DEFAULT 1,
     fee VARCHAR(50) NOT NULL DEFAULT 'Free',
     description TEXT NOT NULL,
+    access_code VARCHAR(10) UNIQUE,   -- 6-digit organiser login passcode (e.g. 'CR7X9A')
+    details TEXT,                     -- Organiser full description / about
+    banner TEXT,                      -- Custom banner image URL
+    steps JSONB DEFAULT '[]'::jsonb,  -- Competition how-it-works guide steps [{ t, x }]
+    rules JSONB DEFAULT '[]'::jsonb,  -- Competition rules [string]
+    coord JSONB DEFAULT '{}'::jsonb,  -- Coordinator contact { name, phone, email }
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Idempotent schema upgrades for existing installations
+ALTER TABLE events ADD COLUMN IF NOT EXISTS access_code VARCHAR(10);
+ALTER TABLE events ADD COLUMN IF NOT EXISTS details TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS banner TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS steps JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS rules JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS coord JSONB DEFAULT '{}'::jsonb;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_events_access_code_unique ON events (access_code) WHERE access_code IS NOT NULL;
 
 -- 4. COORDINATORS / ORGANISERS TABLE
 CREATE TABLE IF NOT EXISTS coordinators (
@@ -72,6 +87,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 CREATE INDEX IF NOT EXISTS idx_regs_dept_time ON registrations (dept_slug, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_regs_search ON registrations (dept_slug, email, txn_id);
 CREATE INDEX IF NOT EXISTS idx_events_dept ON events (dept_slug) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_events_access_code ON events (access_code);
 CREATE INDEX IF NOT EXISTS idx_coords_dept ON coordinators (dept_slug, display_order ASC);
 
 -- ============================================================

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Organiser Dashboard · Tantra 26</title>
+<meta name="description" content="Coordinator dashboard for Tantra 26 event registrations, participant lists, and Excel exports.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/css/organiser-dashboard.css">
+</head>
+<body>
+
+<!-- Top Navigation -->
+<nav class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-brand">
+      Tantra <span>26</span>
+    </div>
+    <span class="badge-dept" id="dept-badge">Department</span>
+    <span class="badge-code">Code: <strong id="code-badge">------</strong></span>
+  </div>
+  <button type="button" class="signout-btn" id="signout-btn">Sign Out &rarr;</button>
+</nav>
+
+<div class="container">
+
+  <!-- Event Hero Card -->
+  <section class="event-hero" id="event-hero">
+    <p class="event-eyebrow" id="hero-dept-name">Department Event</p>
+    <h1 class="event-title" id="hero-event-title">Loading Event…</h1>
+    <p class="event-desc" id="hero-event-desc"></p>
+    <div class="event-chips">
+      <div class="event-chip"><b>When</b><span id="chip-when">7 Oct</span></div>
+      <div class="event-chip"><b>Where</b><span id="chip-where">Campus</span></div>
+      <div class="event-chip"><b>Fee</b><span id="chip-fee">₹100</span></div>
+      <div class="event-chip"><b>Team</b><span id="chip-team">Individual</span></div>
+      <div class="event-chip"><b>Type</b><span id="chip-type">Competition</span></div>
+    </div>
+  </section>
+
+  <!-- Metrics Grid -->
+  <section class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-val green" id="stat-count">0</span>
+      <span class="stat-lbl">Registered Participants</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val gold" id="stat-teams">0</span>
+      <span class="stat-lbl">Registered Teams</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val" id="stat-fees">₹0</span>
+      <span class="stat-lbl">Total Fee Volume</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val" id="stat-verified">0</span>
+      <span class="stat-lbl">With UPI Txn ID</span>
+    </div>
+  </section>
+
+  <!-- Participants Table View -->
+  <section>
+    <div class="toolbar-wrap">
+      <h2 class="toolbar-title">
+        Participant List <span id="reg-badge-count">0</span>
+      </h2>
+      <div class="toolbar-actions">
+        <input type="search" id="search-box" class="search-input" placeholder="Search by name, email, college, team…" autocomplete="off">
+        <button type="button" id="refresh-btn" class="btn-refresh" title="Refresh list">Refresh</button>
+        <button type="button" id="export-excel-btn" class="btn-export">Export to Excel (.xlsx)</button>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-wrap" id="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Pass ID</th>
+            <th>Participant</th>
+            <th>Contact Details</th>
+            <th>College / Institution</th>
+            <th>Team Name</th>
+            <th>UPI Txn ID / UTR</th>
+            <th>Registered At</th>
+          </tr>
+        </thead>
+        <tbody id="participants-tbody">
+          <!-- Rows inserted dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-box" id="empty-box" hidden>
+      <h3>No Registrations Yet</h3>
+      <p>When participants sign up for this event on the department page, their details, contact info, and payment records will appear here live.</p>
+    </div>
+  </section>
+
+</div>
+
+<footer class="page-footer">
+  Vimal Jyothi Engineering College &middot; Tantra 26 National Level Tech Fest
+</footer>
+
+<script type="module" src="/src/js/organiser-dashboard.js"></script>
+</body>
+</html>
+<!-- #TECHNOBLADENEVERDIES -->

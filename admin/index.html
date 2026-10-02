@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/css/slop-guard.css">
 <script type="module" src="/src/js/entries/admin.js"></script>
 </head>
 <body>
@@ -163,10 +164,12 @@
           <select id="central-dept-filter" class="dept-select-filter">
             <option value="">All Departments</option>
             <option value="cse">Computer Science &amp; Engineering</option>
+            <option value="cscy">Cyber Security</option>
             <option value="ai">Artificial Intelligence &amp; Data Science</option>
             <option value="csd">Computer Science &amp; Design</option>
             <option value="csbs">Computer Science &amp; Business Systems</option>
             <option value="eee">Electrical &amp; Electronics Engineering</option>
+            <option value="ece">Electronics &amp; Communication Engineering</option>
             <option value="aei">Applied Electronics &amp; Instrumentation</option>
             <option value="civil">Civil Engineering</option>
             <option value="mech">Mechanical Engineering</option>
@@ -216,18 +219,18 @@
       </div>
       <form id="event-form" novalidate>
         <label>Event title
-          <input name="title" required autocomplete="off" placeholder="e.g. Code Rush">
+          <input name="title" required autocomplete="off" data-slop="Event title" placeholder="e.g. Code Rush">
         </label>
         <div class="row">
           <label>Type
             <select name="type">
-              <option>Competition</option>
-              <option>Workshop</option>
-              <option>Talk</option>
+              <option value="Competition">Competition</option>
+              <option value="Workshop">Workshop</option>
+              <option value="Expo">Expo</option>
             </select>
           </label>
           <label>Entry fee
-            <input name="fee" required placeholder="e.g. ₹100 or Free">
+            <input name="fee" required data-slop="Entry fee" placeholder="e.g. ₹100 or Free">
           </label>
         </div>
         <div class="row">
@@ -242,14 +245,27 @@
         </div>
         <div class="row">
           <label>Venue
-            <input name="venue" required placeholder="e.g. CS Lab 1">
+            <input name="venue" required data-slop="Venue" placeholder="e.g. CS Lab 1">
           </label>
           <label>Max team size
             <input name="team" type="number" min="1" max="20" value="1">
           </label>
         </div>
-        <label>Description
-          <textarea name="desc" rows="3" required placeholder="Short event description shown on the card…"></textarea>
+        <div class="row">
+          <label>Organiser Passcode (6-digit alphanumeric)
+            <div style="display:flex;gap:8px;align-items:center">
+              <input name="accessCode" id="em-code" required maxlength="6" style="text-transform:uppercase;font-family:'Anton',Impact,sans-serif;font-size:1.15rem;letter-spacing:.25em;text-align:center" placeholder="e.g. CYB701">
+              <button type="button" id="em-regen-code" class="cancel-btn" style="white-space:nowrap;padding:12px 14px;font-size:11px">Randomize</button>
+            </div>
+            <span class="field-hint">Coordinators log in at /organisers using this passcode</span>
+          </label>
+        </div>
+        <label>Preview Description (max 120 chars)
+          <textarea name="desc" id="em-desc" rows="3" maxlength="120" required data-slop="Event description" placeholder="Short event preview shown on the card (max 120 characters)…"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+            <span class="field-hint" style="margin:0">Brief preview shown on the event card</span>
+            <span id="em-desc-count" style="font-size:11px;font-weight:700;color:rgba(239,232,218,0.6)">0 / 120</span>
+          </div>
         </label>
         <p class="err" id="em-err"></p>
         <div class="form-actions">
@@ -272,10 +288,10 @@
       </div>
       <form id="coord-form" class="coord-form" novalidate>
         <label>Full name
-          <input id="cm-name" name="name" required autocomplete="off" placeholder="e.g. Riya Sharma">
+          <input id="cm-name" name="name" required autocomplete="off" data-slop="Coordinator name" placeholder="e.g. Riya Sharma">
         </label>
         <label>Phone number
-          <input id="cm-phone" name="phone" type="tel" required autocomplete="off" placeholder="e.g. +91 98765 43210">
+          <input id="cm-phone" name="phone" type="tel" required autocomplete="off" data-slop="Coordinator phone" placeholder="e.g. +91 98765 43210">
         </label>
         <p class="err" id="cm-err"></p>
         <div class="form-actions">
@@ -301,6 +317,7 @@
           <select id="excel-dept-select">
             <option value="all">All Departments (Master Spreadsheet)</option>
             <option value="cse">Computer Science &amp; Engineering</option>
+            <option value="cscy">Cyber Security</option>
             <option value="ai">Artificial Intelligence &amp; Data Science</option>
             <option value="csd">Computer Science &amp; Design</option>
             <option value="csbs">Computer Science &amp; Business Systems</option>
