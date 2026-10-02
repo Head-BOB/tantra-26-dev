@@ -17,7 +17,7 @@ const IST = '+05:30';
 
 export const DEPTS = {
   cse:   ['Computer Science & Engineering', '#2b6a4d', '#efe8da', 'CSE'],
-  cscy:  ['Cyber Security', '#141414', '#efe8da', 'CSCY'],
+  cscy:  ['Computer Science and Cyber Security', '#141414', '#efe8da', 'CSCY'],
   ai:    ['Artificial Intelligence & Data Science', '#c23b22', '#efe8da', 'ADS'],
   csd:   ['Computer Science & Design', '#e3a72f', '#141414', 'CSD'],
   csbs:  ['Computer Science & Business Systems', '#182338', '#efe8da', 'CSBS'],

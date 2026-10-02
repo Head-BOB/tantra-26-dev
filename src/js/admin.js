@@ -140,7 +140,7 @@ const AUTH_MAP = {
 
 const DEPTS = [
   { slug: 'cse',   name: 'Computer Science & Engineering',         color: '#2b6a4d', fg: '#efe8da' },
-  { slug: 'cscy',  name: 'Cyber Security',                         color: '#141414', fg: '#efe8da' },
+  { slug: 'cscy',  name: 'Computer Science and Cyber Security',     color: '#141414', fg: '#efe8da' },
   { slug: 'ai',    name: 'Artificial Intelligence & Data Science',  color: '#c23b22', fg: '#efe8da' },
   { slug: 'csd',   name: 'Computer Science & Design',              color: '#e3a72f', fg: '#141414' },
   { slug: 'csbs',  name: 'Computer Science & Business Systems',     color: '#182338', fg: '#efe8da' },
