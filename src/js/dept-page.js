@@ -99,17 +99,6 @@ export function initDeptPage(CONFIG, EVENTS) {
     });
   }
 
-  const crumbLink = document.querySelector('.top a.crumb');
-  if (crumbLink) {
-    crumbLink.addEventListener('click', (e) => {
-      const ref = document.referrer || '';
-      if (ref.includes(window.location.host) && !ref.includes('/departments/')) {
-        e.preventDefault();
-        window.history.back();
-      }
-    });
-  }
-
   // ---- Registrations storage helpers ----
   const KEY = 'tantra26:registrations';
   function loadRegs() {
