@@ -78,6 +78,11 @@ function demoEvent(kind) {
       'Ties are broken by total time taken.',
     ],
     coord: { name: 'Asha Nair', phone: '+91 98765 43210', email: 'asha@example.com' },
+    prizes: [
+      { pos: 1, label: '1st Prize', reward: '₹5,000' },
+      { pos: 2, label: '2nd Prize', reward: '₹3,000' },
+      { pos: 3, label: '3rd Prize', reward: '₹1,500' },
+    ],
   };
   if (kind === 'workshop') {
     e.id = 'git-deploy';
@@ -91,6 +96,7 @@ function demoEvent(kind) {
     e.details = 'A hands on session on version control, pull requests and deploying a small project in under an hour.\n\nNo experience needed. Bring a laptop with Git installed.';
     e.steps = [];
     e.rules = [];
+    e.prizes = [];
   }
   if (kind === 'expo') {
     e.id = 'robo-expo';
@@ -105,8 +111,27 @@ function demoEvent(kind) {
     e.details = 'Walk through a gallery of robots built by students. Talk to the builders, see them run and vote for your favourite.';
     e.steps = [];
     e.rules = [];
+    e.prizes = [];
   }
   return e;
+}
+
+function calculatePrizePool(prizes) {
+  if (!Array.isArray(prizes) || prizes.length === 0) return null;
+  let total = 0;
+  let hasNumeric = false;
+  for (const p of prizes) {
+    if (!p || !p.reward) continue;
+    const num = parseInt(String(p.reward).replace(/[^0-9]/g, ''), 10);
+    if (!isNaN(num) && num > 0) {
+      total += num;
+      hasNumeric = true;
+    }
+  }
+  if (hasNumeric && total > 0) {
+    return { total, text: `₹${total.toLocaleString('en-IN')}` };
+  }
+  return { total: 0, text: `${prizes.length} Positions` };
 }
 
 function loadEvent(slug, id) {
@@ -117,9 +142,16 @@ function loadEvent(slug, id) {
   // 1. Organiser edited record
   try {
     const s = JSON.parse(localStorage.getItem(EV_KEY) || '{}');
-    if (s[slug + ':' + id]) return s[slug + ':' + id];
+    if (s[slug + ':' + id]) {
+      const it = s[slug + ':' + id];
+      it.prizes = it.prizes || [];
+      return it;
+    }
     for (const k in s) {
-      if (s[k] && s[k].id === id && (!slug || s[k].slug === slug)) return s[k];
+      if (s[k] && s[k].id === id && (!slug || s[k].slug === slug)) {
+        s[k].prizes = s[k].prizes || [];
+        return s[k];
+      }
     }
   } catch {}
 
@@ -147,6 +179,7 @@ function loadEvent(slug, id) {
         banner: found.banner || '',
         steps: found.steps || [],
         rules: found.rules || [],
+        prizes: found.prizes || [],
         coord: found.coord || { name: '', phone: '', email: '' },
       };
     }
@@ -171,6 +204,7 @@ function loadEvent(slug, id) {
       banner: meta.banner || '',
       steps: meta.steps || [],
       rules: meta.rules || [],
+      prizes: meta.prizes || [],
       coord: meta.coord || { name: '', phone: '', email: '' },
     };
   }
@@ -276,7 +310,13 @@ if (!ev) {
     hero.style.backgroundImage = `url("${ev.banner.replace(/"/g, '')}")`;
   }
   $('#ghost').textContent = D[3];
-  $('#chips').innerHTML = `<span class="chip g">${esc(ev.type)}</span><span class="chip">${esc(ev.fee || 'Free')}</span>`;
+  
+  const prizePool = calculatePrizePool(ev.prizes);
+  let chipsHtml = `<span class="chip g">${esc(ev.type)}</span><span class="chip">${esc(ev.fee || 'Free')}</span>`;
+  if (prizePool) {
+    chipsHtml += `<span class="chip">Prize Pool &middot; ${esc(prizePool.text)}</span>`;
+  }
+  $('#chips').innerHTML = chipsHtml;
   $('#eye').textContent = `Tantra 26 · ${D[0]}`;
 
   function formatTitleSpan(text) {
@@ -299,13 +339,17 @@ if (!ev) {
     ? `${Math.floor(eventDurationMin / 60)} hr${Math.floor(eventDurationMin / 60) > 1 ? 's' : ''}${eventDurationMin % 60 ? ` ${eventDurationMin % 60} min` : ''}`
     : `${eventDurationMin} mins`;
 
-  $('#facts').innerHTML = [
+  const factItems = [
     ['When', `${ev.date} · ${ev.time}`],
     ['Duration', durText],
     ['Where', ev.venue],
     ['Team', ev.team > 1 ? `Up to ${ev.team} members` : 'Individual'],
     ['Fee', ev.fee || 'Free'],
-  ].map((r) => `<div><dt>${r[0]}</dt><dd>${esc(r[1])}</dd></div>`).join('');
+  ];
+  if (prizePool) {
+    factItems.push(['Prize Pool', prizePool.text]);
+  }
+  $('#facts').innerHTML = factItems.map((r) => `<div><dt>${r[0]}</dt><dd>${esc(r[1])}</dd></div>`).join('');
 
   const backUrl = '/#departments';
   $('#back').href = backUrl;
@@ -318,6 +362,54 @@ if (!ev) {
   const fullText = ev.details || ev.desc || '';
   const paras = fullText.split(/\n\s*\n/).filter(Boolean);
   $('#about-t').innerHTML = paras.map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
+
+  // Prizes & Rewards section
+  const validPrizes = Array.isArray(ev.prizes) ? ev.prizes.filter((p) => p && (p.reward || p.label)) : [];
+  if (validPrizes.length > 0) {
+    $('#s-prizes').hidden = false;
+    if (prizePool && prizePool.total > 0) {
+      $('#pz-eye').textContent = `Prize Pool · ${prizePool.text}`;
+    } else {
+      $('#pz-eye').textContent = 'Awards & Recognition';
+    }
+
+    function pad2(n) {
+      return n < 10 ? '0' + n : '' + n;
+    }
+
+    function getOrdinal(n) {
+      const s = ['th', 'st', 'nd', 'rd'];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    function getRankTag(pos) {
+      if (pos === 1) return '1st Place';
+      if (pos === 2) return '2nd Place';
+      if (pos === 3) return '3rd Place';
+      return `${getOrdinal(pos)} Place`;
+    }
+
+    $('#pz-grid').innerHTML = validPrizes.map((p, i) => {
+      const pos = p.pos || (i + 1);
+      const isFirst = pos === 1;
+      const numStr = pad2(pos);
+      const rankTag = getRankTag(pos);
+      const title = p.label || `${getOrdinal(pos)} Prize`;
+      const reward = p.reward || 'Certificate';
+
+      return `
+        <div class="pz-card ${isFirst ? 'pz-first' : ''} reveal" style="transition-delay:${(i % 3) * 0.08}s">
+          <div class="pz-head">
+            <i>${numStr}</i>
+            <span class="pz-pos-tag">${esc(rankTag)}</span>
+          </div>
+          <div class="pz-val">${esc(reward)}</div>
+          <div class="pz-title">${esc(title)}</div>
+        </div>
+      `;
+    }).join('');
+  }
 
   // Competition-only sections: Guide & Rules
   if (ev.type === 'Competition' && ev.steps.length > 0) {

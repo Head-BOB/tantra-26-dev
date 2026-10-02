@@ -58,6 +58,7 @@ export function unpackEventRecord(ev) {
   const banner = ev.banner || envelope.banner || '';
   const steps = Array.isArray(ev.steps) ? ev.steps : (Array.isArray(envelope.steps) ? envelope.steps : []);
   const rules = Array.isArray(ev.rules) ? ev.rules : (Array.isArray(envelope.rules) ? envelope.rules : []);
+  const prizes = Array.isArray(ev.prizes) ? ev.prizes : (Array.isArray(envelope.prizes) ? envelope.prizes : []);
   const coord = (ev.coord && typeof ev.coord === 'object') ? ev.coord : ((envelope.coord && typeof envelope.coord === 'object') ? envelope.coord : { name: '', phone: '', email: '' });
   const duration = Math.max(10, parseInt(ev.duration || envelope.duration || 120, 10));
 
@@ -74,6 +75,7 @@ export function unpackEventRecord(ev) {
     banner,
     steps,
     rules,
+    prizes,
     coord,
     team: ev.team_size ?? ev.team ?? 1,
     team_size: ev.team_size ?? ev.team ?? 1,
@@ -389,13 +391,14 @@ export async function apiSaveEvent(eventData, isEdit = false) {
   const banner = eventData.banner || '';
   const steps = Array.isArray(eventData.steps) ? eventData.steps : [];
   const rules = Array.isArray(eventData.rules) ? eventData.rules : [];
+  const prizes = Array.isArray(eventData.prizes) ? eventData.prizes : [];
   const coord = (eventData.coord && typeof eventData.coord === 'object') ? eventData.coord : { name: '', phone: '', email: '' };
 
   const duration = Math.max(10, parseInt(eventData.duration || 120, 10));
 
   if (supabaseClient) {
     try {
-      // 1. First attempt: Native schema columns (access_code, details, banner, steps, rules, coord, duration)
+      // 1. First attempt: Native schema columns
       const nativeRecord = {
         id: eventData.id,
         dept_slug: (eventData.dept_slug || eventData.slug || '').toLowerCase(),
@@ -413,6 +416,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         banner,
         steps,
         rules,
+        prizes,
         coord,
         is_active: true,
         updated_at: new Date().toISOString(),
@@ -421,18 +425,18 @@ export async function apiSaveEvent(eventData, isEdit = false) {
       let { data, error } = await supabaseClient.from('events').upsert([nativeRecord]).select().single();
       if (!error && data) return unpackEventRecord(data);
 
-      // If duration is missing from Supabase schema cache, retry without duration column
-      if (error && (error.message.includes('duration') || error.message.includes('schema cache'))) {
-        const withoutDuration = { ...nativeRecord };
-        delete withoutDuration.duration;
-        const resNoDur = await supabaseClient.from('events').upsert([withoutDuration]).select().single();
-        if (!resNoDur.error && resNoDur.data) {
-          return unpackEventRecord(resNoDur.data);
+      // If prizes or duration is missing from Supabase schema cache, retry without prizes column
+      if (error && (error.message.includes('prizes') || error.message.includes('duration') || error.message.includes('schema cache'))) {
+        const withoutPrizes = { ...nativeRecord };
+        delete withoutPrizes.prizes;
+        const resNoPrizes = await supabaseClient.from('events').upsert([withoutPrizes]).select().single();
+        if (!resNoPrizes.error && resNoPrizes.data) {
+          return unpackEventRecord(resNoPrizes.data);
         }
-        error = resNoDur.error;
+        error = resNoPrizes.error;
       }
 
-      // 2. Second attempt: Fallback metadata envelope if details/steps/rules/banner columns are not migrated yet
+      // 2. Second attempt: Fallback metadata envelope
       if (error) {
         const envelope = JSON.stringify({
           _meta: true,
@@ -443,6 +447,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
           banner,
           steps,
           rules,
+          prizes,
           coord,
         });
         const fallbackRecord = {

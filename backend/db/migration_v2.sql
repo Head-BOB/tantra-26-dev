@@ -17,6 +17,8 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS banner TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS steps JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS rules JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS coord JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS duration INT DEFAULT 120;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS prizes JSONB DEFAULT '[]'::jsonb;
 
 -- 3. Clean up legacy alias event IDs that were superseded by official catalog events
 DELETE FROM events WHERE id = 'lathe-master' AND EXISTS (SELECT 1 FROM events e2 WHERE e2.id = 'robo-race');

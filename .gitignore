@@ -45,4 +45,5 @@ miised_departments/
 
 # Local database fallback / test data
 backend/db/registrations.json
+scripts/
 

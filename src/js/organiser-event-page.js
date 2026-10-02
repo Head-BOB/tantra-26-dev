@@ -59,6 +59,11 @@ function demoEvent(kind) {
     banner: '',
     steps: [],
     rules: [],
+    prizes: [
+      { pos: 1, label: '1st Prize', reward: '₹5,000' },
+      { pos: 2, label: '2nd Prize', reward: '₹3,000' },
+      { pos: 3, label: '3rd Prize', reward: '₹1,500' }
+    ],
     coord: { name: '', phone: '', email: '' },
   };
   if (kind === 'workshop') {
@@ -81,6 +86,12 @@ function demoEvent(kind) {
     b.fee = 'Free';
   }
   return b;
+}
+
+function getOrdinal(n) {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
 function loadEventByCode(rawCode) {
@@ -129,6 +140,7 @@ function loadEventByCode(rawCode) {
             banner: e.banner || '',
             steps: e.steps || [],
             rules: e.rules || [],
+            prizes: e.prizes || [],
             coord: e.coord || { name: '', phone: '', email: '' },
           };
         }
@@ -158,6 +170,7 @@ function loadEventByCode(rawCode) {
         banner: se.banner || '',
         steps: se.steps || [],
         rules: se.rules || [],
+        prizes: se.prizes || [],
         coord: se.coord || { name: '', phone: '', email: '' },
       };
     }
@@ -186,6 +199,7 @@ function saveEvent(eventObj) {
           list[i].banner = eventObj.banner;
           list[i].steps = eventObj.steps;
           list[i].rules = eventObj.rules;
+          list[i].prizes = eventObj.prizes;
           list[i].coord = eventObj.coord;
           found = true;
           break;
@@ -290,6 +304,7 @@ if (window.location.pathname.includes('organiser-event')) {
 export function initDashboard(ev, onSignOut = null) {
   ev.steps = ev.steps || [];
   ev.rules = ev.rules || [];
+  ev.prizes = Array.isArray(ev.prizes) ? ev.prizes : [];
   ev.coord = ev.coord || {};
 
   const activeCode = (ev.code || ev.accessCode || codeParam || '').toUpperCase();
@@ -311,27 +326,29 @@ export function initDashboard(ev, onSignOut = null) {
   const D = DEPTS[ev.slug] || ['Department', '#e3a72f', '#141414', (ev.slug || 'T26').toUpperCase()];
 
   // In background, fetch freshest database state to update any remote changes
-  apiFetchEventByCode(codeParam).then(fresh => {
+  apiFetchEventByCode(activeCode).then(fresh => {
     if (fresh && ev && !dirty) {
-      if (fresh.details && fresh.details !== ev.details && !$('#details').value) {
+      if (fresh.details && fresh.details !== ev.details && $('#details') && !$('#details').value) {
         ev.details = fresh.details;
         $('#details').value = fresh.details;
       }
-      if (fresh.banner && !$('#banner').value) {
+      if (fresh.banner && $('#banner') && !$('#banner').value) {
         ev.banner = fresh.banner;
         $('#banner').value = fresh.banner;
       }
-      if (fresh.coord && fresh.coord.name && !$('#c-name').value) {
+      if (fresh.coord && fresh.coord.name && $('#c-name') && !$('#c-name').value) {
         ev.coord = fresh.coord;
-        $('#c-name').value = fresh.coord.name || '';
-        $('#c-phone').value = fresh.coord.phone || '';
-        $('#c-email').value = fresh.coord.email || '';
+        if ($('#c-name')) $('#c-name').value = fresh.coord.name || '';
+        if ($('#c-phone')) $('#c-phone').value = fresh.coord.phone || '';
+        if ($('#c-email')) $('#c-email').value = fresh.coord.email || '';
       }
     }
   }).catch(() => {});
 
-  $('#gate').hidden = true;
-  $('#app').hidden = false;
+  const gateEl = $('#gate');
+  if (gateEl) gateEl.hidden = true;
+  const appEl = $('#app');
+  if (appEl) appEl.hidden = false;
   document.title = `${ev.title} · Event Manager · Tantra 26`;
 
   function formatTitleSpan(text) {
@@ -380,7 +397,7 @@ export function initDashboard(ev, onSignOut = null) {
     ['s-over', 'Overview'],
     ['s-about', 'Description'],
   ].concat(isComp ? [['s-guide', 'Guide'], ['s-rules', 'Rules']] : [])
-   .concat([['s-coord', 'Coordinator'], ['s-regs', 'Registrations']]);
+   .concat([['s-prizes', 'Prizes'], ['s-coord', 'Coordinator'], ['s-regs', 'Registrations']]);
 
   $('#jump').innerHTML = links.map((l) => `<a href="#${l[0]}">${l[1]}</a>`).join('');
 
@@ -430,6 +447,24 @@ export function initDashboard(ev, onSignOut = null) {
     return d;
   }
 
+  function prizeRow(p, i) {
+    const d = document.createElement('div');
+    d.className = 'it prize-it';
+    d.innerHTML = `
+      <div class="num">${i + 1}</div>
+      <div class="f" style="display:grid;grid-template-columns:minmax(120px, 180px) 1fr;gap:12px">
+        <input data-slop="Position ${i + 1} title" class="pz-input-title" placeholder="e.g. ${getOrdinal(i + 1)} Prize" value="${esc(p.label || '')}">
+        <input data-slop="Position ${i + 1} reward" class="pz-input-reward" placeholder="e.g. ₹5,000 Cash + Trophy" value="${esc(p.reward || '')}">
+      </div>
+      <div class="mv">
+        <button type="button" data-a="up" aria-label="Move up">&uarr;</button>
+        <button type="button" data-a="dn" aria-label="Move down">&darr;</button>
+        <button type="button" data-a="rm" aria-label="Remove">&times;</button>
+      </div>
+    `;
+    return d;
+  }
+
   function relabel(box, kind) {
     [].forEach.call(box.children, (row, i) => {
       row.querySelector('.num').textContent = i + 1;
@@ -437,10 +472,54 @@ export function initDashboard(ev, onSignOut = null) {
       if (kind === 's') {
         f[0].setAttribute('data-slop', `Step ${i + 1} title`);
         f[1].setAttribute('data-slop', `Step ${i + 1} details`);
-      } else {
+      } else if (kind === 'r') {
         f[0].setAttribute('data-slop', `Rule ${i + 1}`);
+      } else if (kind === 'p') {
+        if (f[0]) f[0].setAttribute('data-slop', `Position ${i + 1} title`);
+        if (f[1]) f[1].setAttribute('data-slop', `Position ${i + 1} reward`);
       }
     });
+  }
+
+  function updatePrizePoolDisplay() {
+    const badge = $('#prize-pool-badge');
+    const val = $('#prize-pool-val');
+    if (!badge || !val) return;
+    const pb = $('#prizes');
+    if (!pb) return;
+    let total = 0;
+    let hasVal = false;
+    pb.querySelectorAll('.pz-input-reward').forEach((inp) => {
+      const v = inp.value || '';
+      const num = parseInt(v.replace(/[^0-9]/g, ''), 10);
+      if (!isNaN(num) && num > 0) {
+        total += num;
+        hasVal = true;
+      }
+    });
+    if (hasVal && total > 0) {
+      val.textContent = `₹${total.toLocaleString('en-IN')}`;
+      badge.style.display = 'block';
+    } else {
+      const rowCount = pb.children.length;
+      if (rowCount > 0) {
+        val.textContent = `${rowCount} Position${rowCount > 1 ? 's' : ''}`;
+        badge.style.display = 'block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  }
+
+  function drawPrizes() {
+    const pb = $('#prizes');
+    if (!pb) return;
+    pb.innerHTML = '';
+    ev.prizes.forEach((p, i) => pb.appendChild(prizeRow(p, i)));
+    updatePrizePoolDisplay();
+    if (typeof SlopGuard !== 'undefined' && SlopGuard.flagAll) {
+      SlopGuard.flagAll();
+    }
   }
 
   function drawStepsAndRules() {
@@ -456,27 +535,52 @@ export function initDashboard(ev, onSignOut = null) {
   }
 
   function pullFromDOM() {
-    ev.banner = $('#banner').value.trim();
-    ev.details = $('#details').value.trim();
+    if ($('#banner')) ev.banner = $('#banner').value.trim();
+    if ($('#details')) ev.details = $('#details').value.trim();
     ev.coord = {
-      name: $('#c-name').value.trim(),
-      phone: $('#c-phone').value.trim(),
-      email: $('#c-email').value.trim(),
+      name: $('#c-name')?.value?.trim() || '',
+      phone: $('#c-phone')?.value?.trim() || '',
+      email: $('#c-email')?.value?.trim() || '',
     };
     if (isComp) {
-      ev.steps = [].map.call($('#steps').children, (r) => {
-        const f = r.querySelectorAll('input,textarea');
-        return { t: f[0].value.trim(), x: f[1].value.trim() };
+      const stepsEl = $('#steps');
+      if (stepsEl) {
+        ev.steps = [].map.call(stepsEl.children, (r) => {
+          const f = r.querySelectorAll('input,textarea');
+          return { t: f[0]?.value?.trim() || '', x: f[1]?.value?.trim() || '' };
+        });
+      }
+      const rulesEl = $('#rules');
+      if (rulesEl) {
+        ev.rules = [].map.call(rulesEl.children, (r) => r.querySelector('textarea')?.value?.trim() || '');
+      }
+    }
+    const pb = $('#prizes');
+    if (pb && pb.children.length > 0) {
+      ev.prizes = [].map.call(pb.children, (r, idx) => {
+        const title = (r.querySelector('.pz-input-title')?.value || '').trim();
+        const reward = (r.querySelector('.pz-input-reward')?.value || '').trim();
+        return {
+          pos: idx + 1,
+          label: title || `${getOrdinal(idx + 1)} Prize`,
+          reward: reward,
+        };
       });
-      ev.rules = [].map.call($('#rules').children, (r) => r.querySelector('textarea').value.trim());
     }
   }
 
   if (isComp) {
     if (!ev.steps.length) ev.steps = [{ t: '', x: '' }];
     if (!ev.rules.length) ev.rules = [''];
+    if (!ev.prizes.length) {
+      ev.prizes = [
+        { pos: 1, label: '1st Prize', reward: '' },
+        { pos: 2, label: '2nd Prize', reward: '' },
+      ];
+    }
   }
   drawStepsAndRules();
+  drawPrizes();
 
   function markDirty() {
     dirty = true;
@@ -489,6 +593,7 @@ export function initDashboard(ev, onSignOut = null) {
     if (e.target.closest('main')) {
       markDirty();
       if (e.target.id === 'details') countChars();
+      if (e.target.closest('#prizes')) updatePrizePoolDisplay();
     }
   });
 
@@ -512,6 +617,46 @@ export function initDashboard(ev, onSignOut = null) {
     };
   }
 
+  if ($('#addprize')) {
+    $('#addprize').onclick = () => {
+      pullFromDOM();
+      const nextPos = ev.prizes.length + 1;
+      ev.prizes.push({ pos: nextPos, label: `${getOrdinal(nextPos)} Prize`, reward: '' });
+      drawPrizes();
+      markDirty();
+      const last = $('#prizes')?.lastElementChild;
+      if (last) {
+        const inp = last.querySelector('.pz-input-reward') || last.querySelector('input');
+        if (inp) inp.focus();
+      }
+    };
+  }
+
+  if ($('#preset-top3')) {
+    $('#preset-top3').onclick = () => {
+      pullFromDOM();
+      ev.prizes = [
+        { pos: 1, label: '1st Prize', reward: ev.prizes[0]?.reward || '' },
+        { pos: 2, label: '2nd Prize', reward: ev.prizes[1]?.reward || '' },
+        { pos: 3, label: '3rd Prize', reward: ev.prizes[2]?.reward || '' },
+      ];
+      drawPrizes();
+      markDirty();
+    };
+  }
+
+  if ($('#preset-top2')) {
+    $('#preset-top2').onclick = () => {
+      pullFromDOM();
+      ev.prizes = [
+        { pos: 1, label: '1st Prize', reward: ev.prizes[0]?.reward || '' },
+        { pos: 2, label: '2nd Prize', reward: ev.prizes[1]?.reward || '' },
+      ];
+      drawPrizes();
+      markDirty();
+    };
+  }
+
   function mover(box, kind) {
     if (!box) return;
     box.addEventListener('click', (e) => {
@@ -522,9 +667,18 @@ export function initDashboard(ev, onSignOut = null) {
       if (a === 'rm') {
         if (box.children.length <= 1) {
           row.querySelectorAll('input,textarea').forEach((x) => { x.value = ''; });
+          if (kind === 'p') {
+            ev.prizes = [];
+            updatePrizePoolDisplay();
+          }
+          markDirty();
           return;
         }
         row.remove();
+        if (kind === 'p') {
+          pullFromDOM();
+          updatePrizePoolDisplay();
+        }
       }
       if (a === 'up' && row.previousElementSibling) {
         box.insertBefore(row, row.previousElementSibling);
@@ -533,11 +687,13 @@ export function initDashboard(ev, onSignOut = null) {
         box.insertBefore(row.nextElementSibling, row);
       }
       relabel(box, kind);
+      if (kind === 'p') updatePrizePoolDisplay();
       markDirty();
     });
   }
   mover($('#steps'), 's');
   mover($('#rules'), 'r');
+  mover($('#prizes'), 'p');
 
   // Save handler with SlopGuard check
   function toast(m, bad) {
@@ -568,6 +724,11 @@ export function initDashboard(ev, onSignOut = null) {
       ev.steps = ev.steps.filter((s) => s.t || s.x);
       ev.rules = ev.rules.filter(Boolean);
       drawStepsAndRules();
+    }
+
+    if (Array.isArray(ev.prizes)) {
+      ev.prizes = ev.prizes.filter((p) => p.reward || p.label);
+      drawPrizes();
     }
 
     saveEvent(ev);

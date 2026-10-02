@@ -215,6 +215,25 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
     <div><button class="btn g" id="addrule" type="button">+ Add rule</button></div>
   </section>
 
+  <!-- 5. PRIZES (flexible positions: 1st, 2nd, 3rd, 4th, 5th, etc.) -->
+  <section class="pn" id="s-prizes">
+    <div class="pn-h">
+      <div>
+        <h2>Prizes &amp; Rewards</h2>
+        <p>Set the rewards for winners. Configure 1st, 2nd, 3rd, or as many positions as needed (e.g. Top 2, Top 3, Top 5).</p>
+      </div>
+      <div id="prize-pool-badge" style="background:var(--gold);color:var(--ink);padding:10px 18px;font:700 13px/1 'Inter';clip-path:polygon(3% 0,100% 8%,97% 100%,0 92%);text-transform:uppercase;letter-spacing:.15em;display:none">
+        Prize Pool: <span id="prize-pool-val">₹0</span>
+      </div>
+    </div>
+    <div class="list" id="prizes"></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:14px">
+      <button class="btn g" id="addprize" type="button">+ Add Prize Position</button>
+      <button class="btn" id="preset-top3" type="button" style="font-size:10px;padding:12px 16px">Preset Top 3 (1st, 2nd, 3rd)</button>
+      <button class="btn" id="preset-top2" type="button" style="font-size:10px;padding:12px 16px">Preset Top 2 (1st &amp; 2nd)</button>
+    </div>
+  </section>
+
   <!-- 5. COORDINATOR (shown on the public event page; separate from the department contact) -->
   <section class="pn" id="s-coord">
     <div class="pn-h"><h2>Event coordinator</h2><p>People will see this contact on the event page. Use the person who can answer questions about this event.</p></div>
