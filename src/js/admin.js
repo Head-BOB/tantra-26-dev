@@ -23,6 +23,7 @@ import {
   apiSavePayment,
   fetchAllDeptPayments,
   sanitizePersonalRegistrations,
+  apiSetEventFeatured,
 } from './api.js';
 import { generateRandomCode, generateUniqueAccessCode, getEventAccessCode } from './access-code.js';
 import { SlopGuard } from './slop-guard.js';
@@ -53,6 +54,8 @@ import { CONFIG as MECH_CFG }  from '../data/events/mech.js';
 export function expandMathShortcuts(str) {
   if (!str) return '';
   return str
+    .replace(/\b(m|mu)learn\b/gi, 'µLearn')
+    .replace(/\b(m|mu)-learn\b/gi, 'µLearn')
     .replace(/\\mu|&mu;|&micro;/gi, 'µ')
     .replace(/\\pi|&pi;/gi, 'π')
     .replace(/\\omega|&omega;/gi, 'ω')
@@ -67,7 +70,7 @@ export function expandMathShortcuts(str) {
     .replace(/\\sigma|&sigma;/gi, 'σ')
     .replace(/\\Sigma|&Sigma;/gi, 'Σ')
     .replace(/\\sum/gi, '∑')
-    .replace(/\\infty|\\infin|&infin;/gi, '∞')
+    .replace(/\\infty|&infin;/gi, '∞')
     .replace(/\\approx|&asymp;/gi, '≈')
     .replace(/\\neq|\\ne\b|&ne;/gi, '≠')
     .replace(/\\pm|&plusmn;/gi, '±')
@@ -88,7 +91,14 @@ export function matchEventTitle(t1, t2) {
 
 export function formatTitleSpan(text) {
   const symRe = /([µμΩωπΠλΛθΘαβγδΔσΣ∞≈≠≤≥±√∫°])/g;
-  return esc(text).replace(symRe, '<span class="sym" style="text-transform:none;font-family:\'Inter\',system-ui,sans-serif;display:inline-block">$1</span>');
+  return esc(text).replace(symRe, '<span class="sym" style="text-transform:none !important;font-family:\'Inter\',system-ui,sans-serif !important;display:inline-block;font-weight:700;">$1</span>');
+}
+
+export function isValidImageUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const s = url.trim();
+  if (!s || s === 'null' || s === 'undefined' || s === '[object Object]' || s === '{}' || s === 'none') return false;
+  return s.startsWith('data:image/') || s.startsWith('http://') || s.startsWith('https://') || s.startsWith('/') || s.startsWith('./');
 }
 
 // ─── Password & Role Mapping ───────────────────────────────────
@@ -357,12 +367,13 @@ function refreshSidebar() {
     const count = allEventsFor(btn.dataset.slug).length;
     const badge = btn.querySelector('.badge');
     if (badge) badge.textContent = count;
-    btn.classList.toggle('active', btn.dataset.slug === activeDept && !['central-qrs', 'central-regs'].includes(currentView));
+    btn.classList.toggle('active', btn.dataset.slug === activeDept && !['central-qrs', 'central-regs', 'central-featured'].includes(currentView));
   });
 
   // Central buttons active states
   $('nav-central-qrs').classList.toggle('active', currentView === 'central-qrs');
   $('nav-central-regs').classList.toggle('active', currentView === 'central-regs');
+  if ($('nav-central-featured')) $('nav-central-featured').classList.toggle('active', currentView === 'central-featured');
 
   updateRegsBadge();
 }
@@ -372,6 +383,11 @@ function updateRegsBadge() {
   const deptCount = activeDept ? allRegs.filter(r => r.slug === activeDept).length : 0;
   $('regs-badge').textContent = deptCount;
   $('central-regs-badge').textContent = allRegs.length;
+
+  if ($('central-featured-badge')) {
+    const featCount = getAllFeaturedCandidateEvents().filter(e => e.is_featured).length;
+    $('central-featured-badge').textContent = featCount > 0 ? featCount : '★';
+  }
 }
 
 // ─── Navigation & Views ───────────────────────────────────────
@@ -407,6 +423,7 @@ function hideAllViews() {
   $('view-regs-content').hidden   = true;
   $('view-central-qrs').hidden    = true;
   $('view-central-regs').hidden   = true;
+  if ($('view-central-featured')) $('view-central-featured').hidden = true;
 }
 
 function selectDept(slug) {
@@ -466,6 +483,11 @@ async function syncDeptDataFromCloud(slug) {
         desc: e.description || e.desc || '',
         details: e.details || '',
         banner: e.banner || '',
+        banners: e.banners || {},
+        is_featured: Boolean(e.is_featured),
+        featured_order: parseInt(e.featured_order, 10) || 1,
+        prizes: e.prizes || [],
+        prize_pool: e.prize_pool || '',
         steps: e.steps || [],
         rules: e.rules || [],
         coord: e.coord || {},
@@ -583,7 +605,7 @@ function renderEvents(slug) {
         <span class="ev-fee">${esc(ev.fee)}</span>
       </div>
       <div class="ev-admin-body">
-        <h3>${formatTitleSpan(ev.title)}</h3>
+        <h3>${formatTitleSpan(expandMathShortcuts(ev.title))}</h3>
         <p class="ev-desc">${esc(ev.desc)}</p>
         <dl class="ev-meta">
           <dt>When</dt><dd>${esc(ev.date || '7 Oct')} · ${esc(ev.time)}</dd>
@@ -823,6 +845,12 @@ function bindCoordModal() {
     const name  = $('cm-name').value.trim();
     const phone = $('cm-phone').value.trim();
     if (!name || !phone) { $('cm-err').textContent = 'Please fill in both fields.'; return; }
+    const rawP = phone.replace(/\D/g, '');
+    const cleanPhone = (rawP.length > 10 && (rawP.startsWith('91') || rawP.startsWith('0'))) ? rawP.slice(-10) : rawP;
+    if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      $('cm-err').textContent = 'Enter a valid 10-digit mobile number (e.g. 9876543210).';
+      return;
+    }
     $('cm-err').textContent = '';
 
     const store = getAdminCoords();
@@ -1071,6 +1099,18 @@ function bindCentralAdminViews() {
     renderCentralRegs();
   };
 
+  if ($('nav-central-featured')) {
+    $('nav-central-featured').onclick = () => {
+      if (currentUser.role !== 'superadmin') return;
+      currentView = 'central-featured';
+      hideAllViews();
+      $('main-header').hidden = true;
+      $('view-central-featured').hidden = false;
+      refreshSidebar();
+      renderCentralFeatured();
+    };
+  }
+
   $('central-dept-filter').onchange = () => {
     renderCentralRegs();
   };
@@ -1078,6 +1118,18 @@ function bindCentralAdminViews() {
   $('central-regs-search').oninput = () => {
     renderCentralRegs();
   };
+
+  if ($('central-feat-dept-filter')) {
+    $('central-feat-dept-filter').onchange = () => {
+      renderCentralFeatured();
+    };
+  }
+
+  if ($('central-feat-search')) {
+    $('central-feat-search').oninput = () => {
+      renderCentralFeatured();
+    };
+  }
 
   $('export-master-excel-btn').onclick = () => {
     openExcelModal('all');
@@ -1271,6 +1323,274 @@ function renderCentralRegs() {
       <td style="color:rgba(239,232,218,.5);white-space:nowrap">${dateFormatted}</td>
     `;
     tbody.appendChild(tr);
+  });
+}
+
+// ─── Central View 3: Featured Events Manager ──────────────────
+function getAllFeaturedCandidateEvents() {
+  const list = [];
+  let localOrganiserEvents = {};
+  try {
+    localOrganiserEvents = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
+  } catch {}
+
+  DEPTS.forEach(d => {
+    const deptEvents = allEventsFor(d.slug);
+    deptEvents.forEach(e => {
+      // Merge with any newer local organiser event record (safely matching keys)
+      const orgEv = localOrganiserEvents[d.slug + ':' + e.id]
+        || localOrganiserEvents[e.id]
+        || (e.id ? Object.values(localOrganiserEvents).find(o => o && o.id === e.id) : null)
+        || (e.title ? Object.values(localOrganiserEvents).find(o => o && o.slug === d.slug && matchEventTitle(o.title, e.title)) : null);
+
+      const merged = orgEv ? { ...e, ...orgEv } : { ...e };
+      merged.deptSlug = d.slug;
+      merged.deptName = d.name;
+
+      const bMerged = (merged.banners && typeof merged.banners === 'object') ? merged.banners : {};
+      const orgBanners = (orgEv && orgEv.banners && typeof orgEv.banners === 'object') ? orgEv.banners : {};
+      const eBanners = (e.banners && typeof e.banners === 'object') ? e.banners : {};
+
+      const featDesk = [
+        bMerged.featured_desktop,
+        orgBanners.featured_desktop,
+        eBanners.featured_desktop,
+        bMerged.event_desktop,
+        orgBanners.event_desktop,
+        eBanners.event_desktop,
+        orgEv?.banner,
+        e.banner,
+      ].find(isValidImageUrl) || '';
+
+      const featMob = [
+        bMerged.featured_mobile,
+        orgBanners.featured_mobile,
+        eBanners.featured_mobile,
+        bMerged.event_mobile,
+        orgBanners.event_mobile,
+        eBanners.event_mobile,
+      ].find(isValidImageUrl) || (featDesk ? featDesk : '');
+
+      merged.banners = {
+        ...bMerged,
+        featured_desktop: featDesk,
+        featured_mobile: featMob,
+      };
+
+      merged.is_featured = Boolean(merged.is_featured);
+      merged.featured_order = parseInt(merged.featured_order, 10) || 1;
+      list.push(merged);
+    });
+  });
+
+  return list;
+}
+
+function renderCentralFeatured() {
+  const deptFilter = $('central-feat-dept-filter') ? $('central-feat-dept-filter').value : '';
+  const searchVal  = ($('central-feat-search') ? $('central-feat-search').value : '').trim().toLowerCase();
+  const grid       = $('central-featured-grid');
+  const empty      = $('featured-empty-state');
+  if (!grid) return;
+  grid.innerHTML   = '';
+
+  const allCandidateEvents = getAllFeaturedCandidateEvents();
+
+  // Filter
+  const filtered = allCandidateEvents.filter(ev => {
+    if (deptFilter && ev.deptSlug !== deptFilter) return false;
+    if (!searchVal) return true;
+    return (
+      (ev.title && ev.title.toLowerCase().includes(searchVal)) ||
+      (ev.id && ev.id.toLowerCase().includes(searchVal)) ||
+      (ev.type && ev.type.toLowerCase().includes(searchVal)) ||
+      (ev.deptName && ev.deptName.toLowerCase().includes(searchVal))
+    );
+  });
+
+  // Sort: featured items first (by featured_order asc), then by department, then by title
+  filtered.sort((a, b) => {
+    if (a.is_featured && !b.is_featured) return -1;
+    if (!a.is_featured && b.is_featured) return 1;
+    if (a.is_featured && b.is_featured) {
+      return (a.featured_order || 1) - (b.featured_order || 1);
+    }
+    return a.title.localeCompare(b.title);
+  });
+
+  // Update badge count
+  const featuredCount = allCandidateEvents.filter(e => e.is_featured).length;
+  if ($('central-featured-badge')) {
+    $('central-featured-badge').textContent = featuredCount > 0 ? featuredCount : '★';
+  }
+
+  if (filtered.length === 0) {
+    if (empty) empty.hidden = false;
+    return;
+  }
+  if (empty) empty.hidden = true;
+
+  const deptConfigMap = {
+    cse: CSE_CFG,
+    cscy: CSCY_CFG,
+    ai: AI_CFG,
+    csd: CSD_CFG,
+    csbs: CSBS_CFG,
+    eee: EEE_CFG,
+    ece: ECE_CFG,
+    aei: AEI_CFG,
+    civil: CIVIL_CFG,
+    mech: MECH_CFG,
+  };
+
+  // Handle Demo Mode button
+  const demoBtn = $('feat-demo-toggle-btn');
+  const demoText = $('feat-demo-btn-text');
+  const isDemo = localStorage.getItem('tantra26:featured:demo_mode') === 'true';
+
+  if (demoBtn && demoText) {
+    demoBtn.classList.toggle('is-active', isDemo);
+    demoText.textContent = isDemo ? 'Demo Mode Active (Live on Homepage)' : 'Enable Demo Mode';
+
+    demoBtn.onclick = () => {
+      const nextState = !(localStorage.getItem('tantra26:featured:demo_mode') === 'true');
+      localStorage.setItem('tantra26:featured:demo_mode', String(nextState));
+      demoBtn.classList.toggle('is-active', nextState);
+      demoText.textContent = nextState ? 'Demo Mode Active (Live on Homepage)' : 'Enable Demo Mode';
+      toast(nextState ? 'Showcase Demo Mode ENABLED! Check homepage.' : 'Showcase Demo Mode disabled.');
+    };
+  }
+
+  filtered.forEach(ev => {
+    const b = ev.banners || {};
+    const hasFeatDesktop = isValidImageUrl(b.featured_desktop);
+    const hasFeatMobile  = isValidImageUrl(b.featured_mobile);
+    const isReady        = hasFeatDesktop && hasFeatMobile;
+    const isFeat         = Boolean(ev.is_featured);
+    const cfg            = deptConfigMap[ev.deptSlug] || {};
+    const deptBg         = cfg.heroBg || '#182338';
+    const deptFg         = cfg.heroFg || '#efe8da';
+
+    const card = document.createElement('div');
+    card.className = `feat-card ${isFeat ? 'is-featured' : ''}`;
+    card.innerHTML = `
+      <div class="feat-card-head" style="--acc: ${deptBg}; --accfg: ${deptFg}">
+        <div class="feat-card-title-col">
+          <span class="feat-dept-label">${esc(ev.deptName)}</span>
+          <h4>${formatTitleSpan(expandMathShortcuts(ev.title))}</h4>
+        </div>
+        <span class="feat-type-badge">${esc(ev.type || 'Event')}</span>
+      </div>
+      <div class="feat-card-body">
+        <div class="feat-meta-row">
+          <span>Fee: ${esc(ev.fee || 'Free')} · Team: ${esc(ev.team || '1')} · Venue: ${esc(ev.venue || 'Campus')}</span>
+        </div>
+
+        ${isFeat
+          ? `<div><span class="feat-status-badge active-featured">★ Featured on Homepage (Slot #${ev.featured_order || 1})</span></div>`
+          : isReady
+            ? `<div><span class="feat-status-badge ready">✓ Ready to Feature</span></div>`
+            : ''
+        }
+
+        <div class="feat-banner-previews">
+          <div class="f-prev-slot">
+            <span>Featured Desktop (16:8)</span>
+            ${hasFeatDesktop
+              ? `<img src="${esc(b.featured_desktop)}" alt="Featured Desktop Preview" loading="lazy" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';"><div class="f-no-img" style="display:none">No Banner Uploaded</div>`
+              : `<div class="f-no-img">No Banner Uploaded</div>`
+            }
+          </div>
+          <div class="f-prev-slot">
+            <span>Featured Mobile (4:5)</span>
+            ${hasFeatMobile
+              ? `<img src="${esc(b.featured_mobile)}" alt="Featured Mobile Preview" loading="lazy" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';"><div class="f-no-img" style="display:none">No Banner Uploaded</div>`
+              : `<div class="f-no-img">No Banner Uploaded</div>`
+            }
+          </div>
+        </div>
+
+        <div class="feat-card-actions">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="font: 700 10px/1 'Inter'; letter-spacing: .12em; text-transform: uppercase; color: rgba(239,232,218,.6);">Order:</label>
+            <input type="number" min="1" max="99" class="feat-order-input" value="${ev.featured_order || 1}" ${!isReady && !isFeat ? 'disabled' : ''}>
+          </div>
+          <div>
+            ${isFeat
+              ? `<button class="feat-toggle-btn btn-disable">Unfeature Event</button>`
+              : isReady
+                ? `<button class="feat-toggle-btn btn-enable">★ Feature on Homepage</button>`
+                : `<button class="feat-toggle-btn" disabled title="Organiser must upload both Desktop and Mobile featured banners">Missing Banners</button>`
+            }
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Bind order input change
+    const orderInput = card.querySelector('.feat-order-input');
+    if (orderInput) {
+      orderInput.onchange = async () => {
+        const newOrder = parseInt(orderInput.value, 10) || 1;
+        ev.featured_order = newOrder;
+
+        // Update local store
+        const adminEvents = getAdminEvents();
+        if (adminEvents[ev.deptSlug]) {
+          const target = adminEvents[ev.deptSlug].find(x => x.id === ev.id);
+          if (target) target.featured_order = newOrder;
+          setAdminEvents(adminEvents);
+        }
+
+        if (isFeat) {
+          const res = await apiSetEventFeatured(ev.id, true, newOrder);
+          if (res.ok) {
+            toast(`Order updated for ${ev.title} ✓`);
+            renderCentralFeatured();
+          } else {
+            toast(res.error || 'Failed to update order', 'error');
+          }
+        }
+      };
+    }
+
+    // Bind toggle button
+    const toggleBtn = card.querySelector('.feat-toggle-btn');
+    if (toggleBtn && !toggleBtn.disabled) {
+      toggleBtn.onclick = async () => {
+        toggleBtn.disabled = true;
+        toggleBtn.textContent = isFeat ? 'Unfeaturing…' : 'Featuring…';
+        const targetOrder = parseInt(orderInput.value, 10) || 1;
+
+        const res = await apiSetEventFeatured(ev.id, !isFeat, targetOrder);
+        if (res.ok) {
+          ev.is_featured = !isFeat;
+          ev.featured_order = targetOrder;
+
+          // Update local storage
+          const adminEvents = getAdminEvents();
+          if (!adminEvents[ev.deptSlug]) adminEvents[ev.deptSlug] = [];
+          let target = adminEvents[ev.deptSlug].find(x => x.id === ev.id);
+          if (!target) {
+            target = { ...ev };
+            adminEvents[ev.deptSlug].push(target);
+          }
+          target.is_featured = !isFeat;
+          target.featured_order = targetOrder;
+          setAdminEvents(adminEvents);
+
+          toast(isFeat ? `Removed ${ev.title} from featured events` : `★ ${ev.title} is now featured on the homepage!`);
+          renderCentralFeatured();
+          refreshSidebar();
+        } else {
+          toast(res.error || 'Failed to update featured status', 'error');
+          toggleBtn.disabled = false;
+          toggleBtn.textContent = isFeat ? 'Unfeature Event' : '★ Feature on Homepage';
+        }
+      };
+    }
+
+    grid.appendChild(card);
   });
 }
 

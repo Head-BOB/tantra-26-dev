@@ -112,6 +112,28 @@ main.dash-main input::placeholder, main.dash-main textarea::placeholder{color:rg
 .mv button{width:34px;height:34px;border:0;cursor:pointer;background:var(--ink);color:var(--cream);font-size:14px;clip-path:polygon(8% 0,100% 8%,92% 100%,0 92%)}
 .mv button:hover{background:var(--red)}
 
+/* banner uploaders */
+.banner-group{display:grid;gap:16px;background:rgba(255,255,255,.02);border:1.5px solid rgba(239,232,218,.14);border-radius:12px;padding:22px;margin-bottom:16px}
+.bg-title h3{font:400 1.45rem/1.1 'Anton',Impact,sans-serif;text-transform:uppercase;color:var(--gold);letter-spacing:.02em}
+.bg-title p{font:500 13px/1.5 'Inter';color:rgba(239,232,218,.75);margin-top:4px}
+.banner-upload-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px}
+.b-box{background:#0d1424;border:1.5px solid rgba(239,232,218,.15);border-radius:10px;overflow:hidden;display:grid;gap:6px}
+.b-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#000;border-bottom:1px solid rgba(239,232,218,.1)}
+.b-tag{font:700 10px/1 'Inter';letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.b-dim{font:600 10px/1 'Inter';color:rgba(239,232,218,.6)}
+.b-dropzone{position:relative;min-height:140px;display:grid;place-items:center;cursor:pointer;padding:16px;border:2px dashed rgba(239,232,218,.25);border-radius:8px;margin:10px;transition:border-color .2s,background .2s}
+.b-dropzone:hover{border-color:var(--gold);background:rgba(227,167,47,.05)}
+.b-dropzone.dragover{border-color:var(--cream);background:rgba(255,255,255,.1)}
+.b-empty{display:grid;gap:6px;place-items:center;text-align:center;color:rgba(239,232,218,.7)}
+.b-empty span{font:700 12px/1.3 'Inter';color:var(--cream)}
+.b-empty small{font:500 10px/1 'Inter';color:rgba(239,232,218,.5)}
+.b-preview{position:relative;width:100%;height:100%;border-radius:6px;overflow:hidden}
+.b-preview img{width:100%;max-height:180px;object-fit:cover;border-radius:6px;border:1px solid rgba(239,232,218,.2);display:block}
+.b-remove{position:absolute;top:6px;right:6px;background:var(--red);color:#fff;border:0;width:28px;height:28px;font-size:16px;font-weight:700;cursor:pointer;clip-path:polygon(8% 0,100% 8%,92% 100%,0 92%);transition:transform .2s}
+.b-remove:hover{transform:scale(1.1)}
+.b-hint{font:600 11px/1.4 'Inter';color:rgba(239,232,218,.7);padding-left:4px}
+.b-hint.err{color:var(--red)}
+
 /* registrations */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
 .stat{background:#0d1424;border:1.5px solid rgba(239,232,218,.15);border-radius:10px;padding:18px;display:grid;gap:6px}
@@ -206,9 +228,118 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
   <!-- 2. DESCRIPTION -->
   <section class="pn" id="s-about">
     <div class="pn-h"><h2 id="about-h">Detailed description</h2><p id="about-p">This is the main text on the public event page. Say what the event is, who it is for and what people will get from it. Use blank lines to make paragraphs.</p></div>
-    <label>Banner image (optional link or path, 16:9 works best)<input id="banner" data-slop="Banner link" placeholder="images/events/code-rush.jpg"></label>
     <label>Description<textarea id="details" rows="9" data-slop="Description" placeholder="Write the full description here"></textarea></label>
     <p class="cnt" id="dcount">0 characters</p>
+  </section>
+
+  <!-- 3. BANNERS & VISUALS (Responsive Desktop & Mobile) -->
+  <section class="pn" id="s-banners">
+    <div class="pn-h">
+      <div>
+        <h2>Event Banners &amp; Visuals</h2>
+        <p>Upload responsive visuals. To display a banner on your event page, provide both desktop and mobile versions. To qualify for Homepage Featuring, upload both featured versions.</p>
+      </div>
+    </div>
+
+    <!-- Group A: Event Page Hero Banners -->
+    <div class="banner-group">
+      <div class="bg-title">
+        <h3>1. Public Event Page Hero Banner</h3>
+        <p>Appears at the top of your event page. If not uploaded, your event page cleanly uses the department theme without empty banner space.</p>
+      </div>
+      <div class="banner-upload-grid">
+        <!-- Desktop Event Banner -->
+        <div class="b-box" id="bbox-event-desk">
+          <div class="b-head">
+            <span class="b-tag">Desktop (16:9 / Landscape)</span>
+            <span class="b-dim">Rec. 1920 &times; 1080</span>
+          </div>
+          <div class="b-dropzone" data-target="event_desktop">
+            <div class="b-empty" id="empty-event_desktop">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Click or drop desktop banner</span>
+              <small>PNG, JPG, WebP (auto-optimized)</small>
+            </div>
+            <div class="b-preview" id="prev-event_desktop" hidden>
+              <img src="" alt="Desktop event banner preview" id="img-event_desktop">
+              <button type="button" class="b-remove" data-rm="event_desktop" title="Remove image">&times;</button>
+            </div>
+          </div>
+          <input type="file" accept="image/*" class="b-file-input" data-target="event_desktop" hidden id="file-event_desktop">
+        </div>
+
+        <!-- Mobile Event Banner -->
+        <div class="b-box" id="bbox-event-mob">
+          <div class="b-head">
+            <span class="b-tag">Mobile (4:5 or 1:1 / Portrait)</span>
+            <span class="b-dim">Rec. 800 &times; 1000</span>
+          </div>
+          <div class="b-dropzone" data-target="event_mobile">
+            <div class="b-empty" id="empty-event_mobile">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+              <span>Click or drop mobile banner</span>
+              <small>PNG, JPG, WebP (auto-optimized)</small>
+            </div>
+            <div class="b-preview" id="prev-event_mobile" hidden>
+              <img src="" alt="Mobile event banner preview" id="img-event_mobile">
+              <button type="button" class="b-remove" data-rm="event_mobile" title="Remove image">&times;</button>
+            </div>
+          </div>
+          <input type="file" accept="image/*" class="b-file-input" data-target="event_mobile" hidden id="file-event_mobile">
+        </div>
+      </div>
+      <p class="b-hint" id="hint-event-banners">Both desktop and mobile versions are required if uploading event page banners.</p>
+    </div>
+
+    <!-- Group B: Homepage Featured Banners -->
+    <div class="banner-group">
+      <div class="bg-title">
+        <h3>2. Homepage Featured Showcase Banners</h3>
+        <p>Required for Central Admin to feature this event in the spotlight slider on the Tantra 26 homepage.</p>
+      </div>
+      <div class="banner-upload-grid">
+        <!-- Desktop Featured Banner -->
+        <div class="b-box" id="bbox-feat-desk">
+          <div class="b-head">
+            <span class="b-tag">Desktop Stage (16:8 / Landscape)</span>
+            <span class="b-dim">Rec. 1600 &times; 800</span>
+          </div>
+          <div class="b-dropzone" data-target="featured_desktop">
+            <div class="b-empty" id="empty-featured_desktop">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Click or drop desktop featured banner</span>
+              <small>PNG, JPG, WebP (auto-optimized)</small>
+            </div>
+            <div class="b-preview" id="prev-featured_desktop" hidden>
+              <img src="" alt="Desktop featured banner preview" id="img-featured_desktop">
+              <button type="button" class="b-remove" data-rm="featured_desktop" title="Remove image">&times;</button>
+            </div>
+          </div>
+          <input type="file" accept="image/*" class="b-file-input" data-target="featured_desktop" hidden id="file-featured_desktop">
+        </div>
+
+        <!-- Mobile Featured Banner -->
+        <div class="b-box" id="bbox-feat-mob">
+          <div class="b-head">
+            <span class="b-tag">Mobile Stage (4:5 / Portrait)</span>
+            <span class="b-dim">Rec. 800 &times; 1000</span>
+          </div>
+          <div class="b-dropzone" data-target="featured_mobile">
+            <div class="b-empty" id="empty-featured_mobile">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+              <span>Click or drop mobile featured banner</span>
+              <small>PNG, JPG, WebP (auto-optimized)</small>
+            </div>
+            <div class="b-preview" id="prev-featured_mobile" hidden>
+              <img src="" alt="Mobile featured banner preview" id="img-featured_mobile">
+              <button type="button" class="b-remove" data-rm="featured_mobile" title="Remove image">&times;</button>
+            </div>
+          </div>
+          <input type="file" accept="image/*" class="b-file-input" data-target="featured_mobile" hidden id="file-featured_mobile">
+        </div>
+      </div>
+      <p class="b-hint" id="hint-feat-banners">Both desktop and mobile featured banners must be uploaded for Admin to feature this event on the homepage.</p>
+    </div>
   </section>
 
   <!-- 3. GUIDE (competitions only): how it works / how to play -->

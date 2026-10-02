@@ -19,6 +19,9 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS rules JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS coord JSONB DEFAULT '{}'::jsonb;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS duration INT DEFAULT 120;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS prizes JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS banners JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS featured_order INT DEFAULT 0;
 
 -- 3. Clean up legacy alias event IDs that were superseded by official catalog events
 DELETE FROM events WHERE id = 'lathe-master' AND EXISTS (SELECT 1 FROM events e2 WHERE e2.id = 'robo-race');

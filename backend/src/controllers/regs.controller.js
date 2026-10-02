@@ -72,13 +72,16 @@ export async function createRegistration(req, res) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanPhone = phone.trim().replace(/\D/g, '');
+    const rawPhone = phone.trim().replace(/\D/g, '');
+    const cleanPhone = (rawPhone.length > 10 && (rawPhone.startsWith('91') || rawPhone.startsWith('0')))
+      ? rawPhone.slice(-10)
+      : rawPhone;
 
     if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
       return res.status(400).json({ error: 'Invalid email address.' });
     }
-    if (cleanPhone.length < 10) {
-      return res.status(400).json({ error: 'Invalid phone number. Must be at least 10 digits.' });
+    if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({ error: 'Invalid phone number. Must be a valid 10-digit mobile number (e.g. 9876543210).' });
     }
 
     const cleanTxnId = (txn_id || 'FREE-REGISTRATION').trim();

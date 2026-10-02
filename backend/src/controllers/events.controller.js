@@ -270,12 +270,13 @@ export async function updateEventByAccessCode(req, res) {
       return res.status(404).json({ error: 'Event not found for this access code.' });
     }
 
-    const { details, banner, steps, rules, coord } = req.body;
+    const { details, banner, banners, steps, rules, coord } = req.body;
     const updates = {
       updated_at: new Date().toISOString(),
     };
     if (details !== undefined) updates.details = details;
     if (banner !== undefined) updates.banner = banner;
+    if (banners !== undefined) updates.banners = (banners && typeof banners === 'object') ? banners : {};
     if (steps !== undefined) updates.steps = Array.isArray(steps) ? steps : [];
     if (rules !== undefined) updates.rules = Array.isArray(rules) ? rules : [];
     if (coord !== undefined) updates.coord = (coord && typeof coord === 'object') ? coord : {};

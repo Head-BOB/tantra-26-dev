@@ -183,6 +183,7 @@ function loadEventByCode(rawCode) {
 function saveEvent(eventObj) {
   const s = readEvents();
   s[eventObj.slug + ':' + eventObj.id] = eventObj;
+  s[eventObj.id] = eventObj;
   try {
     localStorage.setItem(EV_KEY, JSON.stringify(s));
   } catch {}
@@ -190,26 +191,28 @@ function saveEvent(eventObj) {
   // Synchronize with tantra26:admin:events
   try {
     const adminEvents = JSON.parse(localStorage.getItem(ADMIN_EV_KEY) || '{}');
-    if (adminEvents[eventObj.slug]) {
-      const list = adminEvents[eventObj.slug];
-      let found = false;
-      for (let i = 0; i < list.length; i++) {
-        if (list[i].id === eventObj.id) {
-          list[i].details = eventObj.details;
-          list[i].banner = eventObj.banner;
-          list[i].steps = eventObj.steps;
-          list[i].rules = eventObj.rules;
-          list[i].prizes = eventObj.prizes;
-          list[i].coord = eventObj.coord;
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        list.push({ ...eventObj, accessCode: eventObj.code });
-      }
-      localStorage.setItem(ADMIN_EV_KEY, JSON.stringify(adminEvents));
+    if (!adminEvents[eventObj.slug]) {
+      adminEvents[eventObj.slug] = [];
     }
+    const list = adminEvents[eventObj.slug];
+    let found = false;
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].id === eventObj.id) {
+        list[i].details = eventObj.details;
+        list[i].banner = eventObj.banner;
+        list[i].banners = eventObj.banners;
+        list[i].steps = eventObj.steps;
+        list[i].rules = eventObj.rules;
+        list[i].prizes = eventObj.prizes;
+        list[i].coord = eventObj.coord;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      list.push({ ...eventObj, accessCode: eventObj.code });
+    }
+    localStorage.setItem(ADMIN_EV_KEY, JSON.stringify(adminEvents));
   } catch {}
 
   // Synchronize directly with cloud database (Supabase & Backend API)
@@ -396,17 +399,148 @@ export function initDashboard(ev, onSignOut = null) {
   const links = [
     ['s-over', 'Overview'],
     ['s-about', 'Description'],
+    ['s-banners', 'Banners'],
   ].concat(isComp ? [['s-guide', 'Guide'], ['s-rules', 'Rules']] : [])
    .concat([['s-prizes', 'Prizes'], ['s-coord', 'Coordinator'], ['s-regs', 'Registrations']]);
 
   $('#jump').innerHTML = links.map((l) => `<a href="#${l[0]}">${l[1]}</a>`).join('');
 
   // Populate fields
-  $('#banner').value = ev.banner || '';
-  $('#details').value = ev.details || '';
-  $('#c-name').value = ev.coord.name || '';
-  $('#c-phone').value = ev.coord.phone || '';
-  $('#c-email').value = ev.coord.email || '';
+  if ($('#details')) $('#details').value = ev.details || '';
+  if ($('#c-name')) $('#c-name').value = ev.coord.name || '';
+  if ($('#c-phone')) $('#c-phone').value = ev.coord.phone || '';
+  if ($('#c-email')) $('#c-email').value = ev.coord.email || '';
+
+  // Banner handling
+  ev.banners = (ev.banners && typeof ev.banners === 'object') ? ev.banners : {};
+  if (!ev.banners.event_desktop && ev.banner) {
+    ev.banners.event_desktop = ev.banner;
+  }
+
+  function compressImage(file, maxDim = 1600, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/webp', quality);
+          resolve(dataUrl);
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderBannerPreviews() {
+    const slots = ['event_desktop', 'event_mobile', 'featured_desktop', 'featured_mobile'];
+    slots.forEach((slot) => {
+      const url = (ev.banners && ev.banners[slot]) || '';
+      const emptyEl = document.getElementById(`empty-${slot}`);
+      const prevEl = document.getElementById(`prev-${slot}`);
+      const imgEl = document.getElementById(`img-${slot}`);
+      if (emptyEl && prevEl && imgEl) {
+        if (url) {
+          imgEl.src = url;
+          prevEl.hidden = false;
+          emptyEl.hidden = true;
+        } else {
+          imgEl.src = '';
+          prevEl.hidden = true;
+          emptyEl.hidden = false;
+        }
+      }
+    });
+  }
+
+  function bindBannerUploaders() {
+    const slots = ['event_desktop', 'event_mobile', 'featured_desktop', 'featured_mobile'];
+    slots.forEach((slot) => {
+      const dropzone = document.querySelector(`.b-dropzone[data-target="${slot}"]`);
+      const fileInput = document.querySelector(`.b-file-input[data-target="${slot}"]`);
+      const removeBtn = document.querySelector(`.b-remove[data-rm="${slot}"]`);
+
+      if (dropzone && fileInput) {
+        dropzone.onclick = (e) => {
+          if (e.target.closest('.b-remove')) return;
+          fileInput.click();
+        };
+
+        dropzone.ondragover = (e) => {
+          e.preventDefault();
+          dropzone.classList.add('dragover');
+        };
+        dropzone.ondragleave = () => dropzone.classList.remove('dragover');
+        dropzone.ondrop = async (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('dragover');
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+            await processBannerFile(e.dataTransfer.files[0], slot);
+          }
+        };
+
+        fileInput.onchange = async () => {
+          if (fileInput.files && fileInput.files[0]) {
+            await processBannerFile(fileInput.files[0], slot);
+            fileInput.value = '';
+          }
+        };
+      }
+
+      if (removeBtn) {
+        removeBtn.onclick = (e) => {
+          e.stopPropagation();
+          ev.banners = ev.banners || {};
+          ev.banners[slot] = '';
+          if (slot === 'event_desktop') ev.banner = '';
+          renderBannerPreviews();
+          markDirty();
+          saveEvent(ev);
+        };
+      }
+    });
+  }
+
+  async function processBannerFile(file, slot) {
+    if (!file.type.startsWith('image/')) {
+      return toast('Please select an image file (PNG, JPG, or WebP).', true);
+    }
+    const maxDim = slot.includes('desk') ? 1600 : 900;
+    try {
+      toast('Optimizing and loading banner…');
+      const compressedDataUrl = await compressImage(file, maxDim, 0.82);
+      ev.banners = ev.banners || {};
+      ev.banners[slot] = compressedDataUrl;
+      if (slot === 'event_desktop') ev.banner = compressedDataUrl;
+      renderBannerPreviews();
+      markDirty();
+      saveEvent(ev);
+      toast('Banner uploaded and saved! ✓');
+    } catch (err) {
+      toast('Could not process image file.', true);
+    }
+  }
+
+  renderBannerPreviews();
+  bindBannerUploaders();
 
   function countChars() {
     const n = $('#details').value.length;
@@ -716,9 +850,35 @@ export function initDashboard(ev, onSignOut = null) {
     if (isComp && !ev.rules.some(Boolean)) miss.push('add at least one rule');
     if (!ev.coord.name || !(ev.coord.phone || ev.coord.email)) miss.push('add the coordinator name and a phone or email');
 
+    if (ev.coord.phone) {
+      const rawP = ev.coord.phone.replace(/\D/g, '');
+      const cleanP = (rawP.length > 10 && (rawP.startsWith('91') || rawP.startsWith('0'))) ? rawP.slice(-10) : rawP;
+      if (cleanP.length !== 10 || !/^[6-9]\d{9}$/.test(cleanP)) {
+        return toast('Please enter a valid 10-digit mobile number for coordinator (e.g. 9876543210).', true);
+      }
+      ev.coord.phone = cleanP;
+    }
+
     if (miss.length > 0) {
       return toast(`Please ${miss.join(', ')}.`, true);
     }
+
+    // Auto-harmonize banners: seamlessly bridge desktop & mobile across slots so organizers never get blocked
+    const b = ev.banners || {};
+    const anyDesk = [b.featured_desktop, b.event_desktop, ev.banner].find(x => typeof x === 'string' && x.trim() && x !== 'null' && x !== 'undefined') || '';
+    const anyMob  = [b.featured_mobile, b.event_mobile].find(x => typeof x === 'string' && x.trim() && x !== 'null' && x !== 'undefined') || anyDesk;
+
+    if (anyDesk) {
+      b.event_desktop = b.event_desktop || anyDesk;
+      b.featured_desktop = b.featured_desktop || anyDesk;
+    }
+    if (anyMob) {
+      b.event_mobile = b.event_mobile || anyMob;
+      b.featured_mobile = b.featured_mobile || anyMob;
+    }
+
+    ev.banners = b;
+    ev.banner = b.event_desktop || '';
 
     if (isComp) {
       ev.steps = ev.steps.filter((s) => s.t || s.x);

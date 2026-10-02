@@ -585,10 +585,15 @@ export function initDeptPage(CONFIG, EVENTS) {
       err.textContent = 'Enter a valid email address.';
       return;
     }
-    if (d.phone.replace(/\D/g, '').length < 10) {
-      err.textContent = 'Enter a valid 10-digit phone number.';
+    const rawPhone = d.phone.replace(/\D/g, '');
+    const cleanPhone = (rawPhone.length > 10 && (rawPhone.startsWith('91') || rawPhone.startsWith('0')))
+      ? rawPhone.slice(-10)
+      : rawPhone;
+    if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      err.textContent = 'Enter a valid 10-digit mobile number (e.g. 9876543210).';
       return;
     }
+    d.phone = cleanPhone;
 
     if (loadRegs().some((r) => r.eventId === curEvent.id && r.slug === CONFIG.slug && r.email.toLowerCase() === d.email.toLowerCase())) {
       err.textContent = 'This email is already registered for this event.';

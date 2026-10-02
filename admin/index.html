@@ -75,6 +75,10 @@
           <span>All Registrations</span>
           <span class="badge" id="central-regs-badge">0</span>
         </button>
+        <button class="dept-btn" id="nav-central-featured">
+          <span>Featured Events</span>
+          <span class="badge" id="central-featured-badge">★</span>
+        </button>
       </div>
     </aside>
 
@@ -199,6 +203,52 @@
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
           </div>
           <p>No registrations recorded across any department yet.</p>
+        </div>
+      </div>
+
+      <!-- VIEW 5: Super Admin Central - Featured Events Manager -->
+      <div id="view-central-featured" hidden>
+        <div class="central-header">
+          <div class="main-eyebrow">Central Administration</div>
+          <h2>Homepage Featured Events Spotlight</h2>
+          <p class="central-sub">Select flagship events to feature on the Tantra 26 homepage. An event must have both Desktop &amp; Mobile featured banners uploaded by the organiser to be featured.</p>
+        </div>
+
+        <div class="feat-demo-bar">
+          <div class="feat-demo-info">
+            <span class="feat-demo-pill">Testing Tool</span>
+            <div class="feat-demo-title">Showcase Demo Mode</div>
+            <p class="feat-demo-desc">Simulate the homepage showcase using 10 flagship department events with native artwork posters (exactly like reference design, no banners required).</p>
+          </div>
+          <button id="feat-demo-toggle-btn" class="feat-demo-btn" type="button">
+            <span class="demo-status-dot"></span>
+            <span id="feat-demo-btn-text">Enable Demo Mode</span>
+          </button>
+        </div>
+
+        <div class="regs-toolbar">
+          <select id="central-feat-dept-filter" class="dept-select-filter">
+            <option value="">All Departments</option>
+            <option value="cse">Computer Science &amp; Engineering</option>
+            <option value="cscy">Cyber Security</option>
+            <option value="ai">Artificial Intelligence &amp; Data Science</option>
+            <option value="csd">Computer Science &amp; Design</option>
+            <option value="csbs">Computer Science &amp; Business Systems</option>
+            <option value="eee">Electrical &amp; Electronics Engineering</option>
+            <option value="ece">Electronics &amp; Communication Engineering</option>
+            <option value="aei">Applied Electronics &amp; Instrumentation</option>
+            <option value="civil">Civil Engineering</option>
+            <option value="mech">Mechanical Engineering</option>
+          </select>
+          <input type="search" id="central-feat-search" placeholder="Search events by title or code…" autocomplete="off">
+        </div>
+
+        <div class="featured-manager-grid" id="central-featured-grid"></div>
+        <div id="featured-empty-state" hidden>
+          <div class="empty-state-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <p>No events found matching your filter.</p>
         </div>
       </div>
 

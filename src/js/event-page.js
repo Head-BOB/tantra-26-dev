@@ -305,11 +305,29 @@ if (!ev) {
   document.documentElement.style.setProperty('--c', D[1]);
   document.documentElement.style.setProperty('--t', D[2]);
 
-  if (ev.banner) {
-    hero.classList.add('img');
-    hero.style.backgroundImage = `url("${ev.banner.replace(/"/g, '')}")`;
+  const b = ev.banners || {};
+  const deskUrl = (b.event_desktop || b.featured_desktop || ev.banner || '').replace(/"/g, '').trim();
+  const mobUrl = (b.event_mobile || b.featured_mobile || deskUrl).replace(/"/g, '').trim();
+  const hasBanner = Boolean(deskUrl && deskUrl !== 'null' && deskUrl !== 'undefined');
+
+  if (hasBanner) {
+    hero.classList.add('img', 'has-banner');
+    hero.style.setProperty('--banner-desk', `url("${deskUrl}")`);
+    hero.style.setProperty('--banner-mob', `url("${mobUrl}")`);
+    if ($('#ghost')) {
+      $('#ghost').style.display = 'none';
+      $('#ghost').textContent = '';
+    }
+  } else {
+    hero.classList.remove('img', 'has-banner');
+    hero.style.removeProperty('--banner-desk');
+    hero.style.removeProperty('--banner-mob');
+    hero.style.backgroundImage = '';
+    if ($('#ghost')) {
+      $('#ghost').style.display = '';
+      $('#ghost').textContent = D[3];
+    }
   }
-  $('#ghost').textContent = D[3];
   
   const prizePool = calculatePrizePool(ev.prizes);
   let chipsHtml = `<span class="chip g">${esc(ev.type)}</span><span class="chip">${esc(ev.fee || 'Free')}</span>`;
@@ -912,10 +930,15 @@ if (!ev) {
       err.textContent = 'Enter a valid email address.';
       return;
     }
-    if (d.phone.replace(/\D/g, '').length < 10) {
-      err.textContent = 'Enter a valid 10-digit phone number.';
+    const rawPhone = d.phone.replace(/\D/g, '');
+    const cleanPhone = (rawPhone.length > 10 && (rawPhone.startsWith('91') || rawPhone.startsWith('0')))
+      ? rawPhone.slice(-10)
+      : rawPhone;
+    if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      err.textContent = 'Enter a valid 10-digit mobile number (e.g. 9876543210).';
       return;
     }
+    d.phone = cleanPhone;
 
     if (readLocalRegs().some((r) => r.eventId === ev.id && r.slug === ev.slug && r.email.toLowerCase() === d.email.toLowerCase())) {
       err.textContent = 'This email is already registered for this event.';

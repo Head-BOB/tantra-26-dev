@@ -85,6 +85,26 @@
 <div id="hint" aria-hidden="true"><span>Scroll</span><i></i></div>
 
 <main id="after">
+<!-- FEATURED EVENTS SHOWCASE: banner stage + thumbnail strip -->
+<section id="feat" class="feat-section" hidden>
+  <div class="fh reveal">
+    <p class="eyebrow">Don't miss</p>
+    <h2>Featured events</h2>
+    <p class="fsub">One standout event from every department.</p>
+  </div>
+  <div class="show reveal">
+    <div class="fstage" id="fstage">
+      <div class="fcnt" id="fcnt">01 / 01</div>
+      <div class="farr">
+        <button id="fprev" aria-label="Previous event">&larr;</button>
+        <button id="fnext" aria-label="Next event">&rarr;</button>
+      </div>
+      <div class="fbar"><i id="fbar"></i></div>
+    </div>
+    <div class="fthumbs" id="fthumbs"></div>
+  </div>
+</section>
+
 <section id="depts" style="position:relative">
  <div id="departments" style="position:absolute;top:-40px;left:0;pointer-events:none" aria-hidden="true"></div>
  <div class="pin">
