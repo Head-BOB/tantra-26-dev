@@ -149,10 +149,10 @@ export async function initFeaturedShowcase() {
     const dateStr = f.date || '7-8 Oct';
     const timeStr = f.time || '';
     const venueStr = f.venue || 'Campus';
-    const prizePool = f.prize_pool || (Array.isArray(f.prizes) && f.prizes.length > 0 ? f.prizes[0]?.amount : '');
+    const dept = (f.deptSlug || f.slug || '').toLowerCase();
     const targetUrl = isDemo
-      ? `/departments/${f.slug}.html#events`
-      : `/event.html?id=${encodeURIComponent(f.id)}`;
+      ? `/departments/${dept}.html#events`
+      : `/event.html?d=${encodeURIComponent(dept)}&e=${encodeURIComponent(f.id)}`;
 
     // Slide
     const sl = document.createElement('article');

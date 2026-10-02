@@ -138,17 +138,23 @@ function loadEvent(slug, id) {
   const m = /[?&]demo(=(\w+))?/.exec(location.search);
   if (m) return demoEvent(m[2]);
   if (!slug && !id) return null;
+  const targetId = id || slug;
 
   // 1. Organiser edited record
   try {
     const s = JSON.parse(localStorage.getItem(EV_KEY) || '{}');
-    if (s[slug + ':' + id]) {
+    if (slug && id && s[slug + ':' + id]) {
       const it = s[slug + ':' + id];
       it.prizes = it.prizes || [];
       return it;
     }
+    if (s[targetId]) {
+      const it = s[targetId];
+      it.prizes = it.prizes || [];
+      return it;
+    }
     for (const k in s) {
-      if (s[k] && s[k].id === id && (!slug || s[k].slug === slug)) {
+      if (s[k] && (s[k].id === targetId || k.endsWith(':' + targetId)) && (!slug || s[k].slug === slug)) {
         s[k].prizes = s[k].prizes || [];
         return s[k];
       }
@@ -159,34 +165,32 @@ function loadEvent(slug, id) {
   try {
     const adminEvents = JSON.parse(localStorage.getItem(ADMIN_EV_KEY) || '{}');
     const delEvents = JSON.parse(localStorage.getItem(DEL_EV_KEY) || '{}');
-    const list = adminEvents[slug] || [];
-    const dels = delEvents[slug] || [];
-    const found = list.find((x) => x.id === id && !dels.includes(id));
-    if (found) {
-      return {
-        slug,
-        id: found.id,
-        title: found.title,
-        type: found.type || 'Competition',
-        date: found.date || '7 Oct',
-        time: found.time || '10:00 AM',
-        venue: found.venue || 'Campus',
-        fee: found.fee || 'Free',
-        team: found.team || 1,
-        duration: Math.max(10, parseInt(found.duration, 10) || 120),
-        desc: found.desc || '',
-        details: found.details || found.desc || '',
-        banner: found.banner || '',
-        steps: found.steps || [],
-        rules: found.rules || [],
-        prizes: found.prizes || [],
-        coord: found.coord || { name: '', phone: '', email: '' },
-      };
+    if (slug && adminEvents[slug]) {
+      const list = adminEvents[slug] || [];
+      const dels = delEvents[slug] || [];
+      const found = list.find((x) => x.id === targetId && !dels.includes(targetId));
+      if (found) {
+        return {
+          slug,
+          ...found,
+        };
+      }
+    }
+    for (const d in adminEvents) {
+      const list = adminEvents[d] || [];
+      const dels = delEvents[d] || [];
+      const found = list.find((x) => x.id === targetId && !dels.includes(targetId));
+      if (found) {
+        return {
+          slug: d,
+          ...found,
+        };
+      }
     }
   } catch {}
 
   // 3. Static catalog
-  const meta = getEventMetadata(id, '', slug);
+  const meta = getEventMetadata(targetId, '', slug);
   if (meta) {
     return {
       slug: meta.slug || slug,
@@ -202,6 +206,7 @@ function loadEvent(slug, id) {
       desc: meta.desc || '',
       details: meta.details || meta.desc || '',
       banner: meta.banner || '',
+      banners: meta.banners || {},
       steps: meta.steps || [],
       rules: meta.rules || [],
       prizes: meta.prizes || [],
@@ -214,16 +219,18 @@ function loadEvent(slug, id) {
 
 // ─── Main Execution ──────────────────────────────────────────────
 const qs = new URLSearchParams(location.search);
-const rawSlug = (qs.get('d') || '').trim().toLowerCase();
-const rawId = (qs.get('e') || '').trim();
+const rawSlug = (qs.get('d') || qs.get('dept') || qs.get('slug') || '').trim().toLowerCase();
+const rawId = (qs.get('e') || qs.get('id') || qs.get('eventId') || '').trim();
 let ev = loadEvent(rawSlug, rawId);
 
-if (!ev && rawId) {
-  apiFetchSingleEvent(rawSlug, rawId).then((cloudEv) => {
+if (!ev && (rawId || rawSlug)) {
+  const fetchId = rawId || rawSlug;
+  apiFetchSingleEvent(rawSlug, fetchId).then((cloudEv) => {
     if (cloudEv) {
       try {
         const s = JSON.parse(localStorage.getItem(EV_KEY) || '{}');
         s[(cloudEv.slug || rawSlug) + ':' + cloudEv.id] = cloudEv;
+        s[cloudEv.id] = cloudEv;
         localStorage.setItem(EV_KEY, JSON.stringify(s));
       } catch {}
       location.reload();
