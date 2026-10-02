@@ -10,11 +10,11 @@ import { generatePassId } from './access-code.js';
 const RAW_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '';
 const RAW_KEY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || '';
 
-// Clean up any typo in the URL (e.g. prjj vs prjij) and fallback to production project
-const FALLBACK_URL = 'https://kzomczprjijbqeheqaaj.supabase.co';
-const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6b21jenByamlqYnFlaGVxYWFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2NTAyMDksImV4cCI6MjEwNjIyNjIwOX0.iFdjUtHI19dG04hF24nXdMxk8Cffu9DETBcR2Ktl-gs';
+// Default production URL & anon key (New Supabase Project)
+const FALLBACK_URL = 'https://hdclbulbjmntzjssynwc.supabase.co';
+const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkY2xidWxiam1udHpqc3N5bndjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5Mzg2NzEsImV4cCI6MjEwNjUxNDY3MX0.YWw8Zqxm6iUTZ3j5Fw-LY5_5r6FemkFcX-N_zQar0jA';
 
-const SUPABASE_URL = RAW_URL ? RAW_URL.replace('kzomczprjjbqeheqaaj', 'kzomczprjijbqeheqaaj') : FALLBACK_URL;
+const SUPABASE_URL = RAW_URL || FALLBACK_URL;
 const SUPABASE_ANON_KEY = RAW_KEY || FALLBACK_KEY;
 const API_BASE = ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) || '').replace(/\/$/, '');
 
