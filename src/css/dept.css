@@ -44,7 +44,7 @@ h1, h2, h3 {
 /* ── Hero section ── */
 .hero {
   position: relative; background: var(--c); color: var(--t);
-  min-height: 100vh; min-height: 100svh;
+  min-height: 100vh; min-height: 100dvh;
   display: flex; align-items: center; justify-content: flex-start; overflow: hidden;
   border-bottom: 6px solid var(--ink);
 }

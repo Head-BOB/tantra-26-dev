@@ -47,7 +47,6 @@ input:focus{outline:none;box-shadow:4px 4px 0 var(--gold)}
 .go::after{content:"";position:absolute;top:0;bottom:0;width:60px;left:-80px;background:rgba(239,232,218,.35);transform:skewX(-20deg)}
 .go.busy::after{animation:sweep .8s linear infinite}
 @keyframes sweep{to{left:110%}}
-.credit{position:fixed;left:0;right:0;bottom:14px;text-align:center;font:600 10px/1 'Inter';letter-spacing:.3em;text-transform:uppercase;color:rgba(239,232,218,.5);pointer-events:none}
 @media(prefers-reduced-motion:reduce){*{animation:none!important}.wipe{display:none}}
 </style>
 </head>
@@ -87,7 +86,7 @@ input:focus{outline:none;box-shadow:4px 4px 0 var(--gold)}
       </div>
       <form id="form" novalidate style="display:grid;gap:14px">
         <span class="f">
-          <input id="pw" type="text" maxlength="6" autocomplete="off" aria-label="Passcode" placeholder="••••••" autofocus spellcheck="false">
+          <input id="pw" type="text" maxlength="6" autocomplete="off" aria-label="Passcode" placeholder="••••••" spellcheck="false">
           <button type="button" class="eye" id="eye">Clear</button>
         </span>
         <p class="err" id="err" role="alert"></p>
@@ -96,8 +95,6 @@ input:focus{outline:none;box-shadow:4px 4px 0 var(--gold)}
     </div>
   </div>
 </main>
-
-<p class="credit">Vimal Jyothi Engineering College &middot; Tantra 26</p>
 
 <script type="module" src="/src/js/organisers-login.js"></script>
 </body>
