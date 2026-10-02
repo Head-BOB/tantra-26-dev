@@ -59,6 +59,7 @@ export function unpackEventRecord(ev) {
   const steps = Array.isArray(ev.steps) ? ev.steps : (Array.isArray(envelope.steps) ? envelope.steps : []);
   const rules = Array.isArray(ev.rules) ? ev.rules : (Array.isArray(envelope.rules) ? envelope.rules : []);
   const coord = (ev.coord && typeof ev.coord === 'object') ? ev.coord : ((envelope.coord && typeof envelope.coord === 'object') ? envelope.coord : { name: '', phone: '', email: '' });
+  const duration = Math.max(10, parseInt(ev.duration || envelope.duration || 120, 10));
 
   return {
     ...ev,
@@ -69,6 +70,7 @@ export function unpackEventRecord(ev) {
     details,
     accessCode,
     access_code: accessCode,
+    duration,
     banner,
     steps,
     rules,
@@ -389,9 +391,11 @@ export async function apiSaveEvent(eventData, isEdit = false) {
   const rules = Array.isArray(eventData.rules) ? eventData.rules : [];
   const coord = (eventData.coord && typeof eventData.coord === 'object') ? eventData.coord : { name: '', phone: '', email: '' };
 
+  const duration = Math.max(10, parseInt(eventData.duration || 120, 10));
+
   if (supabaseClient) {
     try {
-      // 1. First attempt: Native schema columns (access_code, details, banner, steps, rules, coord)
+      // 1. First attempt: Native schema columns (access_code, details, banner, steps, rules, coord, duration)
       const nativeRecord = {
         id: eventData.id,
         dept_slug: (eventData.dept_slug || eventData.slug || '').toLowerCase(),
@@ -399,6 +403,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         title: eventData.title || 'Event',
         date: '7 Oct',
         time: eventData.time || '10:00 AM',
+        duration,
         venue: eventData.venue || 'Campus',
         team_size: parseInt(eventData.team_size || eventData.team || 1, 10) || 1,
         fee: eventData.fee || 'Free',
@@ -413,16 +418,28 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         updated_at: new Date().toISOString(),
       };
 
-      const { data, error } = await supabaseClient.from('events').upsert([nativeRecord]).select().single();
+      let { data, error } = await supabaseClient.from('events').upsert([nativeRecord]).select().single();
       if (!error && data) return unpackEventRecord(data);
 
-      // 2. Second attempt: Fallback metadata envelope if database columns not migrated yet
-      if (error && error.message && error.message.includes('does not exist')) {
+      // If duration is missing from Supabase schema cache, retry without duration column
+      if (error && (error.message.includes('duration') || error.message.includes('schema cache'))) {
+        const withoutDuration = { ...nativeRecord };
+        delete withoutDuration.duration;
+        const resNoDur = await supabaseClient.from('events').upsert([withoutDuration]).select().single();
+        if (!resNoDur.error && resNoDur.data) {
+          return unpackEventRecord(resNoDur.data);
+        }
+        error = resNoDur.error;
+      }
+
+      // 2. Second attempt: Fallback metadata envelope if details/steps/rules/banner columns are not migrated yet
+      if (error) {
         const envelope = JSON.stringify({
           _meta: true,
           desc,
           details,
           accessCode,
+          duration,
           banner,
           steps,
           rules,
@@ -439,12 +456,22 @@ export async function apiSaveEvent(eventData, isEdit = false) {
           team_size: parseInt(eventData.team_size || eventData.team || 1, 10) || 1,
           fee: eventData.fee || 'Free',
           description: envelope,
+          access_code: accessCode,
           is_active: true,
           updated_at: new Date().toISOString(),
         };
-        const { data: fbData, error: fbErr } = await supabaseClient.from('events').upsert([fallbackRecord]).select().single();
+        let { data: fbData, error: fbErr } = await supabaseClient.from('events').upsert([fallbackRecord]).select().single();
         if (!fbErr && fbData) return unpackEventRecord(fbData);
-        if (fbErr) console.warn('⚠️ Supabase fallback event save error:', fbErr.message);
+
+        // If access_code column also not in schema, fallback to storing accessCode inside envelope
+        if (fbErr && (fbErr.message.includes('access_code') || fbErr.message.includes('schema cache'))) {
+          delete fallbackRecord.access_code;
+          const { data: fbData2, error: fbErr2 } = await supabaseClient.from('events').upsert([fallbackRecord]).select().single();
+          if (!fbErr2 && fbData2) return unpackEventRecord(fbData2);
+          if (fbErr2) console.warn('⚠️ Supabase fallback event save error:', fbErr2.message);
+        } else if (fbErr) {
+          console.warn('⚠️ Supabase fallback event save error:', fbErr.message);
+        }
       } else if (error) {
         console.warn('⚠️ Supabase event upsert error:', error.message);
       }
@@ -609,6 +636,24 @@ export async function apiFetchSingleEvent(slug, id) {
 }
 
 export async function apiDeleteEvent(id) {
+  // Prune immediately from local storage keys
+  try {
+    const regRaw = JSON.parse(localStorage.getItem('tantra26:registrations') || '[]');
+    if (Array.isArray(regRaw)) {
+      const filtered = regRaw.filter(r => (r.eventId || r.event_id || r.id) !== id);
+      if (filtered.length !== regRaw.length) {
+        localStorage.setItem('tantra26:registrations', JSON.stringify(filtered));
+      }
+    }
+    const adminRaw = JSON.parse(localStorage.getItem('tantra26:admin:registrations') || '[]');
+    if (Array.isArray(adminRaw)) {
+      const filteredAdmin = adminRaw.filter(r => (r.eventId || r.event_id || r.id) !== id);
+      if (filteredAdmin.length !== adminRaw.length) {
+        localStorage.setItem('tantra26:admin:registrations', JSON.stringify(filteredAdmin));
+      }
+    }
+  } catch {}
+
   if (supabaseClient) {
     try {
       const { error } = await supabaseClient.from('events').delete().eq('id', id);
@@ -632,6 +677,149 @@ export async function apiDeleteEvent(id) {
     } catch {}
   }
   return false;
+}
+
+/**
+ * Sanitizes 'tantra26:registrations' to ensure it ONLY contains registrations
+ * made by the participant using this browser, removing any bulk admin dumps.
+ */
+export function sanitizePersonalRegistrations() {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    const raw = localStorage.getItem('tantra26:registrations');
+    if (!raw) return false;
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list) || list.length === 0) return false;
+
+    // Detect if admin dump got placed here
+    let hasAdminDump = false;
+    const emails = new Set();
+    const phones = new Set();
+
+    for (const r of list) {
+      if (r.email) emails.add(String(r.email).toLowerCase().trim());
+      if (r.phone) phones.add(String(r.phone).trim());
+      // Admin sync dump signature: time contains ISO stamp like "2026-..." and lacks human date / regTime / venue
+      if (!r.regTime && (!r.date || (typeof r.time === 'string' && r.time.includes('T')))) {
+        hasAdminDump = true;
+      }
+    }
+
+    if (emails.size > 2 || phones.size > 2) {
+      hasAdminDump = true;
+    }
+
+    // Check if user is or was logged in as admin/coordinator
+    const hasAdminSession = Boolean(
+      localStorage.getItem('tantra26:admin:session_user') ||
+      localStorage.getItem('tantra26:admin:role') ||
+      sessionStorage.getItem('tantra26:admin_user')
+    );
+
+    if (!hasAdminDump && !hasAdminSession) {
+      return false; // Already clean
+    }
+
+    // Backup full list to admin registrations if not yet present
+    try {
+      const existingAdmin = localStorage.getItem('tantra26:admin:registrations');
+      if (!existingAdmin || existingAdmin === '[]') {
+        localStorage.setItem('tantra26:admin:registrations', JSON.stringify(list));
+      }
+    } catch {}
+
+    const lastEmail = (localStorage.getItem('tantra26:last_user_email') || '').toLowerCase().trim();
+    const lastPhone = (localStorage.getItem('tantra26:last_user_phone') || '').trim();
+    const lastName  = (localStorage.getItem('tantra26:last_user_name') || '').toLowerCase().trim();
+
+    // Filter to retain only registrations genuine to this browser user
+    const cleaned = list.filter(r => {
+      // Must be a genuine front-end registration (has regTime or explicit isSelf)
+      const isGenuineFrontEnd = Boolean(r.regTime || r.isSelf || (r.date && r.venue && !String(r.time || '').includes('T')));
+      if (!isGenuineFrontEnd) return false;
+
+      const rEmail = String(r.email || '').toLowerCase().trim();
+      const rPhone = String(r.phone || '').trim();
+      const rName  = String(r.name || '').toLowerCase().trim();
+
+      if (lastEmail && rEmail) return rEmail === lastEmail;
+      if (lastPhone && rPhone) return rPhone === lastPhone;
+      if (lastName && rName) return rName === lastName;
+
+      // If user has admin session and has multiple different emails/names in regs, discard non-matching
+      if (hasAdminSession) return false;
+
+      // If no admin dump signatures and single email/user, keep
+      return !hasAdminDump;
+    });
+
+    if (cleaned.length !== list.length) {
+      localStorage.setItem('tantra26:registrations', JSON.stringify(cleaned));
+      return true;
+    }
+  } catch (err) {
+    console.warn('Error in sanitizePersonalRegistrations:', err);
+  }
+  return false;
+}
+
+// Automatically sanitize on load to heal contaminated sessions
+try {
+  sanitizePersonalRegistrations();
+} catch {}
+
+/**
+ * Automatically prunes any registrations from localStorage ('tantra26:registrations')
+ * if their corresponding event has been deleted or deactivated in the database.
+ */
+export async function pruneDeletedRegistrations() {
+  sanitizePersonalRegistrations();
+  let pruned = false;
+
+  // 1. Cross-reference with admin deleted_events store
+  try {
+    const delStore = JSON.parse(localStorage.getItem('tantra26:admin:deleted_events') || '{}');
+    const allDeletedIds = new Set(Object.values(delStore).flat());
+    if (allDeletedIds.size > 0) {
+      const regRaw = JSON.parse(localStorage.getItem('tantra26:registrations') || '[]');
+      if (Array.isArray(regRaw)) {
+        const filtered = regRaw.filter(r => !allDeletedIds.has(r.eventId || r.event_id || r.id));
+        if (filtered.length !== regRaw.length) {
+          localStorage.setItem('tantra26:registrations', JSON.stringify(filtered));
+          pruned = true;
+        }
+      }
+    }
+  } catch {}
+
+  // 2. Query Supabase active events
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient.from('events').select('id, is_active');
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const activeIds = new Set(data.filter(e => e.is_active !== false).map(e => e.id));
+        const inactiveIds = new Set(data.filter(e => e.is_active === false).map(e => e.id));
+        const regRaw = JSON.parse(localStorage.getItem('tantra26:registrations') || '[]');
+        if (Array.isArray(regRaw)) {
+          const filtered = regRaw.filter(r => {
+            const evId = r.eventId || r.event_id || r.id;
+            if (inactiveIds.has(evId)) return false;
+            const inDb = data.some(d => d.id === evId);
+            if (inDb && !activeIds.has(evId)) return false;
+            return true;
+          });
+          if (filtered.length !== regRaw.length) {
+            localStorage.setItem('tantra26:registrations', JSON.stringify(filtered));
+            pruned = true;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('pruneDeletedRegistrations Supabase note:', err);
+    }
+  }
+
+  return pruned;
 }
 
 /**

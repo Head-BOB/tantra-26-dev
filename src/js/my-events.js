@@ -7,6 +7,7 @@
 
 import { getEventMetadata } from '../data/all-events.js';
 import { generatePassId } from './access-code.js';
+import { pruneDeletedRegistrations, sanitizePersonalRegistrations } from './api.js';
 
 const KEY = 'tantra26:registrations';
 // Fest start: 7 October 2026, 9:00 AM IST (UTC+05:30)
@@ -39,6 +40,10 @@ const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({
 }[c]));
 
 export function eventDurationMs(r) {
+  if (r && r.duration) {
+    const d = parseInt(r.duration, 10);
+    if (!isNaN(d) && d >= 10) return d * 60000;
+  }
   const id = (r.eventId || r.event_id || '').toLowerCase();
   const title = (r.event || r.title || '').toLowerCase();
   const type = (r.etype || r.type || '').toLowerCase();
@@ -88,6 +93,7 @@ function normalizeRecord(r) {
   const etype = (meta && meta.type) ? meta.type : (r.etype || r.type || 'Event');
   const fee = (meta && meta.fee) ? meta.fee : (r.fee || 'Free');
   const team = r.team || r.team_members || (meta && meta.team > 1 ? `Team of ${meta.team}` : '');
+  const duration = Math.max(10, parseInt(r.duration || (meta && meta.duration) || 120, 10));
 
   return {
     ...r,
@@ -98,6 +104,7 @@ function normalizeRecord(r) {
     etype,
     date,
     time,
+    duration,
     venue,
     team,
     fee,
@@ -137,6 +144,7 @@ export function loadRegistrations() {
     ];
   }
   try {
+    sanitizePersonalRegistrations();
     const raw = JSON.parse(localStorage.getItem(KEY) || '[]');
     if (!Array.isArray(raw)) return [];
     return raw.map(normalizeRecord);
@@ -167,6 +175,20 @@ export function initMyEvents() {
   });
 
   regs.sort((a, b) => (a._s == null) - (b._s == null) || a._s - b._s);
+
+  // Auto-prune registrations for events deleted from database or admin
+  pruneDeletedRegistrations().then((pruned) => {
+    if (pruned) {
+      regs = loadRegistrations().map((r) => {
+        r._s = startOf(r);
+        r._e = r._s ? r._s + eventDurationMs(r) : null;
+        return r;
+      });
+      regs.sort((a, b) => (a._s == null) - (b._s == null) || a._s - b._s);
+      updateHero();
+      draw();
+    }
+  }).catch(() => {});
 
   // Hero greeting + chips
   function stat() {

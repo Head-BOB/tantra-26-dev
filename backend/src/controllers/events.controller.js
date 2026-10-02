@@ -81,7 +81,7 @@ export async function getAllEventsAdmin(req, res) {
 // POST /api/admin/events
 export async function createEvent(req, res) {
   try {
-    const { id, dept_slug, type, title, time, venue, team_size, fee, description, access_code, accessCode, details, banner, steps, rules, coord } = req.body;
+    const { id, dept_slug, type, title, time, duration, venue, team_size, fee, description, access_code, accessCode, details, banner, steps, rules, coord } = req.body;
 
     // Validate department access
     const targetDept = (dept_slug || '').toLowerCase();
@@ -92,6 +92,8 @@ export async function createEvent(req, res) {
     if (!title || !time || !venue || !description) {
       return res.status(400).json({ error: 'Missing required event fields.' });
     }
+
+    const eventDuration = Math.max(10, parseInt(duration, 10) || 120);
 
     const slugBase = title.toLowerCase()
       .replace(/[µμ]/g, 'mu')
@@ -109,6 +111,7 @@ export async function createEvent(req, res) {
       title: title.trim(),
       date: '7 Oct', // Strict fest date requirement
       time: time.trim(),
+      duration: eventDuration,
       venue: venue.trim(),
       team_size: parseInt(team_size, 10) || 1,
       fee: fee ? fee.trim() : 'Free',
@@ -127,7 +130,13 @@ export async function createEvent(req, res) {
       return res.status(503).json({ error: 'Database service not configured.' });
     }
 
-    const { data, error } = await supabase.from('events').insert([newEvent]).select().single();
+    let { data, error } = await supabase.from('events').insert([newEvent]).select().single();
+    if (error && (error.message.includes('duration') || error.message.includes('schema cache'))) {
+      delete newEvent.duration;
+      const resRetry = await supabase.from('events').insert([newEvent]).select().single();
+      data = resRetry.data;
+      error = resRetry.error;
+    }
     if (error) throw error;
 
     clearEventsCache();
@@ -142,7 +151,7 @@ export async function createEvent(req, res) {
 export async function updateEvent(req, res) {
   try {
     const { id } = req.params;
-    const { type, title, time, venue, team_size, fee, description, access_code, accessCode, details, banner, steps, rules, coord } = req.body;
+    const { type, title, time, duration, venue, team_size, fee, description, access_code, accessCode, details, banner, steps, rules, coord } = req.body;
 
     if (!supabase) {
       return res.status(503).json({ error: 'Database service not configured.' });
@@ -170,6 +179,7 @@ export async function updateEvent(req, res) {
     if (type !== undefined) updates.type = type;
     if (title !== undefined) updates.title = title.trim();
     if (time !== undefined) updates.time = time.trim();
+    if (duration !== undefined) updates.duration = Math.max(10, parseInt(duration, 10) || 120);
     if (venue !== undefined) updates.venue = venue.trim();
     if (team_size !== undefined) updates.team_size = parseInt(team_size, 10) || 1;
     if (fee !== undefined) updates.fee = fee.trim();
@@ -181,12 +191,19 @@ export async function updateEvent(req, res) {
     if (rules !== undefined) updates.rules = Array.isArray(rules) ? rules : [];
     if (coord !== undefined) updates.coord = (coord && typeof coord === 'object') ? coord : {};
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('events')
       .update(updates)
       .eq('id', id)
       .select()
       .single();
+
+    if (error && (error.message.includes('duration') || error.message.includes('schema cache'))) {
+      delete updates.duration;
+      const resRetry = await supabase.from('events').update(updates).eq('id', id).select().single();
+      data = resRetry.data;
+      error = resRetry.error;
+    }
 
     if (error) throw error;
 

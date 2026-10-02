@@ -141,6 +141,7 @@ function loadEvent(slug, id) {
         venue: found.venue || 'Campus',
         fee: found.fee || 'Free',
         team: found.team || 1,
+        duration: Math.max(10, parseInt(found.duration, 10) || 120),
         desc: found.desc || '',
         details: found.details || found.desc || '',
         banner: found.banner || '',
@@ -161,6 +162,7 @@ function loadEvent(slug, id) {
       type: meta.type || 'Competition',
       date: meta.date || '7 Oct',
       time: meta.time || '10:00 AM',
+      duration: Math.max(10, parseInt(meta.duration, 10) || 120),
       venue: meta.venue || 'Campus',
       fee: meta.fee || 'Free',
       team: meta.team || 1,
@@ -259,7 +261,8 @@ if (!ev) {
     return isNaN(ts) ? new Date(`${YEAR}-10-07T10:00:00${IST}`).getTime() : ts;
   }
   const START = startOf();
-  const END = START ? START + EVENT_LEN_H * 3600000 : null;
+  const eventDurationMin = Math.max(10, parseInt(ev.duration, 10) || (EVENT_LEN_H * 60));
+  const END = START ? START + eventDurationMin * 60000 : null;
 
   // Hero styling
   const hero = $('#hero');
@@ -291,8 +294,14 @@ if (!ev) {
   }, []);
   $('#title').innerHTML = lines.map((l) => `<span class="ln"><span>${formatTitleSpan(l)}</span></span>`).join('');
   $('#lead').textContent = ev.desc || '';
+
+  const durText = eventDurationMin >= 60
+    ? `${Math.floor(eventDurationMin / 60)} hr${Math.floor(eventDurationMin / 60) > 1 ? 's' : ''}${eventDurationMin % 60 ? ` ${eventDurationMin % 60} min` : ''}`
+    : `${eventDurationMin} mins`;
+
   $('#facts').innerHTML = [
     ['When', `${ev.date} · ${ev.time}`],
+    ['Duration', durText],
     ['Where', ev.venue],
     ['Team', ev.team > 1 ? `Up to ${ev.team} members` : 'Individual'],
     ['Fee', ev.fee || 'Free'],
@@ -551,6 +560,10 @@ if (!ev) {
   }
 
   function getEventDurationHours(e) {
+    if (e && e.duration) {
+      const d = parseInt(e.duration, 10);
+      if (!isNaN(d) && d >= 10) return d / 60;
+    }
     const id = (e.id || e.eventId || '').toLowerCase();
     const type = (e.type || e.etype || '').toLowerCase();
     const title = (e.title || e.event || '').toLowerCase();
@@ -1027,6 +1040,7 @@ if (!ev) {
       etype:   ev.type || 'Event',
       date:    ev.date || '7 Oct',
       time:    ev.time || '10:00 AM',
+      duration: eventDurationMin,
       venue:   ev.venue || 'Campus',
       fee:     ev.fee || 'Free',
       name:    curData.name,
@@ -1037,12 +1051,17 @@ if (!ev) {
       txnId:   txnId,
       regId:   regId,
       regTime: new Date().toISOString(),
+      isSelf:  true,
     };
 
     const list = readLocalRegs();
     list.unshift(rec);
     saveLocalRegs(list);
-    try { localStorage.setItem('tantra26:last_user_name', curData.name); } catch (_) {}
+    try {
+      localStorage.setItem('tantra26:last_user_name', curData.name);
+      if (curData.email) localStorage.setItem('tantra26:last_user_email', curData.email.trim().toLowerCase());
+      if (curData.phone) localStorage.setItem('tantra26:last_user_phone', curData.phone.trim());
+    } catch (_) {}
 
     populatePass(rec);
     setStep(3);

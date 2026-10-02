@@ -26,7 +26,7 @@ export const DEPTS = {
 const EV_KEY = 'tantra26:events';
 const ADMIN_EV_KEY = 'tantra26:admin:events';
 const DEL_EV_KEY = 'tantra26:admin:deleted_events';
-const REG_KEY = 'tantra26:registrations';
+const REG_KEY = 'tantra26:admin:registrations';
 const DEMO_CODE = 'TANTRA26';
 
 const $ = (s) => document.querySelector(s);
@@ -247,21 +247,70 @@ document.querySelectorAll('#signout, #gate-back, a[href*="organisers.html"]').fo
   });
 });
 
-let ev = loadEventByCode(codeParam);
 let dirty = false;
 
-// If not present in local storage, fetch live from Supabase / Backend API
-if (!ev && codeParam) {
-  apiFetchEventByCode(codeParam).then(cloudEv => {
-    if (cloudEv) {
-      ev = cloudEv;
-      location.reload();
+async function bootstrap() {
+  if (!codeParam) {
+    window.location.replace('/organisers.html');
+    return;
+  }
+
+  // 1. Try local storage / static catalog first
+  let ev = loadEventByCode(codeParam);
+
+  // 2. If not present in local storage, fetch live from Supabase / Backend API
+  if (!ev) {
+    try {
+      const cloudEv = await apiFetchEventByCode(codeParam);
+      if (cloudEv) {
+        ev = cloudEv;
+        saveEvent(cloudEv);
+      }
+    } catch (err) {
+      console.warn('Error fetching cloud event by code:', err);
     }
-  }).catch(() => {});
+  }
+
+  // 3. If still not found after cloud lookup
+  if (!ev) {
+    $('#app').hidden = true;
+    $('#gate').hidden = false;
+    $('#gate-msg').textContent = `Passcode "${codeParam}" was not found. Please double-check the 6-digit code or ask your department administrator.`;
+    return;
+  }
+
+  // 4. Render the dashboard directly
+  initDashboard(ev);
 }
 
-// In background, fetch freshest database state to update any remote changes
-if (codeParam) {
+if (window.location.pathname.includes('organiser-event')) {
+  bootstrap();
+}
+
+export function initDashboard(ev, onSignOut = null) {
+  ev.steps = ev.steps || [];
+  ev.rules = ev.rules || [];
+  ev.coord = ev.coord || {};
+
+  const activeCode = (ev.code || ev.accessCode || codeParam || '').toUpperCase();
+
+  const signoutBtn = $('#signout');
+  if (signoutBtn) {
+    signoutBtn.onclick = (e) => {
+      e.preventDefault();
+      try { sessionStorage.removeItem('tantra26:organiser_session'); } catch {}
+      if (typeof onSignOut === 'function') {
+        onSignOut();
+      } else {
+        window.location.href = '/organisers?logout=1';
+      }
+    };
+  }
+
+  const isComp = ev.type === 'Competition';
+  const D = DEPTS[ev.slug] || ['Department', '#e3a72f', '#141414', (ev.slug || 'T26').toUpperCase()];
+
+  // In background, fetch freshest database state to update any remote changes
   apiFetchEventByCode(codeParam).then(fresh => {
     if (fresh && ev && !dirty) {
       if (fresh.details && fresh.details !== ev.details && !$('#details').value) {
@@ -280,21 +329,8 @@ if (codeParam) {
       }
     }
   }).catch(() => {});
-}
 
-if (!ev) {
-  $('#gate').hidden = false;
-  if (!codeParam) {
-    $('#gate-msg').textContent = 'No event code was given. Paste your code on the organiser login page.';
-  }
-} else {
-  ev.steps = ev.steps || [];
-  ev.rules = ev.rules || [];
-  ev.coord = ev.coord || {};
-
-  const isComp = ev.type === 'Competition';
-  const D = DEPTS[ev.slug] || ['Department', '#e3a72f', '#141414', (ev.slug || 'T26').toUpperCase()];
-
+  $('#gate').hidden = true;
   $('#app').hidden = false;
   document.title = `${ev.title} · Event Manager · Tantra 26`;
 

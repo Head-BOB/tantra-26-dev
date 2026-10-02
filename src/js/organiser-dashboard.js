@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 import { fetchAdminRegistrations } from './api.js';
 
 const SESS_KEY = 'tantra26:organiser_session';
-const REG_KEY  = 'tantra26:registrations';
+const REG_KEY  = 'tantra26:admin:registrations';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

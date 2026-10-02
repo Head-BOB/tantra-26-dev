@@ -238,33 +238,38 @@
             <input name="date" id="em-date" value="7 Oct" readonly class="locked-input" title="Tantra 26 fest date is fixed to 7 Oct">
             <span class="field-hint">Fest date is fixed to 7 Oct</span>
           </label>
-          <label>Time
+          <label>Start Time
             <input name="time" id="em-time" required placeholder="e.g. 10:00 AM" autocomplete="off">
             <span class="field-hint">Specify event start time</span>
           </label>
         </div>
         <div class="row">
+          <label>Duration (minutes)
+            <input name="duration" id="em-duration" type="number" min="10" step="5" value="120" required placeholder="e.g. 120">
+            <span class="field-hint">Minimum 10 minutes required</span>
+          </label>
           <label>Venue
             <input name="venue" required data-slop="Venue" placeholder="e.g. CS Lab 1">
           </label>
-          <label>Max team size
-            <input name="team" type="number" min="1" max="20" value="1">
-          </label>
         </div>
         <div class="row">
-          <label>Organiser Passcode (6-digit alphanumeric)
-            <div style="display:flex;gap:8px;align-items:center">
-              <input name="accessCode" id="em-code" required maxlength="6" style="text-transform:uppercase;font-family:'Anton',Impact,sans-serif;font-size:1.15rem;letter-spacing:.25em;text-align:center" placeholder="e.g. CYB701">
-              <button type="button" id="em-regen-code" class="cancel-btn" style="white-space:nowrap;padding:12px 14px;font-size:11px">Randomize</button>
+          <label>Max team size
+            <input name="team" type="number" min="1" max="20" value="1">
+            <span class="field-hint">1 for individual, 2+ for team</span>
+          </label>
+          <label>Organiser Passcode (6-digit)
+            <div style="display:flex;gap:8px;align-items:center;width:100%">
+              <input name="accessCode" id="em-code" required maxlength="6" style="flex:1;min-width:0;text-transform:uppercase;font-family:'Anton',Impact,sans-serif;font-size:1.15rem;letter-spacing:.2em;text-align:center" placeholder="e.g. CYB701">
+              <button type="button" id="em-regen-code" class="cancel-btn" style="flex:none;white-space:nowrap;padding:12px 14px;font-size:11px">Randomize</button>
             </div>
-            <span class="field-hint">Coordinators log in at /organisers using this passcode</span>
+            <span class="field-hint">Coordinators log in at /organisers</span>
           </label>
         </div>
         <label>Preview Description (max 120 chars)
           <textarea name="desc" id="em-desc" rows="3" maxlength="120" required data-slop="Event description" placeholder="Short event preview shown on the card (max 120 characters)…"></textarea>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
             <span class="field-hint" style="margin:0">Brief preview shown on the event card</span>
-            <span id="em-desc-count" style="font-size:11px;font-weight:700;color:rgba(239,232,218,0.6)">0 / 120</span>
+            <span id="em-desc-count" style="font-size:11px;font-weight:700;color:rgba(20,20,20,0.6)">0 / 120</span>
           </div>
         </label>
         <p class="err" id="em-err"></p>

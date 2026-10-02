@@ -41,6 +41,14 @@
       "destination": "/admin/index.html"
     },
     {
+      "source": "/organisers",
+      "destination": "/organisers.html"
+    },
+    {
+      "source": "/organiser-event",
+      "destination": "/organisers.html"
+    },
+    {
       "source": "/departments/cse",
       "destination": "/departments/cse.html"
     },

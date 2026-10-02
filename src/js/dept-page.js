@@ -5,7 +5,7 @@
  */
 
 import QRCode from 'qrcode';
-import { fetchDeptEvents, fetchDeptCoords, fetchDeptPayment, submitRegistration } from './api.js';
+import { fetchDeptEvents, fetchDeptCoords, fetchDeptPayment, submitRegistration, sanitizePersonalRegistrations } from './api.js';
 import { getEventMetadata } from '../data/all-events.js';
 import { generatePassId } from './access-code.js';
 
@@ -113,13 +113,23 @@ export function initDeptPage(CONFIG, EVENTS) {
   // ---- Registrations storage helpers ----
   const KEY = 'tantra26:registrations';
   function loadRegs() {
-    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
+    try {
+      sanitizePersonalRegistrations();
+      return JSON.parse(localStorage.getItem(KEY) || '[]');
+    } catch {
+      return [];
+    }
   }
   function saveRegs(a) {
     try { localStorage.setItem(KEY, JSON.stringify(a)); } catch {}
   }
   function isReg(id) {
-    return loadRegs().some((r) => r.eventId === id && r.slug === CONFIG.slug);
+    const targetSlug = (CONFIG.slug || '').toLowerCase();
+    return loadRegs().some((r) => {
+      const rId = String(r.eventId || r.event_id || r.id || '').trim();
+      const rSlug = String(r.slug || r.dept_slug || '').toLowerCase().trim();
+      return rId === id && rSlug === targetSlug;
+    });
   }
 
   // ---- Event cards ----
@@ -180,6 +190,23 @@ export function initDeptPage(CONFIG, EVENTS) {
         const store = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
         store[CONFIG.slug] = backendEvents;
         localStorage.setItem('tantra26:admin:events', JSON.stringify(store));
+      } catch {}
+
+      // Prune local registrations for events that no longer exist in this department
+      try {
+        const regRaw = JSON.parse(localStorage.getItem('tantra26:registrations') || '[]');
+        if (Array.isArray(regRaw)) {
+          const backendEventIds = new Set(backendEvents.map(e => e.id));
+          const updatedRegs = regRaw.filter(r => {
+            if ((r.slug || r.dept_slug || '').toLowerCase() === CONFIG.slug.toLowerCase()) {
+              return backendEventIds.has(r.eventId || r.event_id || r.id);
+            }
+            return true;
+          });
+          if (updatedRegs.length !== regRaw.length) {
+            localStorage.setItem('tantra26:registrations', JSON.stringify(updatedRegs));
+          }
+        }
       } catch {}
     }
   });
@@ -272,6 +299,10 @@ export function initDeptPage(CONFIG, EVENTS) {
   }
 
   function getEventDurationHours(ev) {
+    if (ev && ev.duration) {
+      const d = parseInt(ev.duration, 10);
+      if (!isNaN(d) && d >= 10) return d / 60;
+    }
     const id = (ev.id || ev.eventId || '').toLowerCase();
     const type = (ev.type || ev.etype || '').toLowerCase();
     const title = (ev.title || ev.event || '').toLowerCase();
@@ -782,6 +813,7 @@ export function initDeptPage(CONFIG, EVENTS) {
       etype:   curEvent.type || 'Event',
       date:    curEvent.date || '7 Oct',
       time:    curEvent.time || '10:00 AM',
+      duration: Math.max(10, parseInt(curEvent.duration, 10) || 120),
       venue:   curEvent.venue || 'Campus',
       fee:     curEvent.fee || 'Free',
       name:    curData.name,
@@ -792,12 +824,17 @@ export function initDeptPage(CONFIG, EVENTS) {
       txnId:   txnId,
       regId:   regId,
       regTime: new Date().toISOString(),
+      isSelf:  true,
     };
 
     const list = loadRegs();
     list.unshift(rec);
     saveRegs(list);
-    try { localStorage.setItem('tantra26:last_user_name', curData.name); } catch (_) {}
+    try {
+      localStorage.setItem('tantra26:last_user_name', curData.name);
+      if (curData.email) localStorage.setItem('tantra26:last_user_email', curData.email.trim().toLowerCase());
+      if (curData.phone) localStorage.setItem('tantra26:last_user_phone', curData.phone.trim());
+    } catch (_) {}
 
     populatePass(rec);
     setStep(3);

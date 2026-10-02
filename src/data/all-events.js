@@ -39,6 +39,7 @@ Object.entries(DEPT_MAP).forEach(([slug, dept]) => {
       dept: dept.name,
       date: ev.date || '7 Oct',
       time: ev.time || '10:00 AM',
+      duration: ev.duration ? Math.max(10, parseInt(ev.duration, 10)) : 120,
       venue: ev.venue || 'Campus',
       type: ev.type || 'Event',
       team: ev.team || 1,

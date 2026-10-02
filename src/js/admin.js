@@ -22,6 +22,7 @@ import {
   fetchDeptEvents,
   apiSavePayment,
   fetchAllDeptPayments,
+  sanitizePersonalRegistrations,
 } from './api.js';
 import { generateRandomCode, generateUniqueAccessCode, getEventAccessCode } from './access-code.js';
 import { SlopGuard } from './slop-guard.js';
@@ -153,7 +154,7 @@ const EV_KEY         = 'tantra26:admin:events';
 const DEL_EV_KEY     = 'tantra26:admin:deleted_events';
 const CO_KEY         = 'tantra26:admin:coords';
 const SESS_KEY       = 'tantra26:admin:session_user';
-const REG_KEY        = 'tantra26:registrations';
+const ADMIN_REGS_KEY = 'tantra26:admin:registrations';
 const DEPT_PAY_KEY   = 'tantra26:admin:dept_payment';
 
 const load = (k, fb = {}) => { try { return JSON.parse(localStorage.getItem(k) || 'null') ?? fb; } catch { return fb; } };
@@ -165,7 +166,7 @@ function getDeletedEvents() { return load(DEL_EV_KEY, {}); }
 function setDeletedEvents(d) { save(DEL_EV_KEY, d); }
 function getAdminCoords() { return load(CO_KEY, {}); }
 function setAdminCoords(d) { save(CO_KEY, d); }
-function getAllRegistrations() { return load(REG_KEY, []); }
+function getAllRegistrations() { return load(ADMIN_REGS_KEY, []); }
 function getDeptPayments() { return load(DEPT_PAY_KEY, {}); }
 function setDeptPayments(d) { save(DEPT_PAY_KEY, d); }
 
@@ -304,7 +305,8 @@ function showApp() {
     selectDept(DEPTS[0].slug);
   }
 
-  // Immediately pull live registrations from Supabase
+  // Immediately pull live registrations from Supabase and sanitize personal tickets
+  try { sanitizePersonalRegistrations(); } catch {}
   syncLiveRegistrations();
 
   // Load cloud payment configs for all departments
@@ -677,12 +679,20 @@ function bindEventModal() {
       return;
     }
 
+    const duration = parseInt(f.duration ? f.duration.value : 120, 10);
+    if (isNaN(duration) || duration < 10) {
+      err.textContent = 'Event duration must be at least 10 minutes.';
+      if (f.duration) f.duration.focus();
+      return;
+    }
+
     const data = {
       title,
       type:  f.type.value,
       fee:   f.fee.value.trim(),
       date:  '7 Oct', // Fest date is strictly October 7
       time:  f.time.value.trim(),
+      duration,
       venue: f.venue.value.trim(),
       team:  parseInt(f.team.value) || 1,
       desc:  desc.slice(0, 120),
@@ -773,6 +783,7 @@ function openEventModal(id) {
       f.fee.value   = ev.fee || '';
       f.date.value  = '7 Oct';
       f.time.value  = ev.time || '10:00 AM';
+      if (f.duration) f.duration.value = Math.max(10, parseInt(ev.duration, 10) || 120);
       f.venue.value = ev.venue || '';
       f.team.value  = ev.team || 1;
       f.desc.value  = ev.desc || '';
@@ -783,6 +794,7 @@ function openEventModal(id) {
     $('em-title').textContent = 'New Event';
     f.date.value = '7 Oct';
     f.time.value = '10:00 AM';
+    if (f.duration) f.duration.value = 120;
     if (f.accessCode) f.accessCode.value = generateUniqueAccessCode();
   }
 
@@ -884,6 +896,23 @@ function bindDeleteModal() {
         delStore[activeDept].push(pendingDeleteId);
         setDeletedEvents(delStore);
       }
+      // Prune from admin registrations and participant registrations cache immediately
+      try {
+        const aRaw = JSON.parse(localStorage.getItem(ADMIN_REGS_KEY) || '[]');
+        if (Array.isArray(aRaw)) {
+          const filtered = aRaw.filter(r => (r.eventId || r.event_id || r.id) !== pendingDeleteId);
+          if (filtered.length !== aRaw.length) {
+            localStorage.setItem(ADMIN_REGS_KEY, JSON.stringify(filtered));
+          }
+        }
+        const regRaw = JSON.parse(localStorage.getItem('tantra26:registrations') || '[]');
+        if (Array.isArray(regRaw)) {
+          const filtered = regRaw.filter(r => (r.eventId || r.event_id || r.id) !== pendingDeleteId);
+          if (filtered.length !== regRaw.length) {
+            localStorage.setItem('tantra26:registrations', JSON.stringify(filtered));
+          }
+        }
+      } catch {}
       apiDeleteEvent(pendingDeleteId).then(ok => {
         if (ok) toast('Deleted from cloud ✓', 'info');
       }).catch(() => {});
@@ -947,7 +976,8 @@ function syncLiveRegistrations() {
         txnId: r.txn_id,
         time: r.created_at,
       }));
-      save(REG_KEY, formatted);
+      save(ADMIN_REGS_KEY, formatted);
+      try { sanitizePersonalRegistrations(); } catch {}
       updateRegsBadge();
       if (currentView === 'regs') renderDeptRegistrations();
       if (currentView === 'central-regs') renderCentralRegs();

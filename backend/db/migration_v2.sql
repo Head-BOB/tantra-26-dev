@@ -103,3 +103,7 @@ END $$;
 -- 7. Create UNIQUE index on access_code
 DROP INDEX IF EXISTS idx_events_access_code_unique;
 CREATE UNIQUE INDEX idx_events_access_code_unique ON events (access_code) WHERE access_code IS NOT NULL;
+
+-- 8. Add event duration (in minutes, min 10 minutes required, default 120 minutes)
+ALTER TABLE events ADD COLUMN IF NOT EXISTS duration INT DEFAULT 120;
+
