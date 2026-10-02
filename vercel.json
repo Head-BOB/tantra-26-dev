@@ -33,7 +33,18 @@
   ],
   "rewrites": [
     {
-      "source": "/event(.*)",
+      "source": "/event",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|WhatsApp|TelegramBot|Twitterbot|Discordbot|Slackbot|LinkedInBot|bot|crawler|spider|Googlebot|bingbot|SkypeUriPreview).*"
+        }
+      ],
+      "destination": "/api/event"
+    },
+    {
+      "source": "/event.html",
       "has": [
         {
           "type": "header",

@@ -328,8 +328,18 @@ canvas {
   display: grid; place-items: center;
   border-bottom: 2px solid var(--ink);
 }
-.poster svg { position: relative; width: 88%; transition: transform .5s cubic-bezier(.16,1,.3,1); }
-.card:hover .poster svg { transform: scale(1.07) rotate(-2deg); }
+.poster svg, .poster img, .poster-img {
+  position: relative;
+  width: 86%;
+  height: auto;
+  max-height: 84%;
+  object-fit: contain;
+  z-index: 2;
+  transition: transform .5s cubic-bezier(.16,1,.3,1);
+}
+.card:hover .poster svg, .card:hover .poster img, .card:hover .poster-img {
+  transform: scale(1.07) rotate(-2deg);
+}
 .ghost {
   position: absolute; left: 0; right: 0; bottom: -6%; text-align: center;
   font: 400 clamp(6rem,13vw,9.5rem)/1 'Anton', Impact, sans-serif;

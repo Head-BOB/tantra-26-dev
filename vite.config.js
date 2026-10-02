@@ -17,6 +17,19 @@ function devEmbedPlugin() {
         const isBot = /facebookexternalhit|WhatsApp|TelegramBot|Twitterbot|Discordbot|Slackbot|LinkedInBot|SkypeUriPreview|Googlebot|bingbot|crawler|spider|bot/i.test(ua);
         const isEventHtml = url.pathname === '/event.html' || url.pathname === '/event';
 
+        if (url.pathname === '/api/banner') {
+          try {
+            const { default: bannerHandler } = await import('./api/banner.js');
+            req.query = Object.fromEntries(url.searchParams.entries());
+            res.status = (code) => { res.statusCode = code; return res; };
+            res.send = (body) => { res.end(body); return res; };
+            return await bannerHandler(req, res);
+          } catch (e) {
+            console.error('dev-embed-plugin banner error:', e);
+            return next();
+          }
+        }
+
         if (isEmbedReq || (isBot && isEventHtml)) {
           try {
             const { default: handler } = await import('./api/event.js');

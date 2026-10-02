@@ -390,7 +390,7 @@ if (!ev) {
   const shareBtn = $('#share-btn');
   const barShareBtn = $('#bar-share-btn');
   const deptParam = (ev.slug || ev.deptSlug || D[0] || '').toLowerCase();
-  const shareUrl = `${window.location.origin}/event.html?d=${encodeURIComponent(deptParam)}&e=${encodeURIComponent(ev.id)}`;
+  const shareUrl = `${window.location.origin}/event?d=${encodeURIComponent(deptParam)}&e=${encodeURIComponent(ev.id)}`;
 
   const handleShare = async () => {
     const shareData = {

@@ -10,7 +10,7 @@ const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI
 
 const DEPT_NAMES = {
   cse: 'Computer Science & Engineering',
-  cscy: 'Cyber Security',
+  cscy: 'Computer Science and Cyber Security',
   ai: 'Artificial Intelligence & Data Science',
   csd: 'Computer Science & Design',
   csbs: 'Computer Science & Business Systems',
@@ -126,6 +126,7 @@ export default async function handler(req, res) {
   if (!event) {
     const defaultTitle = 'Tantra 26 | National Level Techfest';
     const defaultDesc = 'Tantra 26 — the annual national level techfest at Vimal Jyothi Engineering College. 7-8 October 2026.';
+    const defaultBanner = `${baseUrl}/images/banners/default.png`;
     const defaultRedirect = `${baseUrl}/#departments`;
 
     const html = `<!DOCTYPE html>
@@ -138,10 +139,13 @@ export default async function handler(req, res) {
   <meta property="og:site_name" content="Tantra 26 | National Level Techfest">
   <meta property="og:title" content="${escapeHtml(defaultTitle)}">
   <meta property="og:description" content="${escapeHtml(defaultDesc)}">
+  <meta property="og:image" content="${defaultBanner}">
+  <meta property="og:image:secure_url" content="${defaultBanner}">
   <meta property="og:url" content="${baseUrl}/">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(defaultTitle)}">
   <meta name="twitter:description" content="${escapeHtml(defaultDesc)}">
+  <meta name="twitter:image" content="${defaultBanner}">
   <meta http-equiv="refresh" content="0;url=${defaultRedirect}">
 </head>
 <body>
@@ -156,9 +160,13 @@ export default async function handler(req, res) {
   // Extract metadata details
   const deptName = DEPT_NAMES[event.dept_slug] || 'Tantra 26';
   const b = event.banners || {};
-  let bannerUrl = b.featured_desktop || b.event_desktop || b.featured_mobile || b.event_mobile || '';
-  if (bannerUrl && bannerUrl.startsWith('/')) {
-    bannerUrl = `${baseUrl}${bannerUrl}`;
+  let customBanner = b.featured_desktop || b.event_desktop || b.featured_mobile || b.event_mobile || '';
+  let bannerUrl = '';
+  if (customBanner && /^https?:\/\//i.test(customBanner)) {
+    bannerUrl = customBanner;
+  } else {
+    // Serve binary image via /api/banner (handles base64 decoding & department fallback)
+    bannerUrl = `${baseUrl}/api/banner?e=${encodeURIComponent(event.id)}&d=${encodeURIComponent(event.dept_slug || deptSlug)}`;
   }
 
   // Calculate prize pool if present
