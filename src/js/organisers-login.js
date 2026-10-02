@@ -47,10 +47,38 @@ if (c) {
 
   size();
   window.addEventListener('resize', size);
+
   window.addEventListener('pointermove', e => {
-    mx = e.clientX / W - 0.5;
-    my = e.clientY / H - 0.5;
+    mx = (e.clientX / W - 0.5) * 1.4;
+    my = (e.clientY / H - 0.5) * 1.4;
   });
+
+  // Mobile Device Orientation Parallax (gyroscope / accelerometer)
+  if (typeof window !== 'undefined' && window.DeviceOrientationEvent) {
+    window.addEventListener('deviceorientation', e => {
+      if (e.gamma !== null && e.beta !== null) {
+        // gamma: left-right tilt [-90, 90]
+        // beta: front-back tilt [-180, 180], phone normally held at ~40deg
+        const tiltX = Math.max(-1, Math.min(1, e.gamma / 24));
+        const tiltY = Math.max(-1, Math.min(1, (e.beta - 42) / 28));
+        mx = tiltX * 1.3;
+        my = tiltY * 1.3;
+      }
+    }, { passive: true });
+  }
+
+  // Mobile Touch Drag Parallax
+  window.addEventListener('touchmove', e => {
+    if (e.touches && e.touches[0]) {
+      const t = e.touches[0];
+      mx = (t.clientX / W - 0.5) * 1.5;
+      my = (t.clientY / H - 0.5) * 1.5;
+    }
+  }, { passive: true });
+
+  const logoNode = document.querySelector('.logo');
+  const cardNode = document.getElementById('card');
+  let idleTick = 0;
 
   function frame() {
     if (document.body.classList.contains('is-dashboard')) {
@@ -58,14 +86,26 @@ if (c) {
       return;
     }
     g.clearRect(0, 0, W, H);
-    tx += (mx - tx) * 0.05;
-    ty += (my - ty) * 0.05;
+
+    idleTick += 0.014;
+    const ambX = Math.sin(idleTick) * 0.12;
+    const ambY = Math.cos(idleTick * 0.75) * 0.1;
+    const targetX = mx + ambX;
+    const targetY = my + ambY;
+
+    tx += (targetX - tx) * 0.06;
+    ty += (targetY - ty) * 0.06;
+
     stars.forEach(s => {
       s.y -= s.z * 0.16;
       if (s.y < -6) s.y = H + 6;
       s.t += 0.03;
-      const x = (((s.x - tx * 50 * s.z) % W) + W) % W;
-      const y = s.y - ty * 50 * s.z;
+
+      const px = tx * 75 * s.z;
+      const py = ty * 55 * s.z;
+      const x = (((s.x - px) % W) + W) % W;
+      const y = (((s.y - py) % H) + H) % H;
+
       g.globalAlpha = (0.45 + 0.55 * Math.abs(Math.sin(s.t))) * (0.4 + s.z * 0.6);
       g.fillStyle = s.col;
       if (s.big) {
@@ -76,6 +116,15 @@ if (c) {
         g.fillRect(x, y, s.z * 1.8, s.z * 1.8);
       }
     });
+
+    // Subtle 3D multiplane depth for login card and logo on tilt
+    if (logoNode && !logoNode.classList.contains('rise')) {
+      logoNode.style.transform = `translate3d(${tx * -9}px, ${ty * -7}px, 0)`;
+    }
+    if (cardNode && !cardNode.classList.contains('shake')) {
+      cardNode.style.transform = `translate3d(${tx * -5}px, ${ty * -4}px, 0)`;
+    }
+
     requestAnimationFrame(frame);
   }
   frame();
