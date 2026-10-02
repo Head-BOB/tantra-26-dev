@@ -10,7 +10,7 @@ import { apiFetchFeaturedEvents } from './api.js';
 const DEPT_MAP = {
   cse:   { code: 'CSE',  name: 'Computer Science & Engineering',         bg: '#2b6a4d', fg: '#efe8da' },
   cscy:  { code: 'CSCY', name: 'Cyber Security',                         bg: '#141414', fg: '#efe8da' },
-  ai:    { code: 'AI',   name: 'Artificial Intelligence & Data Science', bg: '#c23b22', fg: '#efe8da' },
+  ai:    { code: 'ADS',  name: 'Artificial Intelligence & Data Science', bg: '#c23b22', fg: '#efe8da' },
   csd:   { code: 'CSD',  name: 'Computer Science & Design',              bg: '#e3a72f', fg: '#141414' },
   csbs:  { code: 'CSBS', name: 'Computer Science & Business Systems',    bg: '#182338', fg: '#efe8da' },
   eee:   { code: 'EEE',  name: 'Electrical & Electronics Engineering',   bg: '#efe8da', fg: '#141414' },
@@ -23,7 +23,7 @@ const DEPT_MAP = {
 export const DEMO_FEATURED = [
   { id: 'hack-night',      slug: 'cse',   deptSlug: 'cse',   code: 'CSE',  dept: 'Computer Science & Engineering',         title: 'Hack Night',       type: 'Competition', date: '8 Oct', time: '6:00 PM',  venue: 'Main Auditorium',  bg: '#2b6a4d', fg: '#efe8da' },
   { id: 'capture-flag',    slug: 'cscy',  deptSlug: 'cscy',  code: 'CSCY', dept: 'Cyber Security',                         title: 'Capture the Flag', type: 'Competition', date: '7 Oct', time: '10:00 AM', venue: 'CS Lab 1',          bg: '#141414', fg: '#efe8da' },
-  { id: 'model-arena',     slug: 'ai',    deptSlug: 'ai',    code: 'AI',   dept: 'Artificial Intelligence & Data Science', title: 'Model Arena',      type: 'Competition', date: '7 Oct', time: '10:30 AM', venue: 'AI Lab',            bg: '#c23b22', fg: '#efe8da' },
+  { id: 'model-arena',     slug: 'ai',    deptSlug: 'ai',    code: 'ADS',  dept: 'Artificial Intelligence & Data Science', title: 'Model Arena',      type: 'Competition', date: '7 Oct', time: '10:30 AM', venue: 'AI Lab',            bg: '#c23b22', fg: '#efe8da' },
   { id: 'design-sprint',   slug: 'csd',   deptSlug: 'csd',   code: 'CSD',  dept: 'Computer Science & Design',              title: 'Design Sprint',    type: 'Competition', date: '7 Oct', time: '10:00 AM', venue: 'Design Studio',     bg: '#e3a72f', fg: '#141414' },
   { id: 'startup-pitch',   slug: 'csbs',  deptSlug: 'csbs',  code: 'CSBS', dept: 'Computer Science & Business Systems',    title: 'Startup Pitch',    type: 'Competition', date: '7 Oct', time: '11:00 AM', venue: 'Seminar Hall',      bg: '#182338', fg: '#efe8da' },
   { id: 'line-follower',   slug: 'eee',   deptSlug: 'eee',   code: 'EEE',  dept: 'Electrical & Electronics Engineering',   title: 'Line Follower',    type: 'Competition', date: '7 Oct', time: '2:30 PM',  venue: 'Workshop Ground',   bg: '#efe8da', fg: '#141414' },
