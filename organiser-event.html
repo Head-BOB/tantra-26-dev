@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Event Manager · Tantra 26 Organisers</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
 :root{--cream:#efe8da;--ink:#141414;--red:#c23b22;--gold:#e3a72f;--green:#2b6a4d;--navy:#182338;box-sizing:border-box}
 *{margin:0;padding:0;box-sizing:inherit}
 html{scroll-behavior:smooth}
-body{background:var(--navy);color:var(--cream);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;padding-bottom:90px;
+body{background:var(--navy);color:var(--cream);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px));
   background-image:radial-gradient(rgba(239,232,218,.09) 1px,transparent 1.5px);background-size:26px 26px}
 [hidden]{display:none!important}
 h1,h2,h3{font-family:'Anton',Impact,'Arial Narrow Bold',sans-serif;font-weight:400;text-transform:uppercase}
@@ -81,8 +81,7 @@ td{padding:13px 12px;border-top:1px solid rgba(239,232,218,.1);vertical-align:to
 tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 .empty{padding:34px;text-align:center;font-weight:600;color:rgba(239,232,218,.6)}
 
-/* bars + toast */
-.savebar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0a0e1c;border-top:3px solid var(--gold);padding:14px max(5vw,20px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.savebar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0a0e1c;border-top:3px solid var(--gold);padding:14px max(5vw,20px) calc(14px + env(safe-area-inset-bottom, 0px));display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .status{font:600 12px/1.3 'Inter';letter-spacing:.08em;opacity:.85}
 .status.dirty{color:var(--gold);opacity:1}
 .toast{position:fixed;left:50%;bottom:92px;translate:-50% 20px;opacity:0;z-index:60;background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:10px;box-shadow:6px 6px 0 var(--gold);padding:14px 18px;font:600 14px/1.5 'Inter';max-width:min(92vw,520px);transition:opacity .35s,translate .35s;pointer-events:none}
