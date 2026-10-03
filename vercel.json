@@ -33,30 +33,6 @@
   ],
   "redirects": [
     {
-      "source": "/event",
-      "has": [
-        {
-          "type": "header",
-          "key": "user-agent",
-          "value": ".*([wW]hats[aA]pp|[fF]acebook|[fF]acebot|[tT]witter|[dD]iscord|[tT]elegram|[sS]lack|[lL]inked[iI]n|[aA]pplebot|[gG]oogle|[bB]ing|[bB]ot|[cC]rawler|[sS]pider).*"
-        }
-      ],
-      "destination": "/api/event",
-      "permanent": false
-    },
-    {
-      "source": "/event.html",
-      "has": [
-        {
-          "type": "header",
-          "key": "user-agent",
-          "value": ".*([wW]hats[aA]pp|[fF]acebook|[fF]acebot|[tT]witter|[dD]iscord|[tT]elegram|[sS]lack|[lL]inked[iI]n|[aA]pplebot|[gG]oogle|[bB]ing|[bB]ot|[cC]rawler|[sS]pider).*"
-        }
-      ],
-      "destination": "/api/event",
-      "permanent": false
-    },
-    {
       "source": "/event.html",
       "destination": "/event",
       "permanent": false
@@ -69,7 +45,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*([wW]hats[aA]pp|[fF]acebook|[fF]acebot|[tT]witter|[dD]iscord|[tT]elegram|[sS]lack|[lL]inked[iI]n|[aA]pplebot|[gG]oogle|[bB]ing|[bB]ot|[cC]rawler|[sS]pider).*"
+          "value": ".*([wW]hats[aA]pp|whatsapp|[fF]acebook|facebookexternalhit|[fF]acebot|[tT]witter|Twitterbot|[dD]iscord|Discordbot|[tT]elegram|TelegramBot|[sS]lack|Slackbot|[lL]inked[iI]n|LinkedInBot|[aA]pplebot|[gG]oogle|Googlebot|[bB]ing|bingbot|[bB]ot|[cC]rawler|[sS]pider|[pP]review).*"
         }
       ],
       "destination": "/api/event"
@@ -80,7 +56,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*([wW]hats[aA]pp|[fF]acebook|[fF]acebot|[tT]witter|[dD]iscord|[tT]elegram|[sS]lack|[lL]inked[iI]n|[aA]pplebot|[gG]oogle|[bB]ing|[bB]ot|[cC]rawler|[sS]pider).*"
+          "value": ".*([wW]hats[aA]pp|whatsapp|[fF]acebook|facebookexternalhit|[fF]acebot|[tT]witter|Twitterbot|[dD]iscord|Discordbot|[tT]elegram|TelegramBot|[sS]lack|Slackbot|[lL]inked[iI]n|LinkedInBot|[aA]pplebot|[gG]oogle|Googlebot|[bB]ing|bingbot|[bB]ot|[cC]rawler|[sS]pider|[pP]review).*"
         }
       ],
       "destination": "/api/event"

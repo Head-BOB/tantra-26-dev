@@ -28,7 +28,7 @@ export default async function handler(req, res) {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         },
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(6000),
       });
 
       if (sRes.ok) {
@@ -63,6 +63,8 @@ export default async function handler(req, res) {
       const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
       const buf = Buffer.from(match[2], 'base64');
       res.setHeader('Content-Type', mime);
+      res.setHeader('Content-Length', buf.length);
+      res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800');
       return res.status(200).send(buf);
     }

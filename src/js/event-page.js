@@ -221,6 +221,9 @@ function loadEvent(slug, id) {
 const qs = new URLSearchParams(location.search);
 const rawSlug = (qs.get('d') || qs.get('dept') || qs.get('slug') || '').trim().toLowerCase();
 const rawId = (qs.get('e') || qs.get('id') || qs.get('eventId') || '').trim();
+if (rawSlug && $('#back')) {
+  $('#back').href = `/departments/${rawSlug}.html`;
+}
 let ev = loadEvent(rawSlug, rawId);
 
 if (!ev && (rawId || rawSlug)) {
@@ -408,9 +411,25 @@ if (!ev) {
   }
   $('#facts').innerHTML = factItems.map((r) => `<div><dt>${r[0]}</dt><dd>${esc(r[1])}</dd></div>`).join('');
 
-  const backUrl = '/#departments';
-  $('#back').href = backUrl;
-  $('#back2').href = backUrl;
+  const deptSlug = (ev.slug || rawSlug || ev.deptSlug || '').toLowerCase();
+  const backUrl = deptSlug ? `/departments/${deptSlug}.html` : '/#departments';
+  const backBtn = $('#back');
+  if (backBtn) {
+    backBtn.href = backUrl;
+    backBtn.onclick = (e) => {
+      if (document.referrer && (document.referrer.includes(`/departments/${deptSlug}`) || document.referrer.includes(`${deptSlug}.html`))) {
+        e.preventDefault();
+        window.history.back();
+      }
+    };
+  }
+  const backBtn2 = $('#back2');
+  if (backBtn2) {
+    backBtn2.href = backUrl;
+    if (deptSlug && DEPTS[deptSlug]) {
+      backBtn2.textContent = `Explore more ${DEPTS[deptSlug][3] || deptSlug.toUpperCase()} events`;
+    }
+  }
 
   // Description / About section
   const tKind = ev.type.toLowerCase();

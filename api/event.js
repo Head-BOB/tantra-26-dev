@@ -56,7 +56,7 @@ async function fetchEventData(deptSlug, eventId) {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(6000),
     });
 
     if (res.ok) {
@@ -150,11 +150,11 @@ export default async function handler(req, res) {
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${escapeHtml(defaultTitle)}">
   <meta name="twitter:description" content="${escapeHtml(defaultDesc)}">
-  <meta http-equiv="refresh" content="0;url=${defaultRedirect}">
 </head>
 <body>
   <p>Redirecting to <a href="${defaultRedirect}">Tantra 26</a>...</p>
   <script>location.replace(${JSON.stringify(defaultRedirect)});</script>
+  <noscript><meta http-equiv="refresh" content="0;url=${defaultRedirect}"></noscript>
 </body>
 </html>`;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -230,7 +230,9 @@ export default async function handler(req, res) {
   <meta property="og:image:type" content="image/webp">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="${escapeHtml(event.title)} Banner">` : ''}
+  <meta property="og:image:alt" content="${escapeHtml(event.title)} Banner">
+  <meta itemprop="image" content="${escapeHtml(bannerUrl)}">
+  <link rel="image_src" href="${escapeHtml(bannerUrl)}">` : ''}
 
   <!-- Twitter / X -->
   <meta name="twitter:card" content="${bannerUrl ? 'summary_large_image' : 'summary'}">
@@ -238,8 +240,6 @@ export default async function handler(req, res) {
   <meta name="twitter:description" content="${escapeHtml(metaDesc)}">
   ${bannerUrl ? `<meta name="twitter:image" content="${escapeHtml(bannerUrl)}">` : ''}
 
-  <!-- Automatic redirect for humans -->
-  <meta http-equiv="refresh" content="0;url=${targetPage}">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
 </head>
 <body style="background:#0a0e1c;color:#efe8da;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:20px;text-align:center;">
@@ -253,6 +253,9 @@ export default async function handler(req, res) {
       window.location.replace(${JSON.stringify(targetPage)});
     }
   </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0;url=${targetPage}">
+  </noscript>
 </body>
 </html>`;
 
