@@ -25,6 +25,7 @@ import {
   sanitizePersonalRegistrations,
   apiSetEventFeatured,
   apiFetchSpecialAttractions,
+  apiFetchCandidateFeaturedBanners,
 } from './api.js';
 import { generateRandomCode, generateUniqueAccessCode, getEventAccessCode } from './access-code.js';
 import { SlopGuard } from './slop-guard.js';
@@ -1112,6 +1113,7 @@ function bindCentralAdminViews() {
       $('view-central-featured').hidden = false;
       refreshSidebar();
       renderCentralFeatured();
+      syncCandidateBannersFromCloud($('central-feat-dept-filter') ? $('central-feat-dept-filter').value : '');
     };
   }
 
@@ -1145,6 +1147,7 @@ function bindCentralAdminViews() {
   if ($('central-feat-dept-filter')) {
     $('central-feat-dept-filter').onchange = () => {
       renderCentralFeatured();
+      syncCandidateBannersFromCloud($('central-feat-dept-filter').value);
     };
   }
 
@@ -1350,6 +1353,32 @@ function renderCentralRegs() {
 }
 
 // ─── Central View 3: Featured Events Manager ──────────────────
+// In-memory runtime cache for candidate featured banners from Supabase (does NOT bloat localStorage)
+const cloudCandidateBannersMap = new Map();
+let isCandidateBannersSyncing = false;
+
+async function syncCandidateBannersFromCloud(deptFilter = '') {
+  if (isCandidateBannersSyncing) return;
+  isCandidateBannersSyncing = true;
+  try {
+    const records = await apiFetchCandidateFeaturedBanners(deptFilter || null);
+    if (Array.isArray(records) && records.length > 0) {
+      records.forEach(r => {
+        if (r && r.id) {
+          cloudCandidateBannersMap.set(r.id, r);
+        }
+      });
+      if (currentView === 'central-featured') {
+        renderCentralFeatured();
+      }
+    }
+  } catch (err) {
+    console.warn('Could not sync candidate banners:', err);
+  } finally {
+    isCandidateBannersSyncing = false;
+  }
+}
+
 function getAllFeaturedCandidateEvents() {
   const list = [];
   let localOrganiserEvents = {};
@@ -1373,35 +1402,38 @@ function getAllFeaturedCandidateEvents() {
       const bMerged = (merged.banners && typeof merged.banners === 'object') ? merged.banners : {};
       const orgBanners = (orgEv && orgEv.banners && typeof orgEv.banners === 'object') ? orgEv.banners : {};
       const eBanners = (e.banners && typeof e.banners === 'object') ? e.banners : {};
+      const cloudData = cloudCandidateBannersMap.get(e.id);
+      const cloudBanners = (cloudData && cloudData.banners && typeof cloudData.banners === 'object') ? cloudData.banners : {};
 
+      // Strictly check featured banners without fallback to regular event banners
       const featDesk = [
+        cloudBanners.featured_desktop,
         bMerged.featured_desktop,
         orgBanners.featured_desktop,
         eBanners.featured_desktop,
-        bMerged.event_desktop,
-        orgBanners.event_desktop,
-        eBanners.event_desktop,
-        orgEv?.banner,
-        e.banner,
       ].find(isValidImageUrl) || '';
 
       const featMob = [
+        cloudBanners.featured_mobile,
         bMerged.featured_mobile,
         orgBanners.featured_mobile,
         eBanners.featured_mobile,
-        bMerged.event_mobile,
-        orgBanners.event_mobile,
-        eBanners.event_mobile,
-      ].find(isValidImageUrl) || (featDesk ? featDesk : '');
+      ].find(isValidImageUrl) || '';
 
       merged.banners = {
         ...bMerged,
+        ...cloudBanners,
         featured_desktop: featDesk,
         featured_mobile: featMob,
       };
 
-      merged.is_featured = Boolean(merged.is_featured);
-      merged.featured_order = parseInt(merged.featured_order, 10) || 1;
+      if (cloudData) {
+        merged.is_featured = Boolean(cloudData.is_featured);
+        merged.featured_order = parseInt(cloudData.featured_order, 10) || parseInt(merged.featured_order, 10) || 1;
+      } else {
+        merged.is_featured = Boolean(merged.is_featured);
+        merged.featured_order = parseInt(merged.featured_order, 10) || 1;
+      }
       list.push(merged);
     });
   });
@@ -1415,6 +1447,11 @@ function renderCentralFeatured() {
   const grid       = $('central-featured-grid');
   const empty      = $('featured-empty-state');
   if (!grid) return;
+
+  if (cloudCandidateBannersMap.size === 0 && !isCandidateBannersSyncing) {
+    syncCandidateBannersFromCloud(deptFilter);
+  }
+
   grid.innerHTML   = '';
 
   const allCandidateEvents = getAllFeaturedCandidateEvents();
@@ -1603,6 +1640,8 @@ function renderCentralFeatured() {
         if (isFeat) {
           const res = await apiSetEventFeatured(ev.id, true, newOrder);
           if (res.ok) {
+            const cached = cloudCandidateBannersMap.get(ev.id);
+            if (cached) cached.featured_order = newOrder;
             toast(`Order updated for ${ev.title} (Slot #${newOrder}) ✓`);
             renderCentralFeatured();
           } else {
@@ -1636,6 +1675,15 @@ function renderCentralFeatured() {
         if (res.ok) {
           ev.is_featured = !isFeat;
           ev.featured_order = targetOrder;
+
+          // Update in-memory cloud map
+          const cached = cloudCandidateBannersMap.get(ev.id);
+          if (cached) {
+            cached.is_featured = !isFeat;
+            cached.featured_order = targetOrder;
+          } else {
+            cloudCandidateBannersMap.set(ev.id, { id: ev.id, is_featured: !isFeat, featured_order: targetOrder, banners: ev.banners });
+          }
 
           // Update local storage
           const adminEvents = getAdminEvents();

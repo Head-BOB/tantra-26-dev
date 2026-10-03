@@ -72,8 +72,8 @@ export function unpackEventRecord(ev) {
     : ((envelope.banners && typeof envelope.banners === 'object') ? envelope.banners : {});
   const evDesk = rawBanners.event_desktop || banner || '';
   const evMob  = rawBanners.event_mobile || '';
-  const featDesk = rawBanners.featured_desktop || evDesk || '';
-  const featMob  = rawBanners.featured_mobile || evMob || featDesk || '';
+  const featDesk = rawBanners.featured_desktop || '';
+  const featMob  = rawBanners.featured_mobile || '';
   const banners = {
     event_desktop: evDesk,
     event_mobile: evMob,
@@ -1533,6 +1533,40 @@ export async function apiFetchSpecialAttractions() {
 }
 
 /**
+ * Fetch candidate event banners from cloud for Central Featured Events manager.
+ * Returns only id, dept_slug, is_featured, featured_order, and banners without polluting localStorage.
+ */
+export async function apiFetchCandidateFeaturedBanners(deptSlug = null) {
+  if (!supabaseClient) return [];
+  try {
+    let query = supabaseClient
+      .from('events')
+      .select('id, dept_slug, is_featured, featured_order, banners')
+      .eq('is_active', true);
+
+    if (deptSlug && deptSlug !== 'all') {
+      query = query.eq('dept_slug', deptSlug.toLowerCase());
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn('⚠️ Could not fetch candidate featured banners:', error);
+      return [];
+    }
+    return (data || []).map(row => ({
+      id: row.id,
+      dept_slug: row.dept_slug,
+      is_featured: Boolean(row.is_featured),
+      featured_order: parseInt(row.featured_order, 10) || 0,
+      banners: (row.banners && typeof row.banners === 'object') ? row.banners : {},
+    }));
+  } catch (err) {
+    console.warn('⚠️ Error in apiFetchCandidateFeaturedBanners:', err);
+    return [];
+  }
+}
+
+/**
  * Toggle or set featured status for an event (Super Admin Central).
  * Enforces requirement: event MUST have both featured_desktop and featured_mobile banners.
  */
@@ -1568,11 +1602,11 @@ export async function apiSetEventFeatured(eventId, isFeatured, order = 0) {
     } catch {}
   }
 
-  // Verify requirements if turning ON
+  // Verify requirements if turning ON (strictly require both featured_desktop and featured_mobile)
   if (isFeatured) {
     const b = (targetEvent && targetEvent.banners) || {};
-    const featDesk = b.featured_desktop || b.event_desktop || targetEvent?.banner || '';
-    const featMob  = b.featured_mobile  || b.event_mobile  || featDesk || '';
+    const featDesk = b.featured_desktop || '';
+    const featMob  = b.featured_mobile  || '';
 
     const isDeskValid = featDesk && typeof featDesk === 'string' && (featDesk.startsWith('data:') || featDesk.startsWith('http') || featDesk.startsWith('/') || featDesk.startsWith('.'));
     const isMobValid  = featMob && typeof featMob === 'string' && (featMob.startsWith('data:') || featMob.startsWith('http') || featMob.startsWith('/') || featMob.startsWith('.'));
@@ -1580,7 +1614,7 @@ export async function apiSetEventFeatured(eventId, isFeatured, order = 0) {
     if (!isDeskValid || !isMobValid) {
       return {
         ok: false,
-        error: 'Event must have valid banners uploaded before it can be featured on the homepage.',
+        error: 'Event must have both Featured Desktop (16:8) and Featured Mobile (4:5) banners uploaded before it can be featured on the homepage.',
       };
     }
   }
@@ -1632,6 +1666,12 @@ export async function apiSetEventFeatured(eventId, isFeatured, order = 0) {
       });
     }
     localStorage.setItem('tantra26:admin:events', JSON.stringify(adminEvents));
+  } catch {}
+
+  // Invalidate featured cache for homepage so change appears instantly
+  try {
+    localStorage.removeItem('tantra26:cache:featured_events');
+    localStorage.removeItem('tantra26:cache:featured_events:ts');
   } catch {}
 
   return { ok: true };
