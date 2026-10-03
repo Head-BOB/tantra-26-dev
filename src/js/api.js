@@ -124,7 +124,7 @@ export async function fetchDeptEvents(slug) {
         .eq('dept_slug', slug.toLowerCase())
         .eq('is_active', true)
         .order('created_at', { ascending: true });
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         return data.map(unpackEventRecord);
       }
     } catch (err) {

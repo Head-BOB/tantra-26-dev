@@ -34,7 +34,17 @@ export function initDeptPage(CONFIG, EVENTS) {
     }
   })();
 
+  // Prefer the localStorage admin cache (real Supabase data from previous visits)
+  // over the stale static EVENTS files (which only have placeholder entries).
+  // This prevents users from seeing wrong event counts on first render.
   let allEvents = (() => {
+    // If we have a real cached list from a prior Supabase sync, use it directly
+    if (adminEvents.length > 0) {
+      return adminEvents
+        .filter(a => !deletedEvents.includes(a.id))
+        .map(e => ({ ...e, date: '7 Oct' }));
+    }
+    // Otherwise fall back to static data + admin overrides
     const base = EVENTS
       .filter(e => !deletedEvents.includes(e.id))
       .map(e => {
@@ -139,8 +149,23 @@ export function initDeptPage(CONFIG, EVENTS) {
   );
 
   function formatTitleSpan(text) {
+    if (!text) return '';
+    const clean = String(text)
+      .replace(/\b(m|mu)learn\b/gi, 'µLearn')
+      .replace(/\b(m|mu)-learn\b/gi, 'µLearn');
     const symRe = /([µμΩωπΠλΛθΘαβγδΔσΣ∞≈≠≤≥±√∫°])/g;
-    return esc(text).replace(symRe, '<span class="sym" style="text-transform:none;font-family:\'Inter\',system-ui,sans-serif;display:inline-block">$1</span>');
+    return esc(clean).replace(symRe, '<span class="sym" style="text-transform:none !important;font-family:\'Inter\',system-ui,sans-serif !important;display:inline-block;font-weight:700">$1</span>');
+  }
+
+  function showLoadingSkeleton() {
+    const g = $('#grid');
+    g.innerHTML = '';
+    for (let i = 0; i < 6; i++) {
+      const s = document.createElement('article');
+      s.className = 'ev ev-skeleton';
+      s.innerHTML = '<div class="sk-top"></div><div class="sk-title"></div><div class="sk-text"></div><div class="sk-text sk-text-sm"></div><div class="sk-btn"></div>';
+      g.appendChild(s);
+    }
   }
 
   function draw() {
@@ -166,17 +191,24 @@ export function initDeptPage(CONFIG, EVENTS) {
       io.observe(a);
     });
   }
-  draw();
+  // Show skeleton if we have no cached data yet (fresh first-time visitor)
+  if (allEvents.length === 0) {
+    showLoadingSkeleton();
+  } else {
+    draw();
+  }
 
   // ---- Coordinator contacts ----
   $('#coord').innerHTML = coordinators
     .map((c) => `<div><b>${esc(c.name)}</b>${esc(c.phone)}</div>`)
     .join('');
 
-  // ---- Live async sync from backend / Supabase if available ----
+  // ---- Live async sync from backend / Supabase — always authoritative ----
   fetchDeptEvents(CONFIG.slug).then((backendEvents) => {
     if (backendEvents && Array.isArray(backendEvents) && backendEvents.length > 0) {
-      allEvents = backendEvents;
+      // Apply deleted-events filter from localStorage to the live Supabase data too
+      const filtered = backendEvents.filter(e => !deletedEvents.includes(e.id));
+      allEvents = filtered.map(e => ({ ...e, date: '7 Oct' }));
       updateChipsAndFilters();
       draw();
       try {
@@ -210,6 +242,9 @@ export function initDeptPage(CONFIG, EVENTS) {
           }
         }
       } catch {}
+    } else if (allEvents.length === 0) {
+      // Supabase returned nothing and we have no cached data — show empty state
+      draw();
     }
   });
   fetchDeptCoords(CONFIG.slug).then((backendCoords) => {
@@ -411,7 +446,7 @@ export function initDeptPage(CONFIG, EVENTS) {
       `<div class="co-body">` +
         `<div class="co-event-card">` +
           `<span class="co-badge">Registering For</span>` +
-          `<h4>${esc(curEvent.title)}</h4>` +
+          `<h4>${formatTitleSpan(curEvent.title)}</h4>` +
           `<p>${esc(CONFIG.dept)} &middot; ${esc(curEvent.date)} &middot; ${esc(curTimeRange)}</p>` +
         `</div>` +
         `<div class="co-clash-header">` +
@@ -480,7 +515,7 @@ export function initDeptPage(CONFIG, EVENTS) {
 
     // Header info
     $('#m-type').textContent = `${ev.type} · ${ev.date}`;
-    $('#m-title').textContent = ev.title;
+    $('#m-title').innerHTML = formatTitleSpan(ev.title);
 
     // Badges
     const feeDisp = $('#m-fee-display');
@@ -849,7 +884,7 @@ export function initDeptPage(CONFIG, EVENTS) {
 
   function populatePass(rec) {
     const ten = $('#ticket-event-name');
-    if (ten) ten.textContent = curEvent.title;
+    if (ten) ten.innerHTML = formatTitleSpan(curEvent.title);
     const tdt = $('#ticket-dept-tag');
     if (tdt) tdt.textContent = CONFIG.slug.toUpperCase();
     const rid = $('#rid');
