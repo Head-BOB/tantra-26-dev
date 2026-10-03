@@ -33,6 +33,30 @@
   ],
   "redirects": [
     {
+      "source": "/event",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([wW]hats[aA]pp|whatsapp|[fF]acebook|facebookexternalhit|[fF]acebot|[tT]witter|Twitterbot|[dD]iscord|Discordbot|[tT]elegram|TelegramBot|[sS]lack|Slackbot|[lL]inked[iI]n|LinkedInBot|[aA]pplebot|[gG]oogle|Googlebot|[bB]ing|bingbot|[bB]ot|[cC]rawler|[sS]pider|[pP]review).*"
+        }
+      ],
+      "destination": "https://tantra26.vjec.in/api/event",
+      "permanent": false
+    },
+    {
+      "source": "/event.html",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([wW]hats[aA]pp|whatsapp|[fF]acebook|facebookexternalhit|[fF]acebot|[tT]witter|Twitterbot|[dD]iscord|Discordbot|[tT]elegram|TelegramBot|[sS]lack|Slackbot|[lL]inked[iI]n|LinkedInBot|[aA]pplebot|[gG]oogle|Googlebot|[bB]ing|bingbot|[bB]ot|[cC]rawler|[sS]pider|[pP]review).*"
+        }
+      ],
+      "destination": "https://tantra26.vjec.in/api/event",
+      "permanent": false
+    },
+    {
       "source": "/event.html",
       "destination": "/event",
       "permanent": false
