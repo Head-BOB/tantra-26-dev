@@ -277,13 +277,17 @@ async function init() {
   }
 
   if (code && code.length === 6) {
-    const allEvents = gatherAllEvents();
-    let matched = allEvents.find(ev => (ev.accessCode || getEventAccessCode(ev)).toUpperCase() === code);
+    let matched = null;
+    try {
+      const cloudEv = await apiFetchEventByCode(code);
+      if (cloudEv && cloudEv.is_active !== false && !cloudEv.is_deleted) {
+        matched = cloudEv;
+      }
+    } catch {}
+
     if (!matched) {
-      try {
-        const cloudEv = await apiFetchEventByCode(code);
-        if (cloudEv) matched = cloudEv;
-      } catch {}
+      const allEvents = gatherAllEvents();
+      matched = allEvents.find(ev => (ev.accessCode || getEventAccessCode(ev)).toUpperCase() === code);
     }
 
     if (matched) {
@@ -320,18 +324,22 @@ if (formEl) {
     goBtn.textContent = 'Verifying…';
 
     try {
-      const allEvents = gatherAllEvents();
-      let matched = allEvents.find(ev => {
-        const evCode = (ev.accessCode || getEventAccessCode(ev)).toUpperCase();
-        return evCode === code;
-      });
-
-      // If not found in local memory or static files, fetch live from Supabase
-      if (!matched) {
+      // 1. Check live database first so renamed titles & updated fees always apply
+      let matched = null;
+      try {
         const cloudEvent = await apiFetchEventByCode(code);
         if (cloudEvent && cloudEvent.is_active !== false && !cloudEvent.is_deleted) {
           matched = cloudEvent;
         }
+      } catch {}
+
+      // 2. Fallback to local memory or static catalog
+      if (!matched) {
+        const allEvents = gatherAllEvents();
+        matched = allEvents.find(ev => {
+          const evCode = (ev.accessCode || getEventAccessCode(ev)).toUpperCase();
+          return evCode === code;
+        });
       }
 
       if (matched) {

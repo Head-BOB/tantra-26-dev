@@ -88,19 +88,20 @@ function normalizeRecord(r) {
   const slug = (r.slug || r.dept_slug || 'cse').toLowerCase();
   const d = DEPTS[slug] || ['Department', '#e3a72f', '#141414', slug.toUpperCase()];
   const rawId = r.eventId || r.event_id || '';
-  const rawTitle = r.event || r.event_title || r.title || '';
+  const rawTitle = (r.event_title || r.event || r.title || '').trim();
   const meta = getEventMetadata(rawId, rawTitle, slug);
 
   // Time & date sanitation: if time has ISO stamp or missing, resolve from meta
   const hasCleanDate = r.date && !r.date.includes('T') && r.date !== 'Campus';
   const hasCleanTime = r.time && !r.time.includes('T') && !r.time.includes('Z') && /(AM|PM)/i.test(r.time);
 
-  const date = (meta && meta.date) ? meta.date : (hasCleanDate ? r.date : '7 Oct');
-  const time = (meta && meta.time) ? meta.time : (hasCleanTime ? r.time : '10:00 AM');
-  const venue = (meta && meta.venue) ? meta.venue : ((r.venue && r.venue !== 'Campus') ? r.venue : (r.venue || 'Campus'));
-  const eventName = (meta && meta.title) ? meta.title : (rawTitle || 'Tantra 26 Event');
-  const etype = (meta && meta.type) ? meta.type : (r.etype || r.type || 'Event');
-  const fee = (meta && meta.fee) ? meta.fee : (r.fee || 'Free');
+  const date = hasCleanDate ? r.date : ((meta && meta.date) ? meta.date : '7 Oct');
+  const time = hasCleanTime ? r.time : ((meta && meta.time) ? meta.time : '10:00 AM');
+  const venue = (r.venue && r.venue !== 'Campus') ? r.venue : ((meta && meta.venue) ? meta.venue : (r.venue || 'Campus'));
+  // CRITICAL: Registered title takes precedence over static fallback
+  const eventName = rawTitle || (meta && meta.title) || 'Tantra 26 Event';
+  const etype = (r.etype || r.type) || (meta && meta.type) || 'Event';
+  const fee = r.fee || (meta && meta.fee) || 'Free';
   const team = r.team || r.team_members || (meta && meta.team > 1 ? `Team of ${meta.team}` : '');
   const duration = Math.max(10, parseInt(r.duration || (meta && meta.duration) || 120, 10));
 
@@ -122,7 +123,7 @@ function normalizeRecord(r) {
     phone: r.phone || '',
     college: r.college || 'Vimal Jyothi Engineering College',
     regId: r.regId || r.reg_id || generatePassId(slug),
-    regTime: r.regTime || (r.time && r.time.includes('T') ? r.time : new Date().toISOString()),
+    regTime: r.regTime || r.created_at || (r.time && r.time.includes('T') ? r.time : new Date().toISOString()),
   };
 }
 

@@ -7,8 +7,7 @@
 
 import { SlopGuard } from './slop-guard.js';
 import { getAllEvents } from '../data/all-events.js';
-import { getEventAccessCode } from './access-code.js';
-import { apiFetchEventByCode, apiSaveOrganiserEvent } from './api.js';
+import { apiFetchEventByCode, apiSaveOrganiserEvent, fetchAdminRegistrations } from './api.js';
 
 export const DEPTS = {
   cse:   ['Computer Science & Engineering',           '#2b6a4d', '#efe8da', 'CSE'],
@@ -249,6 +248,55 @@ function saveEvent(eventObj) {
   });
 }
 
+function normalizeRegRecord(r) {
+  return {
+    name: r.name || 'Participant',
+    college: r.college || 'VJEC',
+    email: r.email || '',
+    phone: r.phone || '',
+    team: r.team || r.team_members || '',
+    regId: r.regId || r.reg_id || 'T26-PASS',
+    regTime: r.regTime || r.created_at || new Date().toISOString(),
+    eventId: r.eventId || r.event_id || '',
+    event: r.event || r.event_title || '',
+    slug: (r.slug || r.dept_slug || '').toLowerCase(),
+    fee: r.fee || 'Free',
+    txnid: r.txn_id || r.txnid || '',
+  };
+}
+
+function filterEventRegistrations(list, eventObj) {
+  if (!Array.isArray(list) || !eventObj) return [];
+  const evId = String(eventObj.id || '').trim();
+  const evTitle = String(eventObj.title || '').trim().toLowerCase();
+  const evSlug = String(eventObj.slug || eventObj.dept_slug || '').trim().toLowerCase();
+
+  const seen = new Set();
+  const matched = [];
+
+  list.forEach(item => {
+    if (!item) return;
+    const r = normalizeRegRecord(item);
+    const rId = String(r.eventId || '').trim();
+    const rTitle = String(r.event || '').trim().toLowerCase();
+    const rSlug = String(r.slug || '').trim().toLowerCase();
+
+    const matchesId = evId && rId === evId;
+    const matchesTitle = evTitle && rTitle === evTitle;
+    const matchesDept = !evSlug || !rSlug || rSlug === evSlug;
+
+    if ((matchesId || matchesTitle) && matchesDept) {
+      const uKey = r.regId || (r.email + '-' + r.eventId);
+      if (!seen.has(uKey)) {
+        seen.add(uKey);
+        matched.push(r);
+      }
+    }
+  });
+
+  return matched;
+}
+
 function loadRegistrations(eventObj) {
   if (/[?&]demo/.test(location.search)) {
     const n = ['Asha Nair', 'Rahul Menon', 'Meera Joseph', 'Arjun Das', 'Sneha Pillai', 'Vishnu Raj', 'Anjali K', 'Nikhil Paul'];
@@ -265,7 +313,7 @@ function loadRegistrations(eventObj) {
   }
   try {
     const all = JSON.parse(localStorage.getItem(REG_KEY) || '[]');
-    return all.filter((r) => r.slug === eventObj.slug && (r.eventId === eventObj.id || r.event === eventObj.title));
+    return filterEventRegistrations(all, eventObj);
   } catch {
     return [];
   }
@@ -1109,14 +1157,42 @@ export function initDashboard(ev, onSignOut = null) {
     }
   }
 
+  async function syncAndDrawRegs(showToast = false) {
+    drawRegs();
+
+    try {
+      const deptSlug = (ev.slug || ev.dept_slug || '').toLowerCase();
+      const cloudList = await fetchAdminRegistrations(deptSlug);
+      if (Array.isArray(cloudList) && cloudList.length > 0) {
+        let localList = [];
+        try { localList = JSON.parse(localStorage.getItem(REG_KEY) || '[]'); } catch {}
+        const seen = new Set();
+        const merged = [];
+        [...cloudList, ...localList].forEach(r => {
+          if (!r) return;
+          const k = r.reg_id || r.regId || r.id || (r.email + '-' + (r.event_id || r.eventId));
+          if (!seen.has(k)) {
+            seen.add(k);
+            merged.push(r);
+          }
+        });
+        localStorage.setItem(REG_KEY, JSON.stringify(merged));
+        drawRegs();
+      }
+      if (showToast) toast('Registrations updated live from database ✓');
+    } catch (err) {
+      console.warn('Could not sync cloud registrations:', err);
+      if (showToast) toast('Registrations refreshed from local storage.');
+    }
+  }
+
   $('#q').addEventListener('input', drawRegs);
   $('#refresh').onclick = () => {
-    drawRegs();
-    toast('Registrations refreshed.');
+    syncAndDrawRegs(true);
   };
-  drawRegs();
+  syncAndDrawRegs();
   setInterval(() => {
-    if (document.activeElement !== $('#q')) drawRegs();
+    if (document.activeElement !== $('#q')) syncAndDrawRegs();
   }, 20000);
 
   // Pure JS .xlsx generation without external libraries
