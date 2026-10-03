@@ -527,9 +527,9 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         accessCode,
         duration,
         fee: eventData.fee || 'Free',
-        // For showcase posters, do NOT duplicate massive base64 inside the envelope text!
-        banner: isShowcase ? '' : (banners.event_desktop || banner),
-        banners: isShowcase ? {} : banners,
+        // Dedicated banners column is authoritative; do not duplicate base64 into description envelope
+        banner: '',
+        banners: {},
         is_featured,
         featured_order,
         steps,
