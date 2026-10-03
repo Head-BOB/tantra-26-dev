@@ -330,8 +330,8 @@ function showApp() {
     }
   }).catch(() => {});
 
-  // Sync all departments from cloud in background to populate badges
-  DEPTS.forEach(d => syncDeptDataFromCloud(d.slug));
+  // Sync all departments from cloud in background to populate badges (staggered to avoid network congestion)
+  DEPTS.forEach((d, idx) => setTimeout(() => syncDeptDataFromCloud(d.slug), idx * 120));
   syncCentralPostersFromCloud();
 }
 
@@ -1353,9 +1353,25 @@ function renderCentralRegs() {
 }
 
 // ─── Central View 3: Featured Events Manager ──────────────────
-// In-memory runtime cache for candidate featured banners from Supabase (does NOT bloat localStorage)
+// Runtime cache for candidate featured banners from Supabase (persisted in sessionStorage per tab so refresh is instant)
+const CANDIDATE_BANNERS_SESSION_KEY = 'tantra26:session:candidate_banners';
 const cloudCandidateBannersMap = new Map();
+try {
+  const cached = JSON.parse(sessionStorage.getItem(CANDIDATE_BANNERS_SESSION_KEY) || '{}');
+  for (const [id, val] of Object.entries(cached)) {
+    if (id && val) cloudCandidateBannersMap.set(id, val);
+  }
+} catch {}
+
 let isCandidateBannersSyncing = false;
+
+function saveCandidateBannersToSession() {
+  try {
+    const obj = {};
+    cloudCandidateBannersMap.forEach((v, k) => { obj[k] = v; });
+    sessionStorage.setItem(CANDIDATE_BANNERS_SESSION_KEY, JSON.stringify(obj));
+  } catch {}
+}
 
 async function syncCandidateBannersFromCloud(deptFilter = '') {
   if (isCandidateBannersSyncing) return;
@@ -1368,6 +1384,7 @@ async function syncCandidateBannersFromCloud(deptFilter = '') {
           cloudCandidateBannersMap.set(r.id, r);
         }
       });
+      saveCandidateBannersToSession();
       if (currentView === 'central-featured') {
         renderCentralFeatured();
       }
@@ -1676,7 +1693,7 @@ function renderCentralFeatured() {
           ev.is_featured = !isFeat;
           ev.featured_order = targetOrder;
 
-          // Update in-memory cloud map
+          // Update in-memory cloud map and tab session
           const cached = cloudCandidateBannersMap.get(ev.id);
           if (cached) {
             cached.is_featured = !isFeat;
@@ -1684,6 +1701,7 @@ function renderCentralFeatured() {
           } else {
             cloudCandidateBannersMap.set(ev.id, { id: ev.id, is_featured: !isFeat, featured_order: targetOrder, banners: ev.banners });
           }
+          saveCandidateBannersToSession();
 
           // Update local storage
           const adminEvents = getAdminEvents();
