@@ -5,7 +5,7 @@
  * Also supports Showcase Demo Mode for testing before banners are uploaded.
  */
 
-import { apiFetchFeaturedEvents } from './api.js';
+import { apiFetchFeaturedEvents, apiGetCachedFeaturedEvents } from './api.js';
 
 const DEPT_MAP = {
   cse:   { code: 'CSE',  name: 'Computer Science & Engineering',         bg: '#2b6a4d', fg: '#efe8da' },
@@ -85,206 +85,69 @@ export async function initFeaturedShowcase() {
   if (!featSec || !fst || !fth || !fbar || !fcnt) return;
 
   const isDemo = localStorage.getItem('tantra26:featured:demo_mode') === 'true';
-  let featuredEvents = [];
 
-  if (isDemo) {
-    featuredEvents = DEMO_FEATURED;
-  } else {
-    // 1. Fetch live featured events
-    featuredEvents = (await apiFetchFeaturedEvents()) || [];
-
-    // 2. Merge any local showcase posters from admin storage if available
-    try {
-      const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
-      const hasImg = (ev) => {
-        if (!ev) return false;
-        const b = ev.banners || {};
-        return Boolean(b.featured_desktop || b.event_desktop || ev.banner || b.featured_mobile || b.event_mobile);
-      };
-
-      // Central showcase posters
-      (adminEvents['central'] || []).forEach(p => {
-        if (p && (p.is_featured || p.isFeatured || p.type === 'Special Attraction') && hasImg(p) && !featuredEvents.some(x => x.id === p.id)) {
-          featuredEvents.push(p);
-        }
-      });
-
-      // Other admin featured events
-      Object.keys(adminEvents).forEach(slug => {
-        (adminEvents[slug] || []).forEach(e => {
-          if (e && (e.is_featured || e.isFeatured) && hasImg(e) && !featuredEvents.some(x => x.id === e.id)) {
-            featuredEvents.push({ ...e, deptSlug: slug });
-          }
-        });
-      });
-    } catch {}
-
-    // Strictly ensure only valid featured items with actual banners are displayed
-    featuredEvents = (featuredEvents || []).filter(e => {
-      if (!e) return false;
-      const b = e.banners || {};
-      const hasImg = Boolean(b.featured_desktop || b.event_desktop || e.banner || b.featured_mobile || b.event_mobile);
-      const isFeat = Boolean(e.is_featured || e.isFeatured || e.type === 'Special Attraction' || e.display_only);
-      return isFeat && hasImg;
-    });
+  function getLocalEvents() {
+    if (isDemo) return DEMO_FEATURED;
+    let list = apiGetCachedFeaturedEvents();
+    if (!list || list.length === 0) {
+      try {
+        const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
+        const central = adminEvents['central'] || [];
+        if (central.length > 0) list = central;
+      } catch {}
+    }
+    if (!list || list.length === 0) {
+      list = DEMO_FEATURED;
+    }
+    return list;
   }
 
-  // Ensure unique distinct order
-  if (featuredEvents && featuredEvents.length > 0) {
-    featuredEvents.sort((a, b) => (a.featured_order || 1) - (b.featured_order || 1));
-    const seenSlots = new Set();
-    let curSlot = 1;
-    featuredEvents.forEach(e => {
-      let o = parseInt(e.featured_order, 10) || curSlot;
-      if (seenSlots.has(o)) {
-        while (seenSlots.has(curSlot)) curSlot++;
-        o = curSlot;
-      }
-      e.featured_order = o;
-      seenSlots.add(o);
-    });
-    featuredEvents.sort((a, b) => (a.featured_order || 1) - (b.featured_order || 1));
-  }
-
-  // If still zero featured events, keep section hidden
-  if (!featuredEvents || featuredEvents.length === 0) {
-    featSec.hidden = true;
-    return;
-  }
-
-  // Display showcase section
-  featSec.hidden = false;
-
-  // Clear existing dynamic slides
-  fst.querySelectorAll('.slide').forEach(s => s.remove());
-  fth.innerHTML = '';
-
+  let animTimer = null;
+  let rafId = null;
   let fcur = -1;
   let fprog = 0;
   let fhover = false;
   let fvis = false;
   const FDUR = 6500;
   let flast = performance.now();
-  let rafId = null;
+  let fslides = [];
+  let fthumbs = [];
+  let n = 0;
+  let currentEvents = [];
 
-  // Populate slides and thumbnails
-  featuredEvents.forEach((f, i) => {
-    const d = DEPT_MAP[f.deptSlug || f.slug] || { code: f.code || 'T26', name: f.dept || 'Tantra 26' };
-    const dateStr = f.date || '7-8 Oct';
-    const timeStr = f.time || '';
-    const venueStr = f.venue || 'Campus';
-    const dept = (f.deptSlug || f.slug || '').toLowerCase();
-    let prizePool = f.prize_pool || (Array.isArray(f.prizes) && f.prizes.length > 0 ? (f.prizes[0]?.reward || f.prizes[0]?.amount) : '');
-    if (typeof prizePool === 'string') prizePool = prizePool.replace(/^₹\s*/, '');
-    const isDisplayOnly = Boolean(f.display_only || f.displayOnly);
-    const targetUrl = isDemo
-      ? `/departments/${dept}.html#events`
-      : `/event.html?d=${encodeURIComponent(dept)}&e=${encodeURIComponent(f.id)}`;
-
-    // Slide
-    const sl = document.createElement('article');
-    sl.className = 'slide' + (isDisplayOnly ? ' slide-display-only' : '');
-    sl.innerHTML = `
-      ${fmedia(f)}
-      <div class="finfo">
-        <div class="fchips">
-          ${isDisplayOnly
-            ? `<span class="fchip" style="background:var(--gold);color:#101a2d;font-weight:700">${fesc(f.type || 'Special Attraction')}</span>`
-            : `
-              <span class="fchip">Featured</span>
-              <span class="fchip c2">${fesc(f.type || 'Event')}</span>
-              ${prizePool ? `<span class="fchip prize">Prize: ₹${fesc(prizePool)}</span>` : ''}
-            `}
-        </div>
-        <h3>${fesc(f.title)}</h3>
-        <p class="fdept">${fesc(isDisplayOnly ? (f.venue || 'Campus Central') : (d.name || d.code))}</p>
-        <p class="fmeta">${fesc(dateStr)}${timeStr ? ` &middot; ${fesc(timeStr)}` : ''}${venueStr && !isDisplayOnly ? ` &middot; ${fesc(venueStr)}` : ''}</p>
-        ${isDisplayOnly
-          ? ''
-          : `<a class="btn" href="${targetUrl}">Register <b>&rarr;</b></a>`}
-      </div>
-    `;
-    fst.insertBefore(sl, fcnt);
-
-    // Thumbnail
-    const th = document.createElement('button');
-    th.className = 'th';
-    th.setAttribute('aria-label', `Go to ${f.title}`);
-    th.innerHTML = `
-      <div class="tp">${fmedia(f)}</div>
-      <div class="tl">
-        ${fesc(f.title)}
-        <small>${fesc(isDisplayOnly ? 'Attraction' : d.code)} &middot; ${fesc(dateStr)}</small>
-      </div>
-    `;
-    th.onclick = () => fgo(i, true);
-    fth.appendChild(th);
-  });
-
-  const fslides = [].slice.call(fst.querySelectorAll('.slide'));
-  const fthumbs = [].slice.call(fth.children);
-  const n = featuredEvents.length;
-
-    let animTimer = null;
-    function fgo(i, anim) {
-      i = (i + n) % n;
-      if (i === fcur) return;
-      fslides.forEach((s, k) => {
-        s.classList.toggle('off', k === fcur);
-        s.classList.toggle('on', k === i);
-      });
-      fthumbs.forEach((t, k) => {
-        t.classList.toggle('on', k === i);
-      });
-      fst.classList.toggle('anim', !!anim);
-      if (anim) {
-        void fst.offsetWidth; // re-trigger animation
-        if (animTimer) clearTimeout(animTimer);
-        animTimer = setTimeout(() => {
-          fst.classList.remove('anim');
-          fslides.forEach((s, k) => {
-            if (k !== i) s.classList.remove('off');
-          });
-        }, 950);
-      }
-      const t = fthumbs[i];
-      if (t) {
-        fth.scrollTo({
-          left: t.offsetLeft - fth.clientWidth / 2 + t.offsetWidth / 2,
-          behavior: 'smooth',
+  function fgo(i, anim) {
+    if (n === 0) return;
+    i = (i + n) % n;
+    if (i === fcur) return;
+    fslides.forEach((s, k) => {
+      s.classList.toggle('off', k === fcur);
+      s.classList.toggle('on', k === i);
+    });
+    fthumbs.forEach((t, k) => {
+      t.classList.toggle('on', k === i);
+    });
+    fst.classList.toggle('anim', !!anim);
+    if (anim) {
+      void fst.offsetWidth; // re-trigger animation
+      if (animTimer) clearTimeout(animTimer);
+      animTimer = setTimeout(() => {
+        fst.classList.remove('anim');
+        fslides.forEach((s, k) => {
+          if (k !== i) s.classList.remove('off');
         });
-      }
-      fcur = i;
-      fprog = 0;
-      fcnt.textContent = (i < 9 ? '0' : '') + (i + 1) + ' / ' + (n < 10 ? '0' : '') + n;
+      }, 950);
     }
-
-  // Initial state
-  fgo(0, false);
-
-  if (fprev) fprev.onclick = () => fgo(fcur - 1, true);
-  if (fnext) fnext.onclick = () => fgo(fcur + 1, true);
-
-  // Pause on hover or touch
-  fst.addEventListener('pointerenter', () => { fhover = true; });
-  fst.addEventListener('pointerleave', () => { fhover = false; });
-  fst.addEventListener('touchstart', () => { fhover = true; }, { passive: true });
-  fst.addEventListener('touchend', () => { fhover = false; }, { passive: true });
-
-  // IntersectionObserver for autoplay
-  const io = new IntersectionObserver(es => {
-    const was = fvis;
-    fvis = es[0].isIntersecting;
-    if (fvis && !was && fcur === 0 && fprog < 50) {
-      fst.classList.add('anim');
-      if (fslides[0]) {
-        fslides[0].style.animation = 'none';
-        void fslides[0].offsetWidth;
-        fslides[0].style.animation = '';
-      }
+    const t = fthumbs[i];
+    if (t) {
+      fth.scrollTo({
+        left: t.offsetLeft - fth.clientWidth / 2 + t.offsetWidth / 2,
+        behavior: 'smooth',
+      });
     }
-  }, { threshold: 0.35 });
-  io.observe(fst);
+    fcur = i;
+    fprog = 0;
+    fcnt.textContent = (i < 9 ? '0' : '') + (i + 1) + ' / ' + (n < 10 ? '0' : '') + n;
+  }
 
   const freduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -303,5 +166,140 @@ export async function initFeaturedShowcase() {
     rafId = requestAnimationFrame(floop);
   }
 
-  rafId = requestAnimationFrame(floop);
+  function renderSlides(events) {
+    if (!events || events.length === 0) {
+      featSec.hidden = true;
+      return;
+    }
+
+    currentEvents = events;
+    featSec.hidden = false;
+
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    if (animTimer) {
+      clearTimeout(animTimer);
+      animTimer = null;
+    }
+
+    fst.querySelectorAll('.slide').forEach(s => s.remove());
+    fth.innerHTML = '';
+
+    events.forEach((f, i) => {
+      const d = DEPT_MAP[f.deptSlug || f.slug] || { code: f.code || 'T26', name: f.dept || 'Tantra 26' };
+      const dateStr = f.date || '7-8 Oct';
+      const timeStr = f.time || '';
+      const venueStr = f.venue || 'Campus';
+      const dept = (f.deptSlug || f.slug || '').toLowerCase();
+      let prizePool = f.prize_pool || (Array.isArray(f.prizes) && f.prizes.length > 0 ? (f.prizes[0]?.reward || f.prizes[0]?.amount) : '');
+      if (typeof prizePool === 'string') prizePool = prizePool.replace(/^₹\s*/, '');
+      const isDisplayOnly = Boolean(f.display_only || f.displayOnly);
+      const targetUrl = isDemo
+        ? `/departments/${dept}.html#events`
+        : `/event.html?d=${encodeURIComponent(dept)}&e=${encodeURIComponent(f.id)}`;
+
+      // Slide
+      const sl = document.createElement('article');
+      sl.className = 'slide' + (isDisplayOnly ? ' slide-display-only' : '');
+      sl.innerHTML = `
+        ${fmedia(f)}
+        <div class="finfo">
+          <div class="fchips">
+            ${isDisplayOnly
+              ? `<span class="fchip" style="background:var(--gold);color:#101a2d;font-weight:700">${fesc(f.type || 'Special Attraction')}</span>`
+              : `
+                <span class="fchip">Featured</span>
+                <span class="fchip c2">${fesc(f.type || 'Event')}</span>
+                ${prizePool ? `<span class="fchip prize">Prize: ₹${fesc(prizePool)}</span>` : ''}
+              `}
+          </div>
+          <h3>${fesc(f.title)}</h3>
+          <p class="fdept">${fesc(isDisplayOnly ? (f.venue || 'Campus Central') : (d.name || d.code))}</p>
+          <p class="fmeta">${fesc(dateStr)}${timeStr ? ` &middot; ${fesc(timeStr)}` : ''}${venueStr && !isDisplayOnly ? ` &middot; ${fesc(venueStr)}` : ''}</p>
+          ${isDisplayOnly
+            ? ''
+            : `<a class="btn" href="${targetUrl}">Register <b>&rarr;</b></a>`}
+        </div>
+      `;
+      fst.insertBefore(sl, fcnt);
+
+      // Thumbnail
+      const th = document.createElement('button');
+      th.className = 'th';
+      th.setAttribute('aria-label', `Go to ${f.title}`);
+      th.innerHTML = `
+        <div class="tp">${fmedia(f)}</div>
+        <div class="tl">
+          ${fesc(f.title)}
+          <small>${fesc(isDisplayOnly ? 'Attraction' : d.code)} &middot; ${fesc(dateStr)}</small>
+        </div>
+      `;
+      th.onclick = () => fgo(i, true);
+      fth.appendChild(th);
+    });
+
+    fslides = [].slice.call(fst.querySelectorAll('.slide'));
+    fthumbs = [].slice.call(fth.children);
+    n = events.length;
+    fcur = -1;
+    fprog = 0;
+    flast = performance.now();
+
+    fgo(0, false);
+    rafId = requestAnimationFrame(floop);
+  }
+
+  // Bind UI control listeners once
+  if (fprev) fprev.onclick = () => fgo(fcur - 1, true);
+  if (fnext) fnext.onclick = () => fgo(fcur + 1, true);
+
+  fst.addEventListener('pointerenter', () => { fhover = true; });
+  fst.addEventListener('pointerleave', () => { fhover = false; });
+  fst.addEventListener('touchstart', () => { fhover = true; }, { passive: true });
+  fst.addEventListener('touchend', () => { fhover = false; }, { passive: true });
+
+  const io = new IntersectionObserver(es => {
+    const was = fvis;
+    fvis = es[0].isIntersecting;
+    if (fvis && !was && fcur === 0 && fprog < 50) {
+      fst.classList.add('anim');
+      if (fslides[0]) {
+        fslides[0].style.animation = 'none';
+        void fslides[0].offsetWidth;
+        fslides[0].style.animation = '';
+      }
+    }
+  }, { threshold: 0.35 });
+  io.observe(fst);
+
+  // 1. Instant 0ms initial render from cache or demo items
+  const initial = getLocalEvents();
+  renderSlides(initial);
+
+  // 2. Background live cloud sync (non-blocking)
+  if (!isDemo) {
+    apiFetchFeaturedEvents().then(liveEvents => {
+      if (liveEvents && liveEvents.length > 0) {
+        const curKeys = currentEvents.map(e => (e.id || '') + ':' + (e.title || '')).join('|');
+        const liveKeys = liveEvents.map(e => (e.id || '') + ':' + (e.title || '')).join('|');
+        if (curKeys !== liveKeys) {
+          renderSlides(liveEvents);
+        }
+      }
+    }).catch(err => {
+      console.warn('apiFetchFeaturedEvents background sync:', err);
+    });
+
+    // 3. React to live update broadcasts from admin
+    window.addEventListener('tantra26:featured:updated', async () => {
+      try {
+        const fresh = await apiFetchFeaturedEvents();
+        if (fresh && fresh.length > 0) {
+          renderSlides(fresh);
+        }
+      } catch {}
+    });
+  }
 }

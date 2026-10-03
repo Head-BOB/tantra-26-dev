@@ -545,6 +545,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
       const invalidateCaches = () => {
         try {
           localStorage.removeItem('tantra26:cache:featured_events');
+          localStorage.removeItem('tantra26:cache:featured_events_time');
           localStorage.removeItem('tantra26:cache:dept_events:' + rawDept);
           localStorage.removeItem('tantra26:cache:dept_events:' + dbDept);
         } catch {}
@@ -863,6 +864,7 @@ export async function apiDeleteEvent(id) {
     }
 
     localStorage.removeItem('tantra26:cache:featured_events');
+    localStorage.removeItem('tantra26:cache:featured_events_time');
   } catch {}
 
   // 2. Supabase deletion
@@ -1149,37 +1151,70 @@ export async function apiSavePayment(paymentData) {
 // ─── Featured Events Helpers ─────────────────────────────────
 
 /**
- * Fetch all active events marked as featured, ordered by featured_order.
- * Uses local storage caching for ultra-fast, zero-lag delivery under high traffic (1000 concurrent visitors).
+ * Synchronously retrieves fast cached featured events for 0ms initial render.
  */
-export async function apiFetchFeaturedEvents() {
+export function apiGetCachedFeaturedEvents() {
   const CACHE_KEY = 'tantra26:cache:featured_events';
-
-  // Read immediately from fast local cache
-  let cached = [];
   try {
     const raw = localStorage.getItem(CACHE_KEY);
-    if (raw) cached = JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const delList = JSON.parse(localStorage.getItem('tantra26:deleted_events') || '[]');
+        const delSet = new Set(delList);
+        return parsed.filter(e => e && e.id && !delSet.has(e.id) && e.is_active !== false);
+      }
+    }
   } catch {}
+  return [];
+}
+
+/**
+ * Fetch all active events marked as featured, ordered by featured_order.
+ * Uses targeted lightweight query to eliminate statement timeouts (Postgres 57014),
+ * merges local showcase posters, and caches data.
+ */
+export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
+  const CACHE_KEY = 'tantra26:cache:featured_events';
+  const CACHE_TIME_KEY = 'tantra26:cache:featured_events_time';
+
+  // Read immediately from fast local cache
+  let cached = apiGetCachedFeaturedEvents();
+
+  // If cache is fresh (< 60s) and not forced, return cached directly to protect database limits
+  if (!forceRefresh && cached.length > 0) {
+    try {
+      const lastFetch = parseInt(localStorage.getItem(CACHE_TIME_KEY) || '0', 10);
+      if (Date.now() - lastFetch < 60000) {
+        return cached;
+      }
+    } catch {}
+  }
+
+  const delList = JSON.parse(localStorage.getItem('tantra26:deleted_events') || '[]');
+  const delSet = new Set(delList);
 
   // Async refresh from Supabase
   if (supabaseClient) {
     try {
-      const { data, error } = await supabaseClient
+      const queryPromise = supabaseClient
         .from('events')
-        .select('*')
+        .select('id, dept_slug, type, title, date, time, venue, fee, is_featured, featured_order, banner, banners, description, is_active, created_at')
         .eq('is_active', true)
-        .or('is_featured.eq.true,type.eq.Special Attraction')
+        .or('is_featured.eq.true,type.eq.Special Attraction,type.ilike.%attraction%,type.ilike.%showcase%')
         .order('featured_order', { ascending: true });
 
-      if (!error && data) {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Supabase query timeout')), 3500)
+      );
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+      if (!error && Array.isArray(data)) {
         let unpacked = data.map(unpackEventRecord).filter(ev => {
-          if (!ev) return false;
+          if (!ev || delSet.has(ev.id) || ev.is_active === false) return false;
           const isFeat = Boolean(ev.is_featured || ev.isFeatured || ev.dept_slug === 'central' || ev.slug === 'central' || ev.display_only || ev.type === 'Special Attraction');
-          if (!isFeat) return false;
-          const b = ev.banners || {};
-          const hasImg = Boolean(b.featured_desktop || b.event_desktop || ev.banner || b.featured_mobile || b.event_mobile);
-          return hasImg;
+          return isFeat;
         });
 
         // Merge local admin posters so newly created attractions appear immediately
@@ -1187,11 +1222,8 @@ export async function apiFetchFeaturedEvents() {
           const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
           const localPosters = adminEvents['central'] || [];
           localPosters.forEach(p => {
-            if (p && (p.is_featured || p.isFeatured || p.type === 'Special Attraction') && !unpacked.some(x => x.id === p.id)) {
-              const b = p.banners || {};
-              if (b.featured_desktop || b.event_desktop || p.banner || b.featured_mobile || b.event_mobile) {
-                unpacked.push(p);
-              }
+            if (p && !delSet.has(p.id) && (p.is_featured || p.isFeatured || p.type === 'Special Attraction' || p.display_only) && !unpacked.some(x => x.id === p.id)) {
+              unpacked.push(p);
             }
           });
         } catch {}
@@ -1211,6 +1243,7 @@ export async function apiFetchFeaturedEvents() {
         unpacked.sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0));
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify(unpacked));
+          localStorage.setItem(CACHE_TIME_KEY, String(Date.now()));
         } catch {}
         return unpacked;
       }
@@ -1226,13 +1259,10 @@ export async function apiFetchFeaturedEvents() {
     const seen = new Set();
 
     const checkAndAdd = ev => {
-      if (!ev || !ev.id || seen.has(ev.id)) return;
-      if (ev.is_featured || ev.isFeatured || ev.type === 'Special Attraction') {
-        const b = ev.banners || {};
-        if ((b.featured_desktop && b.featured_mobile) || (ev.display_only && (b.featured_desktop || ev.banner)) || (b.featured_desktop || ev.banner)) {
-          list.push(ev);
-          seen.add(ev.id);
-        }
+      if (!ev || !ev.id || seen.has(ev.id) || delSet.has(ev.id)) return;
+      if (ev.is_featured || ev.isFeatured || ev.type === 'Special Attraction' || ev.display_only) {
+        list.push(ev);
+        seen.add(ev.id);
       }
     };
 
@@ -1265,17 +1295,26 @@ export async function apiFetchFeaturedEvents() {
  * Fetch all special attractions / showcase posters from Supabase or admin storage
  */
 export async function apiFetchSpecialAttractions() {
+  const delList = JSON.parse(localStorage.getItem('tantra26:deleted_events') || '[]');
+  const delSet = new Set(delList);
+
   if (supabaseClient) {
     try {
-      const { data, error } = await supabaseClient
+      const queryPromise = supabaseClient
         .from('events')
-        .select('*')
+        .select('id, dept_slug, type, title, date, time, venue, fee, is_featured, featured_order, banner, banners, description, is_active, created_at')
         .eq('is_active', true)
-        .eq('type', 'Special Attraction')
+        .or('type.eq.Special Attraction,type.ilike.%attraction%,type.ilike.%showcase%')
         .order('created_at', { ascending: false });
 
-      if (!error && data) {
-        return data.map(unpackEventRecord).filter(Boolean);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Special attractions query timeout')), 3500)
+      );
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+      if (!error && Array.isArray(data)) {
+        return data.map(unpackEventRecord).filter(e => e && !delSet.has(e.id) && e.is_active !== false);
       }
     } catch (err) {
       console.warn('⚠️ apiFetchSpecialAttractions error:', err);
@@ -1283,7 +1322,7 @@ export async function apiFetchSpecialAttractions() {
   }
   try {
     const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
-    return adminEvents['central'] || [];
+    return (adminEvents['central'] || []).filter(e => e && !delSet.has(e.id));
   } catch {}
   return [];
 }

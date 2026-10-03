@@ -1788,7 +1788,7 @@ function renderCentralPosters() {
   });
 }
 
-function compressPosterImage(file, maxDim = 1600, quality = 0.82) {
+function compressPosterImage(file, maxDim = 1200, quality = 0.75) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -1877,7 +1877,7 @@ function bindPosterModal() {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      const dataUrl = await compressPosterImage(file);
+      const dataUrl = await compressPosterImage(file, 1200, 0.75);
       currentPosterDeskImg = dataUrl;
       $('pm-desk-preview').style.display = 'block';
       $('pm-desk-img').src = dataUrl;
@@ -1895,7 +1895,7 @@ function bindPosterModal() {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      const dataUrl = await compressPosterImage(file, 1200, 0.82);
+      const dataUrl = await compressPosterImage(file, 800, 0.72);
       currentPosterMobImg = dataUrl;
       $('pm-mob-preview').style.display = 'block';
       $('pm-mob-img').src = dataUrl;
@@ -1910,6 +1910,13 @@ function bindPosterModal() {
     if (!title) {
       toast('Please enter a title for this poster', 'error');
       return;
+    }
+
+    const submitBtn = $('pm-submit');
+    const origBtnText = submitBtn ? submitBtn.textContent : 'Save Showcase Poster';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
     }
 
     const id = $('pm-id').value.trim() || ('attraction-' + Date.now().toString(36));
@@ -1942,7 +1949,7 @@ function bindPosterModal() {
       banner: currentPosterDeskImg,
     };
 
-    // Save to adminEvents['central']
+    // Save to local storage stores immediately
     const adminEvents = getAdminEvents();
     if (!adminEvents['central']) adminEvents['central'] = [];
     const idx = adminEvents['central'].findIndex(x => x.id === id);
@@ -1952,20 +1959,41 @@ function bindPosterModal() {
       adminEvents['central'].push(posterObj);
     }
     setAdminEvents(adminEvents);
-    try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
 
-    closePosterModal();
-    toast('Showcase poster saved ✓');
+    const dedicated = load('tantra26:admin:showcase_posters', []);
+    const dIdx = dedicated.findIndex(x => x.id === id);
+    if (dIdx >= 0) dedicated[dIdx] = posterObj;
+    else dedicated.push(posterObj);
+    save('tantra26:admin:showcase_posters', dedicated);
+
+    try {
+      localStorage.removeItem('tantra26:cache:featured_events');
+      localStorage.removeItem('tantra26:cache:featured_events_time');
+    } catch {}
+
     renderCentralPosters();
+    updateShowcaseBadge();
     updateRegsBadge();
 
-    // Async save to cloud database
-    apiSaveEvent(posterObj).then(() => {
-      toast('Poster synced to database ✓', 'info');
-      syncCentralPostersFromCloud();
-    }).catch(err => {
+    // Await cloud sync so the user has immediate feedback and no data is lost
+    try {
+      await apiSaveEvent(posterObj);
+      toast('Showcase poster saved & synced to cloud ✓');
+      await syncCentralPostersFromCloud();
+      try {
+        window.dispatchEvent(new CustomEvent('tantra26:featured:updated'));
+      } catch {}
+      closePosterModal();
+    } catch (err) {
       console.warn('apiSaveEvent poster warning:', err);
-    });
+      toast('Poster saved locally ✓ (Cloud sync will retry)', 'info');
+      closePosterModal();
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = origBtnText;
+      }
+    }
   };
 }
 
@@ -1984,7 +2012,18 @@ async function deleteShowcasePoster(poster) {
   });
   setAdminEvents(adminEvents);
   save('tantra26:admin:showcase_posters', load('tantra26:admin:showcase_posters', []).filter(x => x.id !== id));
-  try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
+
+  // Add to deleted_events list so it never reappears on frontend
+  try {
+    const delList = JSON.parse(localStorage.getItem('tantra26:deleted_events') || '[]');
+    if (!delList.includes(id)) {
+      delList.push(id);
+      localStorage.setItem('tantra26:deleted_events', JSON.stringify(delList));
+    }
+    localStorage.removeItem('tantra26:cache:featured_events');
+    localStorage.removeItem('tantra26:cache:featured_events_time');
+    window.dispatchEvent(new CustomEvent('tantra26:featured:updated'));
+  } catch {}
 
   toast(`Deleted "${poster.title}"`);
   renderCentralPosters();
