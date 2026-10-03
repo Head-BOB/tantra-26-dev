@@ -21,19 +21,66 @@ const DEPT_NAMES = {
   mech: 'Mechanical Engineering',
 };
 
-// Fallback seed events in case database is cold-starting or offline
+// Fallback seed events across all 10 departments in case database is cold-starting or offline
 const SEED_EVENTS = {
+  // CSE
   'code-rush': { title: 'Code Rush', dept_slug: 'cse', type: 'Competition', date: '7 Oct', time: '10:00 AM', venue: 'CS Lab 1', fee: '₹50', description: 'Timed competitive programming round. Solve as many problems as you can before the clock runs out.' },
+  'bug-hunt': { title: 'Bug Hunt', dept_slug: 'cse', type: 'Competition', date: '7 Oct', time: '2:00 PM', venue: 'CS Lab 2', fee: '₹100', description: 'Teams get a broken codebase and a ticking timer. Find the bugs, fix them, climb the board.' },
+  'git-deploy': { title: 'Git & Deploy', dept_slug: 'cse', type: 'Workshop', date: '7 Oct', time: '11:00 AM', venue: 'Seminar Hall', fee: 'Free', description: 'Hands-on session: version control, pull requests and putting a project live in under an hour.' },
   'hack-night': { title: 'Hack Night', dept_slug: 'cse', type: 'Competition', date: '7 Oct', time: '6:00 PM', venue: 'Main Auditorium', fee: '₹200', description: 'A night-long build sprint. Pitch an idea, ship a prototype, demo it to the judges.' },
-  'capture-flag': { title: 'Capture the Flag', dept_slug: 'cscy', type: 'Competition', date: '7 Oct', time: '10:00 AM', venue: 'Cyber Security Lab', fee: '₹100', description: 'Team-based hacking challenges across web, crypto and forensics. Capture the most flags.' },
-  'model-arena': { title: 'Model Arena', dept_slug: 'ai', type: 'Competition', date: '7 Oct', time: '10:30 AM', venue: 'AI Lab', fee: '₹100', description: 'Same dataset, same clock. Build the most accurate machine learning model.' },
-  'design-sprint': { title: 'Design Sprint', dept_slug: 'csd', type: 'Competition', date: '7 Oct', time: '10:00 AM', venue: 'Design Studio', fee: '₹100', description: 'Redesign a broken app screen from a short brief before the timer ends.' },
-  'startup-pitch': { title: 'Startup Pitch', dept_slug: 'csbs', type: 'Competition', date: '7 Oct', time: '11:00 AM', venue: 'Seminar Hall', fee: '₹150', description: 'Pitch a viable tech business model to investor judges.' },
-  'line-follower': { title: 'Line Follower', dept_slug: 'eee', type: 'Competition', date: '7 Oct', time: '2:30 PM', venue: 'Workshop Ground', fee: '₹100', description: 'High-speed autonomous line tracer robot showdown.' },
-  'antenna-build': { title: 'Antenna Build', dept_slug: 'ece', type: 'Competition', date: '7 Oct', time: '2:30 PM', venue: 'Electronics Lab', fee: '₹100', description: 'Design, simulate and construct an RF antenna for maximum gain.' },
-  'signal-chase': { title: 'Signal Chase', dept_slug: 'aei', type: 'Competition', date: '7 Oct', time: '2:30 PM', venue: 'Electronics Lab', fee: '₹100', description: 'Decode hidden frequencies and sensor signals under time pressure.' },
-  'bridge-it': { title: 'Bridge It', dept_slug: 'civil', type: 'Competition', date: '7 Oct', time: '11:00 AM', venue: 'Civil Workshop', fee: '₹100', description: 'Truss design and load testing competition. Maximize load-to-weight ratio.' },
-  'robo-race': { title: 'Robo Race', dept_slug: 'mech', type: 'Competition', date: '7 Oct', time: '11:00 AM', venue: 'Workshop Ground', fee: '₹150', description: 'All-terrain robotic racing through sharp obstacles and ramps.' },
+
+  // AI & Data Science
+  'model-arena': { title: 'Model Arena', dept_slug: 'ai', type: 'Competition', date: '7 Oct', time: '10:30 AM', venue: 'AI Lab', fee: '₹100', description: 'Train and tune an ML model on a live dataset. Highest accuracy on hidden test data wins.' },
+  'prompt-craft': { title: 'Prompt Craft', dept_slug: 'ai', type: 'Competition', date: '7 Oct', time: '2:00 PM', venue: 'Computer Lab 3', fee: '₹50', description: 'Write the best prompts to get precise outputs across image, text and reasoning benchmarks.' },
+  'llm-workshop': { title: 'Building with LLMs', dept_slug: 'ai', type: 'Workshop', date: '7 Oct', time: '11:00 AM', venue: 'Seminar Hall', fee: 'Free', description: 'Hands-on session on APIs, function calling and connecting models to external tools.' },
+  'ai-ethics-talk': { title: 'AI Beyond the Hype', dept_slug: 'ai', type: 'Talk', date: '7 Oct', time: '10:00 AM', venue: 'Main Auditorium', fee: 'Free', description: 'A fast-paced talk on what is real in modern AI and what is marketing.' },
+
+  // CSD
+  'ui-redesign': { title: 'UI Redesign Challenge', dept_slug: 'csd', type: 'Competition', date: '7 Oct', time: '10:00 AM', venue: 'Design Studio', fee: '₹100', description: 'Pick an ugly or broken interface and rebuild it from scratch in three hours.' },
+  'motion-sprint': { title: 'Motion Sprint', dept_slug: 'csd', type: 'Competition', date: '7 Oct', time: '2:00 PM', venue: 'Computer Lab', fee: '₹100', description: 'Animate a product interaction or micro-animation from a short creative brief.' },
+  'figma-systems': { title: 'Design Systems in Figma', dept_slug: 'csd', type: 'Workshop', date: '7 Oct', time: '11:00 AM', venue: 'Design Studio', fee: 'Free', description: 'Tokens, auto-layout and components: build a production-grade system in two hours.' },
+  'brand-talk': { title: 'Design That Scales', dept_slug: 'csd', type: 'Talk', date: '7 Oct', time: '10:00 AM', venue: 'Seminar Hall', fee: 'Free', description: 'How early stage design choices save or sink a product later on.' },
+
+  // CSBS
+  'startup-pitch': { title: 'Startup Pitch', dept_slug: 'csbs', type: 'Competition', date: '7 Oct', time: '11:00 AM', venue: 'Seminar Hall', fee: '₹150', description: 'Pitch an idea to a panel in five minutes. Best plan takes the prize.' },
+  'biz-code-battle': { title: 'Biz Code Battle', dept_slug: 'csbs', type: 'Competition', date: '7 Oct', time: '2:30 PM', venue: 'CS Lab 1', fee: '₹100', description: 'A business case with a coding twist. Solve it with logic and code.' },
+  'data-decisions': { title: 'Data to Decisions', dept_slug: 'csbs', type: 'Workshop', date: '7 Oct', time: '10:30 AM', venue: 'Computer Lab', fee: 'Free', description: 'Turn a spreadsheet into a decision using simple analytics.' },
+  'fintech-talk': { title: 'Inside Fintech', dept_slug: 'csbs', type: 'Talk', date: '7 Oct', time: '11:00 AM', venue: 'Main Auditorium', fee: 'Free', description: 'How software is changing money, payments and markets.' },
+
+  // EEE
+  'circuit-debug': { title: 'Circuit Debug', dept_slug: 'eee', type: 'Competition', date: '7 Oct', time: '10:00 AM', venue: 'Electronics Lab', fee: '₹100', description: 'Faulty boards, a multimeter and a countdown. Find every fault before the others do.' },
+  'line-follower': { title: 'Line Follower', dept_slug: 'eee', type: 'Competition', date: '7 Oct', time: '2:30 PM', venue: 'Workshop Ground', fee: '₹150', description: 'Program a bot to follow the track and finish first without leaving the line.' },
+  'pcb-workshop': { title: 'PCB Design', dept_slug: 'eee', type: 'Workshop', date: '7 Oct', time: '11:00 AM', venue: 'Electronics Lab', fee: 'Free', description: 'From schematic to a board ready to print, step by step.' },
+  'spark-quiz': { title: 'Spark Quiz', dept_slug: 'eee', type: 'Competition', date: '7 Oct', time: '10:00 AM', venue: 'Seminar Hall', fee: '₹50', description: 'Rapid-fire quiz on circuits, machines and power. Buzzers included.' },
+
+  // ECE
+  'signal-decode': { title: 'Signal Decode', dept_slug: 'ece', type: 'Competition', date: '7 Oct', time: '10:30 AM', venue: 'Communication Lab', fee: '₹100', description: 'Recover a message hidden in a noisy signal. The cleanest decode wins.' },
+  'antenna-build': { title: 'Antenna Build', dept_slug: 'ece', type: 'Competition', date: '7 Oct', time: '2:30 PM', venue: 'Electronics Lab', fee: '₹150', description: 'Build an antenna from scratch and see whose reaches the farthest.' },
+  'embedded-workshop': { title: 'Embedded Basics', dept_slug: 'ece', type: 'Workshop', date: '7 Oct', time: '11:00 AM', venue: 'Electronics Lab', fee: 'Free', description: 'Program a board to send and receive data wirelessly.' },
+  'comm-talk': { title: 'How the World Connects', dept_slug: 'ece', type: 'Talk', date: '7 Oct', time: '10:00 AM', venue: 'Seminar Hall', fee: 'Free', description: 'A talk on how signals travel from a tower to your phone.' },
+
+  // AEI
+  'sensor-quest': { title: 'Sensor Quest', dept_slug: 'aei', type: 'Competition', date: '7 Oct', time: '10:30 AM', venue: 'Instrumentation Lab', fee: '₹100', description: 'Build a small sensor project that measures something real and shows the reading.' },
+  'signal-chase': { title: 'Signal Chase', dept_slug: 'aei', type: 'Competition', date: '7 Oct', time: '2:30 PM', venue: 'Electronics Lab', fee: '₹100', description: 'Trace faults in a signal chain using an oscilloscope. Fastest clean fix wins.' },
+  'micro-workshop': { title: 'Microcontroller Basics', dept_slug: 'aei', type: 'Workshop', date: '7 Oct', time: '11:00 AM', venue: 'Electronics Lab', fee: 'Free', description: 'Program a microcontroller to read a sensor and drive an output.' },
+  'automation-talk': { title: 'Automation in Industry', dept_slug: 'aei', type: 'Talk', date: '7 Oct', time: '10:00 AM', venue: 'Seminar Hall', fee: 'Free', description: 'How measurement and control keep factories running.' },
+
+  // Civil
+  'bridge-builders': { title: 'Bridge Builders', dept_slug: 'civil', type: 'Competition', date: '7 Oct', time: '10:00 AM', venue: 'Civil Workshop', fee: '₹150', description: 'Build a bridge from limited material. The one that holds the most load wins.' },
+  'cad-showdown': { title: 'CAD Showdown', dept_slug: 'civil', type: 'Competition', date: '7 Oct', time: '2:00 PM', venue: 'Computer Lab', fee: '₹50', description: 'Draft a structure from a brief inside a strict time limit.' },
+  'survey-sprint': { title: 'Survey Sprint', dept_slug: 'civil', type: 'Competition', date: '7 Oct', time: '9:30 AM', venue: 'Campus Ground', fee: '₹100', description: 'Field survey race: measure, map and close your traverse with the smallest error.' },
+  'site-talk': { title: 'Building in the Real World', dept_slug: 'civil', type: 'Talk', date: '7 Oct', time: '11:00 AM', venue: 'Seminar Hall', fee: 'Free', description: 'A practising engineer on how projects go from drawing to site.' },
+
+  // Mechanical
+  'robo-race': { title: 'Robo Race', dept_slug: 'mech', type: 'Competition', date: '7 Oct', time: '11:00 AM', venue: 'Workshop Ground', fee: '₹200', description: 'Build a bot and race it around the obstacle track. Fastest clean lap wins.' },
+  'cad-modelling': { title: 'CAD Modelling', dept_slug: 'mech', type: 'Competition', date: '7 Oct', time: '3:00 PM', venue: 'CAD Lab', fee: '₹50', description: 'Model a mechanical assembly from a reference and a deadline.' },
+  'engine-teardown': { title: 'Engine Teardown', dept_slug: 'mech', type: 'Workshop', date: '7 Oct', time: '10:00 AM', venue: 'Automobile Lab', fee: 'Free', description: 'Strip down an engine, learn what each part does, then put it back together.' },
+
+  // CSCY
+  'capture-flag': { title: 'Capture the Flag', dept_slug: 'cscy', type: 'Competition', date: '7 Oct', time: '10:00 AM', venue: 'CS Lab 1', fee: '₹150', description: 'Team-based hacking challenges across web, crypto and forensics. Capture the most flags before time runs out.' },
+  'cipher-break': { title: 'Cipher Break', dept_slug: 'cscy', type: 'Competition', date: '7 Oct', time: '2:30 PM', venue: 'CS Lab 2', fee: '₹100', description: 'Decode layered ciphers and puzzles. First to the final plaintext wins.' },
+  'ethical-hacking': { title: 'Ethical Hacking 101', dept_slug: 'cscy', type: 'Workshop', date: '8 Oct', time: '11:00 AM', venue: 'Seminar Hall', fee: 'Free', description: 'How attackers think and how defenders stop them, with live demos on a safe practice lab.' },
+  'forensics-talk': { title: 'Digital Forensics in Action', dept_slug: 'cscy', type: 'Talk', date: '9 Oct', time: '10:30 AM', venue: 'Main Auditorium', fee: 'Free', description: 'A look at how investigators trace what happened after a breach.' },
 };
 
 function escapeHtml(str) {
@@ -96,13 +143,26 @@ async function fetchEventData(deptSlug, eventId) {
     console.warn('api/event fetch error:', err.message);
   }
 
-  // 2. Check fallback seed events
-  const fallback = SEED_EVENTS[eventId];
+  // 2. Check fallback catalog events
+  const fallback = SEED_EVENTS[eventId] || SEED_EVENTS[eventId.toLowerCase()];
   if (fallback) {
     return {
       id: eventId,
       ...fallback,
       dept_slug: fallback.dept_slug || deptSlug,
+      banners: {},
+      prizes: [],
+    };
+  }
+
+  // 3. Fuzzy slug fallback
+  const slugId = eventId.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  if (SEED_EVENTS[slugId]) {
+    const f = SEED_EVENTS[slugId];
+    return {
+      id: eventId,
+      ...f,
+      dept_slug: f.dept_slug || deptSlug,
       banners: {},
       prizes: [],
     };
