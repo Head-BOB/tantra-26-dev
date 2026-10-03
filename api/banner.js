@@ -10,7 +10,13 @@ const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI
 
 export default async function handler(req, res) {
   const query = req.query || {};
-  const eventId = (query.e || query.id || query.eventId || '').trim();
+  let eventId = (query.e || query.id || query.eventId || '').trim();
+  if (!eventId && req.url) {
+    try {
+      const u = new URL(req.url, 'http://localhost');
+      eventId = (u.searchParams.get('e') || u.searchParams.get('id') || u.searchParams.get('eventId') || '').trim();
+    } catch {}
+  }
 
   let bannerRaw = '';
 
@@ -30,13 +36,14 @@ export default async function handler(req, res) {
         if (Array.isArray(rows) && rows.length > 0) {
           const row = rows[0];
           const b = row.banners || {};
-          bannerRaw = b.featured_desktop || b.event_desktop || b.featured_mobile || b.event_mobile || row.banner || '';
+          // Prioritize normal event banner over featured banner
+          bannerRaw = b.event_desktop || row.banner || b.event_mobile || b.featured_desktop || b.featured_mobile || '';
 
           if (!bannerRaw && typeof row.description === 'string' && row.description.startsWith('{"_meta":true')) {
             try {
               const parsed = JSON.parse(row.description);
               if (parsed.banners) {
-                bannerRaw = parsed.banners.featured_desktop || parsed.banners.event_desktop || parsed.banners.featured_mobile || parsed.banners.event_mobile || '';
+                bannerRaw = parsed.banners.event_desktop || parsed.banner || parsed.banners.event_mobile || parsed.banners.featured_desktop || parsed.banners.featured_mobile || '';
               }
               if (!bannerRaw && parsed.banner) bannerRaw = parsed.banner;
             } catch {}

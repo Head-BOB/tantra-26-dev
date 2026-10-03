@@ -33,6 +33,30 @@
   ],
   "redirects": [
     {
+      "source": "/event",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([wW]hats[aA]pp|[fF]acebook|[fF]acebot|[tT]witter|[dD]iscord|[tT]elegram|[sS]lack|[lL]inked[iI]n|[aA]pplebot|[gG]oogle|[bB]ing|[bB]ot|[cC]rawler|[sS]pider).*"
+        }
+      ],
+      "destination": "/api/event",
+      "permanent": false
+    },
+    {
+      "source": "/event.html",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([wW]hats[aA]pp|[fF]acebook|[fF]acebot|[tT]witter|[dD]iscord|[tT]elegram|[sS]lack|[lL]inked[iI]n|[aA]pplebot|[gG]oogle|[bB]ing|[bB]ot|[cC]rawler|[sS]pider).*"
+        }
+      ],
+      "destination": "/api/event",
+      "permanent": false
+    },
+    {
       "source": "/event.html",
       "destination": "/event",
       "permanent": false
@@ -45,7 +69,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|WhatsApp|TelegramBot|Twitterbot|Discordbot|Slackbot|LinkedInBot|bot|crawler|spider|Googlebot|bingbot|SkypeUriPreview).*"
+          "value": ".*([wW]hats[aA]pp|[fF]acebook|[fF]acebot|[tT]witter|[dD]iscord|[tT]elegram|[sS]lack|[lL]inked[iI]n|[aA]pplebot|[gG]oogle|[bB]ing|[bB]ot|[cC]rawler|[sS]pider).*"
         }
       ],
       "destination": "/api/event"
@@ -56,7 +80,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|WhatsApp|TelegramBot|Twitterbot|Discordbot|Slackbot|LinkedInBot|bot|crawler|spider|Googlebot|bingbot|SkypeUriPreview).*"
+          "value": ".*([wW]hats[aA]pp|[fF]acebook|[fF]acebot|[tT]witter|[dD]iscord|[tT]elegram|[sS]lack|[lL]inked[iI]n|[aA]pplebot|[gG]oogle|[bB]ing|[bB]ot|[cC]rawler|[sS]pider).*"
         }
       ],
       "destination": "/api/event"

@@ -113,11 +113,18 @@ async function fetchEventData(deptSlug, eventId) {
 
 export default async function handler(req, res) {
   const query = req.query || {};
-  // Handle query params from rewrites or direct URL
-  const deptSlug = (query.d || query.dept || query.slug || '').toLowerCase();
-  const eventId  = (query.e || query.id || query.eventId || '').trim();
+  let deptSlug = (query.d || query.dept || query.slug || '').toLowerCase();
+  let eventId  = (query.e || query.id || query.eventId || '').trim();
 
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'tantra26.com';
+  if (!eventId && req.url) {
+    try {
+      const u = new URL(req.url, 'http://localhost');
+      deptSlug = deptSlug || (u.searchParams.get('d') || u.searchParams.get('dept') || u.searchParams.get('slug') || '').toLowerCase();
+      eventId  = eventId  || (u.searchParams.get('e') || u.searchParams.get('id') || u.searchParams.get('eventId') || '').trim();
+    } catch {}
+  }
+
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'tantra26.vjec.in';
   const proto = (req.headers['x-forwarded-proto'] || 'https').replace(/:$/, '');
   const baseUrl = `${proto}://${host}`;
 
@@ -157,7 +164,8 @@ export default async function handler(req, res) {
   // Extract metadata details
   const deptName = DEPT_NAMES[event.dept_slug] || 'Tantra 26';
   const b = event.banners || {};
-  const rawBanner = b.featured_desktop || b.event_desktop || b.featured_mobile || b.event_mobile || event.banner || '';
+  // Prioritize normal event banner over featured showcase banner
+  const rawBanner = b.event_desktop || event.banner || b.event_mobile || b.featured_desktop || b.featured_mobile || '';
 
   let bannerUrl = '';
   if (rawBanner && typeof rawBanner === 'string' && rawBanner.trim()) {
@@ -195,7 +203,7 @@ export default async function handler(req, res) {
 
   const metaDesc = `${metaDescParts.join(' · ')} — ${event.description || 'Join at Vimal Jyothi Engineering College.'}`.slice(0, 240);
 
-  const targetPage = `/event.html?d=${encodeURIComponent(event.dept_slug || deptSlug)}&e=${encodeURIComponent(event.id)}`;
+  const targetPage = `/event?d=${encodeURIComponent(event.dept_slug || deptSlug)}&e=${encodeURIComponent(event.id)}`;
   const canonicalUrl = `${baseUrl}${targetPage}`;
 
   // Check if requester is a crawler bot
@@ -212,13 +220,16 @@ export default async function handler(req, res) {
   <meta name="description" content="${escapeHtml(metaDesc)}">
 
   <!-- Open Graph / Facebook / WhatsApp / Discord / LinkedIn -->
-  <meta property="og:type" content="article">
+  <meta property="og:type" content="website">
   <meta property="og:site_name" content="Tantra 26 | National Level Techfest">
   <meta property="og:title" content="${escapeHtml(metaTitle)}">
   <meta property="og:description" content="${escapeHtml(metaDesc)}">
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
   ${bannerUrl ? `<meta property="og:image" content="${escapeHtml(bannerUrl)}">
   <meta property="og:image:secure_url" content="${escapeHtml(bannerUrl)}">
+  <meta property="og:image:type" content="image/webp">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="${escapeHtml(event.title)} Banner">` : ''}
 
   <!-- Twitter / X -->
