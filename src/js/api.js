@@ -550,7 +550,8 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         } catch {}
       };
 
-      // 1. First attempt: Native schema columns (with envelope preserved in description as safety fallback)
+      // 1. First attempt: Native schema columns that exist in Postgres table
+      // (custom metadata like display_only, max_registrations, is_closed are safely stored in envelope)
       const nativeRecord = {
         id: eventData.id,
         dept_slug: dbDept,
@@ -567,18 +568,12 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         details,
         banner: banners.event_desktop || banner,
         banners,
-        is_featured,
-        featured_order,
+        is_featured: Boolean(eventData.is_featured ?? eventData.isFeatured ?? (dbDept === 'central')),
+        featured_order: parseInt(eventData.featured_order ?? eventData.featuredOrder ?? 1, 10) || 1,
         steps,
         rules,
         prizes,
-        manual_prize_pool: Boolean(eventData.manual_prize_pool || eventData.manualPrizePool),
-        prize_pool: String(eventData.prize_pool || eventData.prizePool || '').trim(),
         coord,
-        whatsapp_group,
-        display_only: Boolean(eventData.display_only || eventData.displayOnly),
-        max_registrations: parseInt(eventData.max_registrations ?? eventData.maxRegistrations ?? 0, 10) || 0,
-        is_closed: Boolean(eventData.is_closed || eventData.isClosed),
         is_active: true,
         updated_at: new Date().toISOString(),
       };
@@ -590,18 +585,13 @@ export async function apiSaveEvent(eventData, isEdit = false) {
       }
 
       // If custom columns are missing from Supabase schema cache, retry progressively with envelope in description
-      if (error && (error.message.includes('banners') || error.message.includes('is_featured') || error.message.includes('prizes') || error.message.includes('duration') || error.message.includes('whatsapp_group') || error.message.includes('manual_prize_pool') || error.message.includes('prize_pool') || error.message.includes('display_only') || error.message.includes('max_registrations') || error.message.includes('is_closed') || error.message.includes('schema cache'))) {
+      if (error && (error.message.includes('banners') || error.message.includes('is_featured') || error.message.includes('prizes') || error.message.includes('duration') || error.message.includes('schema cache'))) {
         const fallbackNative = { ...nativeRecord };
-        delete fallbackNative.banners;
-        delete fallbackNative.is_featured;
-        delete fallbackNative.featured_order;
-        delete fallbackNative.prizes;
-        delete fallbackNative.manual_prize_pool;
-        delete fallbackNative.prize_pool;
-        delete fallbackNative.whatsapp_group;
-        delete fallbackNative.display_only;
-        delete fallbackNative.max_registrations;
-        delete fallbackNative.is_closed;
+        if (error.message.includes('banners')) delete fallbackNative.banners;
+        if (error.message.includes('is_featured')) delete fallbackNative.is_featured;
+        if (error.message.includes('featured_order')) delete fallbackNative.featured_order;
+        if (error.message.includes('prizes')) delete fallbackNative.prizes;
+        if (error.message.includes('duration')) delete fallbackNative.duration;
         // Keep description: envelope so mobile banners, duration, fee etc. are preserved!
         fallbackNative.description = envelope;
         const resNoCols = await supabaseClient.from('events').upsert([fallbackNative]).select().single();
@@ -1141,14 +1131,17 @@ export async function apiFetchFeaturedEvents() {
         .from('events')
         .select('*')
         .eq('is_active', true)
-        .eq('is_featured', true)
+        .or('is_featured.eq.true,dept_slug.eq.central')
         .order('featured_order', { ascending: true });
 
       if (!error && data) {
         let unpacked = data.map(unpackEventRecord).filter(ev => {
-          // Strictly verify event has both featured banners or is a display_only showcase poster
+          if (!ev) return false;
+          const isFeat = Boolean(ev.is_featured || ev.isFeatured || ev.dept_slug === 'central' || ev.slug === 'central' || ev.display_only || ev.type === 'Special Attraction');
+          if (!isFeat) return false;
           const b = ev.banners || {};
-          return Boolean((b.featured_desktop && b.featured_mobile) || (ev.display_only && (b.featured_desktop || ev.banner || b.event_desktop)));
+          const hasImg = Boolean(b.featured_desktop || b.event_desktop || ev.banner || b.featured_mobile || b.event_mobile);
+          return hasImg;
         });
 
         // Merge local admin posters so newly created attractions appear immediately
