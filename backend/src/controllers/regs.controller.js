@@ -85,6 +85,7 @@ export async function createRegistration(req, res) {
     }
 
     const cleanTxnId = (txn_id || 'FREE-REGISTRATION').trim();
+    const isBypassTxn = cleanTxnId.toUpperCase() === 'FREE-REGISTRATION' || cleanTxnId.toUpperCase() === 'PAY-AT-VENUE';
 
     if (!supabase) {
       const localRegs = loadLocalRegs();
@@ -96,10 +97,11 @@ export async function createRegistration(req, res) {
       }
 
       // Check duplicate UPI transaction ID / UTR
-      if (cleanTxnId && cleanTxnId.toUpperCase() !== 'FREE-REGISTRATION') {
+      if (cleanTxnId && !isBypassTxn) {
         const txnExists = localRegs.find(
           (r) => r.txn_id &&
           r.txn_id.toUpperCase() !== 'FREE-REGISTRATION' &&
+          r.txn_id.toUpperCase() !== 'PAY-AT-VENUE' &&
           r.txn_id.toLowerCase().trim() === cleanTxnId.toLowerCase()
         );
         if (txnExists) {
@@ -158,7 +160,7 @@ export async function createRegistration(req, res) {
     }
 
     // Check duplicate UPI transaction ID / UTR (Supabase)
-    if (cleanTxnId && cleanTxnId.toUpperCase() !== 'FREE-REGISTRATION') {
+    if (cleanTxnId && !isBypassTxn) {
       const { data: existingTxn } = await supabase
         .from('registrations')
         .select('id')

@@ -717,7 +717,10 @@ function renderEvent(ev) {
 
   let curData     = null;
   const feeRaw    = String(ev.fee || '').trim();
-  const isFreeEvent = /free|^₹?0$/i.test(feeRaw);
+  const isPayAtVenue = (ev.type && ev.type.trim().toLowerCase() === 'pay at venue') ||
+                       /pay\s+at\s+venue/i.test(ev.type || '') ||
+                       /pay\s+at\s+venue/i.test(feeRaw);
+  const isFreeEvent = !isPayAtVenue && /free|^₹?0$/i.test(feeRaw);
   let isProcessing = false;
   let conflictConfirmed = false;
 
@@ -923,7 +926,14 @@ function renderEvent(ev) {
     $('#m-title').innerHTML = formatTitleSpan(ev.title);
 
     const feeDisp = $('#m-fee-display');
-    if (feeDisp) feeDisp.textContent = ev.fee || 'Free';
+    if (feeDisp) {
+      if (isPayAtVenue) {
+        const feeStr = ev.fee && !/free/i.test(ev.fee) ? ev.fee : '';
+        feeDisp.textContent = feeStr ? `${feeStr} (Pay at Venue)` : 'Pay at Venue';
+      } else {
+        feeDisp.textContent = ev.fee || 'Free';
+      }
+    }
     const teamDisp = $('#m-team-display');
     if (teamDisp) teamDisp.textContent = ev.team > 1 ? `Team of ${ev.team}` : 'Individual';
 
@@ -937,13 +947,20 @@ function renderEvent(ev) {
     if (subBtn) {
       subBtn.disabled = false;
       subBtn.style.display = '';
-      subBtn.textContent = isFreeEvent ? 'Complete Free Registration ✓' : 'Proceed to Payment →';
+      if (isFreeEvent) {
+        subBtn.textContent = 'Complete Free Registration ✓';
+      } else if (isPayAtVenue) {
+        subBtn.textContent = 'Confirm Registration (Pay at Venue) ✓';
+      } else {
+        subBtn.textContent = 'Proceed to Payment →';
+      }
     }
 
+    const hidePaymentStep = isFreeEvent || isPayAtVenue;
     const dot2 = $('#step-dot-2');
     const line2 = $('#step-line-2');
-    if (dot2) dot2.style.display = isFreeEvent ? 'none' : 'flex';
-    if (line2) line2.style.display = isFreeEvent ? 'none' : 'block';
+    if (dot2) dot2.style.display = hidePaymentStep ? 'none' : 'flex';
+    if (line2) line2.style.display = hidePaymentStep ? 'none' : 'block';
 
     setStep(1);
     modal.classList.add('open');
@@ -1043,7 +1060,7 @@ function renderEvent(ev) {
     proceedAfterDetails();
 
     async function proceedAfterDetails() {
-      if (isFreeEvent) {
+      if (isFreeEvent || isPayAtVenue) {
         const subBtn = $('#sub');
         isProcessing = true;
         if (mx) mx.classList.add('disabled');
@@ -1053,7 +1070,7 @@ function renderEvent(ev) {
         }
         try {
           await new Promise((r) => setTimeout(r, 1000));
-          await finalizeRegistration('FREE-REGISTRATION');
+          await finalizeRegistration(isPayAtVenue ? 'PAY-AT-VENUE' : 'FREE-REGISTRATION');
         } catch (submitErr) {
           err.textContent = submitErr.message || 'Registration failed. Please try again.';
         } finally {
@@ -1061,7 +1078,7 @@ function renderEvent(ev) {
           if (mx) mx.classList.remove('disabled');
           if (subBtn) {
             subBtn.disabled = false;
-            subBtn.textContent = 'Complete Free Registration ✓';
+            subBtn.textContent = isPayAtVenue ? 'Confirm Registration (Pay at Venue) ✓' : 'Complete Free Registration ✓';
           }
         }
       } else {
@@ -1163,6 +1180,7 @@ function renderEvent(ev) {
       const isTxnUsed = readLocalRegs().some((r) =>
         r.txnId &&
         r.txnId.toUpperCase() !== 'FREE-REGISTRATION' &&
+        r.txnId.toUpperCase() !== 'PAY-AT-VENUE' &&
         r.txnId.toLowerCase().trim() === cleanTxn.toLowerCase()
       );
       if (isTxnUsed) {
@@ -1280,11 +1298,21 @@ function renderEvent(ev) {
     const ta = $('#ticket-amount');
     if (ta) ta.textContent = rec.fee;
     const ttx = $('#ticket-txnid');
-    if (ttx) ttx.textContent = rec.txnId;
+    if (ttx) {
+      if (rec.txnId === 'PAY-AT-VENUE') {
+        ttx.textContent = 'Pay at Venue Desk';
+      } else {
+        ttx.textContent = rec.txnId;
+      }
+    }
 
     const okMsg = $('#ok-msg');
     if (okMsg) {
-      okMsg.innerHTML = `Registered for ${formatTitleSpan(ev.title)} on ${esc(ev.date)} at ${esc(ev.time)} in ${esc(ev.venue)}.`;
+      if (rec.txnId === 'PAY-AT-VENUE') {
+        okMsg.innerHTML = `Registration confirmed for ${formatTitleSpan(ev.title)}! Please pay ${esc(rec.fee || 'the entry fee')} at the event venue desk on arrival.`;
+      } else {
+        okMsg.innerHTML = `Registered for ${formatTitleSpan(ev.title)} on ${esc(ev.date)} at ${esc(ev.time)} in ${esc(ev.venue)}.`;
+      }
     }
 
     const waLink = (ev.whatsapp_group || ev.whatsappGroup || '').trim();

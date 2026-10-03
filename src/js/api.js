@@ -314,7 +314,8 @@ export async function submitRegistration(payload) {
 
       // Check duplicate UPI transaction ID / UTR
       const cleanTxn = (payload.txn_id || '').trim();
-      if (cleanTxn && cleanTxn.toUpperCase() !== 'FREE-REGISTRATION') {
+      const isBypassTxn = cleanTxn.toUpperCase() === 'FREE-REGISTRATION' || cleanTxn.toUpperCase() === 'PAY-AT-VENUE';
+      if (cleanTxn && !isBypassTxn) {
         const { data: existingTxn } = await supabaseClient
           .from('registrations')
           .select('id')

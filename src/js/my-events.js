@@ -338,6 +338,7 @@ export function initMyEvents() {
             `<dt>Where</dt><dd>${esc(r.venue || 'Campus')}</dd>` +
             (r.college ? `<dt>College</dt><dd>${esc(r.college)}</dd>` : '') +
             (r.team ? `<dt>Team</dt><dd>${esc(r.team)}</dd>` : '') +
+            (r.txnId === 'PAY-AT-VENUE' ? `<dt>Payment</dt><dd style="color:var(--gold);font-weight:600">Pay at Venue Desk (${esc(r.fee || 'Entry Fee')})</dd>` : '') +
           `</dl>` +
           `<div class="foot">` +
             `<span class="rid">${esc(r.regId)}</span>` +

@@ -184,7 +184,7 @@ function renderStats() {
   }
 
   // Verified UPI Transactions
-  const verifiedCount = allRegistrations.filter(r => r.txnid && r.txnid.trim().length >= 6).length;
+  const verifiedCount = allRegistrations.filter(r => r.txnid && r.txnid.trim().length >= 6 && r.txnid !== 'FREE-REGISTRATION' && r.txnid !== 'PAY-AT-VENUE').length;
   $('stat-verified').textContent = verifiedCount;
 }
 
@@ -209,7 +209,12 @@ function renderTable() {
     const tr = document.createElement('tr');
 
     const formattedDate = formatDateTime(r.regTime);
-    const txnBadge = r.txnid
+    const isPayVenue = r.txnid === 'PAY-AT-VENUE' || (r.fee && /pay\s+at\s+venue/i.test(r.fee));
+    const txnBadge = isPayVenue
+      ? `<span class="txn-pill" style="background:rgba(217,119,6,0.18);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)" title="Entry fee to be collected at venue desk">Pay at Venue</span>`
+      : r.txnid === 'FREE-REGISTRATION'
+      ? `<span class="txn-pill" style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.3)" title="Free Entry">Free</span>`
+      : r.txnid
       ? `<span class="txn-pill" title="UPI Transaction ID">${esc(r.txnid)}</span>`
       : `<span style="opacity:0.4;font-size:11px">Pending / Cash</span>`;
 
@@ -296,7 +301,7 @@ function exportToExcel() {
     'Event Name': ev.title,
     'Department': ev.dept || ev.slug?.toUpperCase() || 'Tantra 26',
     'Entry Fee': r.fee || ev.fee || 'Free',
-    'UPI Transaction ID / UTR': r.txnid || 'N/A',
+    'UPI Transaction ID / UTR': r.txnid === 'PAY-AT-VENUE' ? 'Pay at Venue' : (r.txnid || 'N/A'),
     'Registration Timestamp': r.regTime,
   }));
 

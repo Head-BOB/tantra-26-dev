@@ -1310,8 +1310,8 @@ export function initDashboard(ev, onSignOut = null) {
   $('#export').onclick = () => {
     if (!regs.length) return toast('There are no registrations to export yet.', true);
     const rows = [
-      ['#', 'Name', 'College', 'Email', 'Phone', 'Team members', 'Reg ID', 'Registered at'],
-    ].concat(regs.map((r, i) => [i + 1, r.name, r.college, r.email, r.phone, r.team || '', r.regId, fmt(r.regTime)]));
+      ['#', 'Name', 'College', 'Email', 'Phone', 'Team members', 'Reg ID', 'Payment / Txn', 'Registered at'],
+    ].concat(regs.map((r, i) => [i + 1, r.name, r.college, r.email, r.phone, r.team || '', r.regId, r.txnid === 'PAY-AT-VENUE' ? 'Pay at Venue' : (r.txnid || 'Free'), fmt(r.regTime)]));
 
     const u = URL.createObjectURL(makeXlsx(rows));
     const a = document.createElement('a');

@@ -1069,7 +1069,7 @@ function renderDeptRegistrations(query = '') {
       <td>${esc(r.event || '—')}</td>
       <td>${esc(r.fee || 'Free')}</td>
       <td>
-        ${r.txnId ? `<span class="txn-badge" title="UPI Transaction ID">${esc(r.txnId)}</span>` : '<span style="color:rgba(239,232,218,.35)">Free / None</span>'}
+        ${r.txnId === 'PAY-AT-VENUE' ? '<span class="txn-badge" style="background:rgba(217,119,6,0.2);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)">Pay at Venue</span>' : r.txnId === 'FREE-REGISTRATION' ? '<span class="txn-badge" style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.3)">Free</span>' : r.txnId ? `<span class="txn-badge" title="UPI Transaction ID">${esc(r.txnId)}</span>` : '<span style="color:rgba(239,232,218,.35)">Free / None</span>'}
       </td>
       <td>
         <span style="font-size:12px">${esc(r.phone || '—')}</span><br>
@@ -1285,7 +1285,7 @@ function renderCentralRegs() {
   let paidCount = 0;
   allRegs.forEach(r => {
     if (r.college) colleges.add(r.college.toLowerCase());
-    if (r.txnId && r.txnId !== 'FREE-REGISTRATION') paidCount++;
+    if (r.txnId && r.txnId !== 'FREE-REGISTRATION' && r.txnId !== 'PAY-AT-VENUE') paidCount++;
   });
 
   $('master-stats-row').innerHTML = `
@@ -1337,7 +1337,7 @@ function renderCentralRegs() {
       <td><span class="badge" style="background:rgba(255,255,255,.1);text-transform:uppercase">${esc(r.slug || '—')}</span></td>
       <td>${esc(r.fee || 'Free')}</td>
       <td>
-        ${r.txnId ? `<span class="txn-badge" title="UPI Transaction ID">${esc(r.txnId)}</span>` : '<span style="color:rgba(239,232,218,.35)">Free / None</span>'}
+        ${r.txnId === 'PAY-AT-VENUE' ? '<span class="txn-badge" style="background:rgba(217,119,6,0.2);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)">Pay at Venue</span>' : r.txnId === 'FREE-REGISTRATION' ? '<span class="txn-badge" style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.3)">Free</span>' : r.txnId ? `<span class="txn-badge" title="UPI Transaction ID">${esc(r.txnId)}</span>` : '<span style="color:rgba(239,232,218,.35)">Free / None</span>'}
       </td>
       <td>
         <span style="font-size:12px">${esc(r.phone || '—')}</span><br>
@@ -2138,7 +2138,7 @@ function exportToExcel(slug, eventIdentifier = 'all') {
     'Event Title': r.event || (eventObj ? eventObj.title : ''),
     'Entry Fee': r.fee || 'Free',
     'Team Members': r.team || 'Individual',
-    'UPI Transaction ID / UTR': r.txnId || 'N/A',
+    'UPI Transaction ID / UTR': r.txnId === 'PAY-AT-VENUE' ? 'Pay at Venue' : (r.txnId || 'N/A'),
     'Registration Timestamp': r.time ? new Date(r.time).toLocaleString('en-IN') : '',
   }));
 
