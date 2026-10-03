@@ -24,6 +24,7 @@ import {
   fetchAllDeptPayments,
   sanitizePersonalRegistrations,
   apiSetEventFeatured,
+  apiFetchSpecialAttractions,
 } from './api.js';
 import { generateRandomCode, generateUniqueAccessCode, getEventAccessCode } from './access-code.js';
 import { SlopGuard } from './slop-guard.js';
@@ -330,6 +331,7 @@ function showApp() {
 
   // Sync all departments from cloud in background to populate badges
   DEPTS.forEach(d => syncDeptDataFromCloud(d.slug));
+  syncCentralPostersFromCloud();
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────
@@ -1122,6 +1124,7 @@ function bindCentralAdminViews() {
       $('view-central-posters').hidden = false;
       refreshSidebar();
       renderCentralPosters();
+      syncCentralPostersFromCloud();
     };
   }
 
@@ -1667,27 +1670,62 @@ let currentPosterMobImg = '';
 
 function getAllShowcasePosters() {
   const adminEvents = getAdminEvents();
+  const dedicated = load('tantra26:admin:showcase_posters', []);
   const posters = [];
   const seen = new Set();
 
-  const centralList = adminEvents['central'] || [];
-  centralList.forEach(e => {
-    if (e && (e.display_only || e.displayOnly || e.dept_slug === 'central')) {
+  const add = (e) => {
+    if (!e || !e.id || seen.has(e.id)) return;
+    if (e.display_only || e.displayOnly || e.dept_slug === 'central' || e.type === 'Special Attraction') {
       posters.push(e);
       seen.add(e.id);
     }
-  });
+  };
+
+  (adminEvents['central'] || []).forEach(add);
+  dedicated.forEach(add);
 
   Object.keys(adminEvents).forEach(slug => {
-    (adminEvents[slug] || []).forEach(e => {
-      if (e && (e.display_only || e.displayOnly) && !seen.has(e.id)) {
-        posters.push(e);
-        seen.add(e.id);
-      }
-    });
+    (adminEvents[slug] || []).forEach(add);
   });
 
   return posters;
+}
+
+function updateShowcaseBadge() {
+  if ($('central-posters-badge')) {
+    const posters = getAllShowcasePosters();
+    $('central-posters-badge').textContent = posters.length > 0 ? posters.length : 'Ad';
+  }
+}
+
+let isSyncingCentral = false;
+async function syncCentralPostersFromCloud() {
+  if (isSyncingCentral) return;
+  isSyncingCentral = true;
+  try {
+    const cloudAttractions = await apiFetchSpecialAttractions();
+    if (cloudAttractions && Array.isArray(cloudAttractions)) {
+      const adminEvents = getAdminEvents();
+      const existing = [
+        ...(adminEvents['central'] || []),
+        ...load('tantra26:admin:showcase_posters', []),
+      ];
+      const map = new Map();
+      existing.forEach(p => { if (p && p.id) map.set(p.id, p); });
+      cloudAttractions.forEach(p => { if (p && p.id) map.set(p.id, p); });
+      const merged = Array.from(map.values());
+      adminEvents['central'] = merged;
+      setAdminEvents(adminEvents);
+      save('tantra26:admin:showcase_posters', merged);
+      renderCentralPosters();
+      updateShowcaseBadge();
+    }
+  } catch (err) {
+    console.warn('Could not sync central posters from cloud:', err);
+  } finally {
+    isSyncingCentral = false;
+  }
 }
 
 function renderCentralPosters() {
@@ -1697,6 +1735,7 @@ function renderCentralPosters() {
   grid.innerHTML = '';
 
   const posters = getAllShowcasePosters();
+  updateShowcaseBadge();
   if (posters.length === 0) {
     if (empty) empty.hidden = false;
     return;
@@ -1923,6 +1962,7 @@ function bindPosterModal() {
     // Async save to cloud database
     apiSaveEvent(posterObj).then(() => {
       toast('Poster synced to database ✓', 'info');
+      syncCentralPostersFromCloud();
     }).catch(err => {
       console.warn('apiSaveEvent poster warning:', err);
     });
@@ -1932,21 +1972,34 @@ function bindPosterModal() {
 async function deleteShowcasePoster(poster) {
   if (!confirm(`Are you sure you want to delete the showcase poster "${poster.title}"?`)) return;
 
+  const id = poster.id;
+
+  // 1. Immediately prune from local storage
   const adminEvents = getAdminEvents();
   if (adminEvents['central']) {
-    adminEvents['central'] = adminEvents['central'].filter(x => x.id !== poster.id);
+    adminEvents['central'] = adminEvents['central'].filter(x => x.id !== id);
   }
   Object.keys(adminEvents).forEach(s => {
-    adminEvents[s] = (adminEvents[s] || []).filter(x => x.id !== poster.id);
+    adminEvents[s] = (adminEvents[s] || []).filter(x => x.id !== id);
   });
   setAdminEvents(adminEvents);
+  save('tantra26:admin:showcase_posters', load('tantra26:admin:showcase_posters', []).filter(x => x.id !== id));
   try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
 
   toast(`Deleted "${poster.title}"`);
   renderCentralPosters();
+  updateShowcaseBadge();
   updateRegsBadge();
 
-  apiDeleteEvent(poster.id).catch(console.error);
+  // 2. Delete from cloud database
+  try {
+    await apiDeleteEvent(id);
+  } catch (err) {
+    console.error('Delete poster failed:', err);
+  }
+
+  // 3. Confirm cloud synchronization
+  await syncCentralPostersFromCloud();
 }
 
 function getDepartmentEventsList(slug) {

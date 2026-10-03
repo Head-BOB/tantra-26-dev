@@ -168,16 +168,21 @@ function gatherAllEvents() {
   const results = [];
   const seenIds = new Set();
 
+  const deletedMap = JSON.parse(localStorage.getItem(DEL_EV_KEY) || '{}');
+  const globalDel = new Set(JSON.parse(localStorage.getItem('tantra26:deleted_events') || '[]'));
+  Object.values(deletedMap).forEach(arr => {
+    if (Array.isArray(arr)) arr.forEach(id => globalDel.add(id));
+  });
+
+  const isDeleted = (id) => !id || globalDel.has(id);
+
   // 1. Admin local events
   try {
     const adminEvents = JSON.parse(localStorage.getItem(ADMIN_EV_KEY) || '{}');
-    const deletedMap = JSON.parse(localStorage.getItem(DEL_EV_KEY) || '{}');
-
     Object.entries(adminEvents).forEach(([deptSlug, list]) => {
-      const deleted = deletedMap[deptSlug] || [];
       if (Array.isArray(list)) {
         list.forEach(ev => {
-          if (!deleted.includes(ev.id)) {
+          if (ev && ev.id && !isDeleted(ev.id) && ev.is_active !== false) {
             const code = (ev.accessCode || ev.access_code || getEventAccessCode(ev)).toUpperCase();
             results.push({ ...ev, dept_slug: deptSlug, slug: ev.slug || deptSlug, accessCode: code });
             seenIds.add(ev.id);
@@ -191,7 +196,7 @@ function gatherAllEvents() {
   try {
     const evMap = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
     Object.values(evMap).forEach(ev => {
-      if (ev && ev.id && !seenIds.has(ev.id)) {
+      if (ev && ev.id && !seenIds.has(ev.id) && !isDeleted(ev.id) && ev.is_active !== false) {
         const code = (ev.accessCode || ev.access_code || ev.code || getEventAccessCode(ev)).toUpperCase();
         results.push({ ...ev, accessCode: code });
         seenIds.add(ev.id);
@@ -202,7 +207,7 @@ function gatherAllEvents() {
   // 3. Static catalog events
   const staticEvents = getAllEvents();
   staticEvents.forEach(ev => {
-    if (!seenIds.has(ev.id)) {
+    if (ev && ev.id && !seenIds.has(ev.id) && !isDeleted(ev.id)) {
       const code = (ev.accessCode || ev.access_code || getEventAccessCode(ev)).toUpperCase();
       results.push({ ...ev, accessCode: code });
       seenIds.add(ev.id);
@@ -324,7 +329,7 @@ if (formEl) {
       // If not found in local memory or static files, fetch live from Supabase
       if (!matched) {
         const cloudEvent = await apiFetchEventByCode(code);
-        if (cloudEvent) {
+        if (cloudEvent && cloudEvent.is_active !== false && !cloudEvent.is_deleted) {
           matched = cloudEvent;
         }
       }

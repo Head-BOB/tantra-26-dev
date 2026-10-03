@@ -102,11 +102,24 @@ function loadEventByCode(rawCode) {
   if (!rawCode) return null;
   const code = rawCode.trim().toUpperCase();
 
+  const isDeleted = (id) => {
+    if (!id) return false;
+    try {
+      const delEvents = JSON.parse(localStorage.getItem(DEL_EV_KEY) || '{}');
+      for (const s in delEvents) {
+        if (Array.isArray(delEvents[s]) && delEvents[s].includes(id)) return true;
+      }
+      const globalDel = JSON.parse(localStorage.getItem('tantra26:deleted_events') || '[]');
+      if (Array.isArray(globalDel) && globalDel.includes(id)) return true;
+    } catch {}
+    return false;
+  };
+
   // 1. Organiser records
   const s = readEvents();
   for (const k in s) {
     const item = s[k];
-    if (item) {
+    if (item && item.id && !isDeleted(item.id)) {
       const c = (item.code || item.accessCode || '').toUpperCase();
       if (c === code) return item;
     }
@@ -121,7 +134,7 @@ function loadEventByCode(rawCode) {
       const dels = delEvents[slug] || [];
       for (let i = 0; i < list.length; i++) {
         const e = list[i];
-        if (dels.includes(e.id)) continue;
+        if (dels.includes(e.id) || isDeleted(e.id)) continue;
         const evCode = (e.accessCode || e.code || getEventAccessCode(e)).toUpperCase();
         if (evCode === code) {
           return {
@@ -154,6 +167,7 @@ function loadEventByCode(rawCode) {
   const staticList = getAllEvents();
   for (let j = 0; j < staticList.length; j++) {
     const se = staticList[j];
+    if (isDeleted(se.id)) continue;
     const seCode = (se.accessCode || se.code || getEventAccessCode(se)).toUpperCase();
     if (seCode === code) {
       return {

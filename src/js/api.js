@@ -564,7 +564,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         team_size: parseInt(eventData.team_size || eventData.team || 1, 10) || 1,
         fee: eventData.fee || 'Free',
         description: envelope,
-        access_code: accessCode,
+        access_code: accessCode || null,
         details,
         banner: banners.event_desktop || banner,
         banners,
@@ -615,7 +615,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
           team_size: parseInt(eventData.team_size || eventData.team || 1, 10) || 1,
           fee: eventData.fee || 'Free',
           description: envelope,
-          access_code: accessCode,
+          access_code: accessCode || null,
           is_active: true,
           updated_at: new Date().toISOString(),
         };
@@ -784,9 +784,10 @@ export async function apiFetchSingleEvent(slug, id) {
         .from('events')
         .select('*')
         .eq('id', id)
+        .eq('is_active', true)
         .maybeSingle();
 
-      if (!error && data) {
+      if (!error && data && data.is_active !== false) {
         const item = unpackEventRecord(data);
         if (item) {
           try {
@@ -816,7 +817,9 @@ export async function apiFetchSingleEvent(slug, id) {
 }
 
 export async function apiDeleteEvent(id) {
-  // Prune immediately from local storage keys
+  if (!id) return false;
+
+  // 1. Prune immediately from all local storage keys
   try {
     const regRaw = JSON.parse(localStorage.getItem('tantra26:registrations') || '[]');
     if (Array.isArray(regRaw)) {
@@ -832,14 +835,49 @@ export async function apiDeleteEvent(id) {
         localStorage.setItem('tantra26:admin:registrations', JSON.stringify(filteredAdmin));
       }
     }
+    const evMap = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
+    let evChanged = false;
+    Object.keys(evMap).forEach(k => {
+      if (k.endsWith(':' + id) || evMap[k]?.id === id) {
+        delete evMap[k];
+        evChanged = true;
+      }
+    });
+    if (evChanged) localStorage.setItem('tantra26:events', JSON.stringify(evMap));
+
+    const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
+    let aChanged = false;
+    Object.keys(adminEvents).forEach(k => {
+      if (Array.isArray(adminEvents[k])) {
+        const prevLen = adminEvents[k].length;
+        adminEvents[k] = adminEvents[k].filter(e => e && e.id !== id);
+        if (adminEvents[k].length !== prevLen) aChanged = true;
+      }
+    });
+    if (aChanged) localStorage.setItem('tantra26:admin:events', JSON.stringify(adminEvents));
+
+    const delList = JSON.parse(localStorage.getItem('tantra26:deleted_events') || '[]');
+    if (!delList.includes(id)) {
+      delList.push(id);
+      localStorage.setItem('tantra26:deleted_events', JSON.stringify(delList));
+    }
+
+    localStorage.removeItem('tantra26:cache:featured_events');
   } catch {}
 
+  // 2. Supabase deletion
   if (supabaseClient) {
     try {
       const { error } = await supabaseClient.from('events').delete().eq('id', id);
       if (error) {
-        console.warn('⚠️ Supabase hard-delete failed, trying soft-delete:', error.message);
-        await supabaseClient.from('events').update({ is_active: false }).eq('id', id);
+        console.warn('⚠️ Supabase hard-delete failed (foreign keys exist), applying full soft-delete:', error.message);
+        // Deactivate, remove from featured, and completely revoke access code
+        await supabaseClient.from('events').update({
+          is_active: false,
+          is_featured: false,
+          access_code: null,
+          description: JSON.stringify({ _meta: true, is_deleted: true, is_active: false })
+        }).eq('id', id);
       }
       return true;
     } catch (err) {
@@ -1131,7 +1169,7 @@ export async function apiFetchFeaturedEvents() {
         .from('events')
         .select('*')
         .eq('is_active', true)
-        .or('is_featured.eq.true,dept_slug.eq.central')
+        .or('is_featured.eq.true,type.eq.Special Attraction')
         .order('featured_order', { ascending: true });
 
       if (!error && data) {
@@ -1149,8 +1187,11 @@ export async function apiFetchFeaturedEvents() {
           const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
           const localPosters = adminEvents['central'] || [];
           localPosters.forEach(p => {
-            if (p && (p.is_featured || p.isFeatured) && !unpacked.some(x => x.id === p.id)) {
-              unpacked.push(p);
+            if (p && (p.is_featured || p.isFeatured || p.type === 'Special Attraction') && !unpacked.some(x => x.id === p.id)) {
+              const b = p.banners || {};
+              if (b.featured_desktop || b.event_desktop || p.banner || b.featured_mobile || b.event_mobile) {
+                unpacked.push(p);
+              }
             }
           });
         } catch {}
@@ -1181,22 +1222,20 @@ export async function apiFetchFeaturedEvents() {
   // Fallback to local storage admin events
   try {
     const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
-    const localEvents = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
     const list = [];
     const seen = new Set();
 
     const checkAndAdd = ev => {
       if (!ev || !ev.id || seen.has(ev.id)) return;
-      if (ev.is_featured || ev.isFeatured) {
+      if (ev.is_featured || ev.isFeatured || ev.type === 'Special Attraction') {
         const b = ev.banners || {};
-        if ((b.featured_desktop && b.featured_mobile) || (ev.display_only && (b.featured_desktop || ev.banner))) {
+        if ((b.featured_desktop && b.featured_mobile) || (ev.display_only && (b.featured_desktop || ev.banner)) || (b.featured_desktop || ev.banner)) {
           list.push(ev);
           seen.add(ev.id);
         }
       }
     };
 
-    for (const k in localEvents) checkAndAdd(localEvents[k]);
     for (const d in adminEvents) {
       (adminEvents[d] || []).forEach(checkAndAdd);
     }
@@ -1220,6 +1259,33 @@ export async function apiFetchFeaturedEvents() {
   } catch {}
 
   return cached;
+}
+
+/**
+ * Fetch all special attractions / showcase posters from Supabase or admin storage
+ */
+export async function apiFetchSpecialAttractions() {
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from('events')
+        .select('*')
+        .eq('is_active', true)
+        .eq('type', 'Special Attraction')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        return data.map(unpackEventRecord).filter(Boolean);
+      }
+    } catch (err) {
+      console.warn('⚠️ apiFetchSpecialAttractions error:', err);
+    }
+  }
+  try {
+    const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
+    return adminEvents['central'] || [];
+  } catch {}
+  return [];
 }
 
 /**

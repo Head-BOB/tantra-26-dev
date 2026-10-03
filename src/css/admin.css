@@ -527,9 +527,18 @@ h1,h2,h3 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; text-tran
   font-family: 'Anton', Impact, sans-serif; font-size: 13px; letter-spacing: .08em;
   color: var(--cream); background: rgba(0,0,0,.3); padding: 4px 8px; border-radius: 4px;
 }
-#regs-empty-state, #empty-state, #central-empty-state {
-  text-align: center; padding: 60px 20px; color: rgba(239,232,218,.4);
-  font-size: .95rem; line-height: 1.6;
+#regs-empty-state, #empty-state, #central-empty-state, #featured-empty-state, #posters-empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(239,232,218,.7);
+  font-size: .95rem;
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto;
+}
+#posters-empty-state p, #featured-empty-state p, #empty-state p, #regs-empty-state p, #central-empty-state p {
+  margin: 8px 0;
+  text-align: center;
 }
 .empty-state-icon {
   width: 64px; height: 64px; border-radius: 12px;

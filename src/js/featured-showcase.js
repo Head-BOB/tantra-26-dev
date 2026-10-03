@@ -93,14 +93,18 @@ export async function initFeaturedShowcase() {
     // 1. Fetch live featured events
     featuredEvents = (await apiFetchFeaturedEvents()) || [];
 
-    // 2. Always merge any local showcase posters / featured events from admin storage
+    // 2. Merge any local showcase posters from admin storage if available
     try {
       const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
-      const localEvents = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
+      const hasImg = (ev) => {
+        if (!ev) return false;
+        const b = ev.banners || {};
+        return Boolean(b.featured_desktop || b.event_desktop || ev.banner || b.featured_mobile || b.event_mobile);
+      };
 
       // Central showcase posters
       (adminEvents['central'] || []).forEach(p => {
-        if (p && (p.is_featured || p.isFeatured) && !featuredEvents.some(x => x.id === p.id)) {
+        if (p && (p.is_featured || p.isFeatured || p.type === 'Special Attraction') && hasImg(p) && !featuredEvents.some(x => x.id === p.id)) {
           featuredEvents.push(p);
         }
       });
@@ -108,19 +112,21 @@ export async function initFeaturedShowcase() {
       // Other admin featured events
       Object.keys(adminEvents).forEach(slug => {
         (adminEvents[slug] || []).forEach(e => {
-          if (e && (e.is_featured || e.isFeatured) && !featuredEvents.some(x => x.id === e.id)) {
+          if (e && (e.is_featured || e.isFeatured) && hasImg(e) && !featuredEvents.some(x => x.id === e.id)) {
             featuredEvents.push({ ...e, deptSlug: slug });
           }
         });
       });
-
-      // Organiser featured events
-      Object.values(localEvents).forEach(e => {
-        if (e && (e.is_featured || e.isFeatured) && !featuredEvents.some(x => x.id === e.id)) {
-          featuredEvents.push(e);
-        }
-      });
     } catch {}
+
+    // Strictly ensure only valid featured items with actual banners are displayed
+    featuredEvents = (featuredEvents || []).filter(e => {
+      if (!e) return false;
+      const b = e.banners || {};
+      const hasImg = Boolean(b.featured_desktop || b.event_desktop || e.banner || b.featured_mobile || b.event_mobile);
+      const isFeat = Boolean(e.is_featured || e.isFeatured || e.type === 'Special Attraction' || e.display_only);
+      return isFeat && hasImg;
+    });
   }
 
   // Ensure unique distinct order
@@ -219,31 +225,39 @@ export async function initFeaturedShowcase() {
   const fthumbs = [].slice.call(fth.children);
   const n = featuredEvents.length;
 
-  function fgo(i, anim) {
-    i = (i + n) % n;
-    if (i === fcur) return;
-    fslides.forEach((s, k) => {
-      s.classList.toggle('off', k === fcur);
-      s.classList.toggle('on', k === i);
-    });
-    fthumbs.forEach((t, k) => {
-      t.classList.toggle('on', k === i);
-    });
-    fst.classList.toggle('anim', !!anim);
-    if (anim) {
-      void fst.offsetWidth; // re-trigger animation
-    }
-    const t = fthumbs[i];
-    if (t) {
-      fth.scrollTo({
-        left: t.offsetLeft - fth.clientWidth / 2 + t.offsetWidth / 2,
-        behavior: 'smooth',
+    let animTimer = null;
+    function fgo(i, anim) {
+      i = (i + n) % n;
+      if (i === fcur) return;
+      fslides.forEach((s, k) => {
+        s.classList.toggle('off', k === fcur);
+        s.classList.toggle('on', k === i);
       });
+      fthumbs.forEach((t, k) => {
+        t.classList.toggle('on', k === i);
+      });
+      fst.classList.toggle('anim', !!anim);
+      if (anim) {
+        void fst.offsetWidth; // re-trigger animation
+        if (animTimer) clearTimeout(animTimer);
+        animTimer = setTimeout(() => {
+          fst.classList.remove('anim');
+          fslides.forEach((s, k) => {
+            if (k !== i) s.classList.remove('off');
+          });
+        }, 950);
+      }
+      const t = fthumbs[i];
+      if (t) {
+        fth.scrollTo({
+          left: t.offsetLeft - fth.clientWidth / 2 + t.offsetWidth / 2,
+          behavior: 'smooth',
+        });
+      }
+      fcur = i;
+      fprog = 0;
+      fcnt.textContent = (i < 9 ? '0' : '') + (i + 1) + ' / ' + (n < 10 ? '0' : '') + n;
     }
-    fcur = i;
-    fprog = 0;
-    fcnt.textContent = (i < 9 ? '0' : '') + (i + 1) + ' / ' + (n < 10 ? '0' : '') + n;
-  }
 
   // Initial state
   fgo(0, false);

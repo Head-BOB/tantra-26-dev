@@ -699,13 +699,26 @@ canvas {
   position: absolute;
   inset: 0;
   visibility: hidden;
+  opacity: 0;
+  background: #0d1527;
+  transition: opacity .4s ease, visibility .4s ease;
+  pointer-events: none;
 }
 .slide.on {
   visibility: visible;
+  opacity: 1;
   z-index: 2;
+  pointer-events: auto;
 }
 .slide.off {
+  visibility: hidden;
+  opacity: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.fstage.anim .slide.off {
   visibility: visible;
+  opacity: 1;
   z-index: 1;
 }
 .fstage.anim .slide.on {
