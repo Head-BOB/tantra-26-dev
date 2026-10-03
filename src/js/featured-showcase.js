@@ -282,8 +282,13 @@ export async function initFeaturedShowcase() {
   if (!isDemo) {
     apiFetchFeaturedEvents().then(liveEvents => {
       if (liveEvents && liveEvents.length > 0) {
-        const curKeys = currentEvents.map(e => (e.id || '') + ':' + (e.title || '')).join('|');
-        const liveKeys = liveEvents.map(e => (e.id || '') + ':' + (e.title || '')).join('|');
+        const keyFn = (e) => {
+          const b = e.banners || {};
+          const imgSig = (b.featured_desktop || b.event_desktop || e.banner || '').length;
+          return (e.id || '') + ':' + (e.title || '') + ':' + imgSig;
+        };
+        const curKeys = currentEvents.map(keyFn).join('|');
+        const liveKeys = liveEvents.map(keyFn).join('|');
         if (curKeys !== liveKeys) {
           renderSlides(liveEvents);
         }

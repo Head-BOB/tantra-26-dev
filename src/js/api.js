@@ -507,7 +507,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
 
   const duration = Math.max(10, parseInt(eventData.duration || 120, 10));
 
-  const validDepts = ['cse', 'cscy', 'ai', 'csd', 'csbs', 'eee', 'ece', 'aei', 'civil', 'mech'];
+  const validDepts = ['cse', 'cscy', 'ai', 'csd', 'csbs', 'eee', 'ece', 'aei', 'civil', 'mech', 'central'];
   let rawDept = (eventData.dept_slug || eventData.slug || 'cse').toLowerCase();
   let dbDept = validDepts.includes(rawDept) ? rawDept : 'cse';
   const eventDate = eventData.date || '7 Oct';
@@ -1201,7 +1201,7 @@ export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
         .from('events')
         .select('id, dept_slug, type, title, date, time, venue, fee, is_featured, featured_order, banner, banners, description, is_active, created_at')
         .eq('is_active', true)
-        .or('is_featured.eq.true,type.eq.Special Attraction,type.ilike.%attraction%,type.ilike.%showcase%')
+        .or('is_featured.eq.true,dept_slug.eq.central,type.eq.Special Attraction,type.ilike.%attraction%,type.ilike.%showcase%')
         .order('featured_order', { ascending: true });
 
       const timeoutPromise = new Promise((_, reject) =>
@@ -1304,7 +1304,7 @@ export async function apiFetchSpecialAttractions() {
         .from('events')
         .select('id, dept_slug, type, title, date, time, venue, fee, is_featured, featured_order, banner, banners, description, is_active, created_at')
         .eq('is_active', true)
-        .or('type.eq.Special Attraction,type.ilike.%attraction%,type.ilike.%showcase%')
+        .or('dept_slug.eq.central,type.eq.Special Attraction,type.ilike.%attraction%,type.ilike.%showcase%')
         .order('created_at', { ascending: false });
 
       const timeoutPromise = new Promise((_, reject) =>
