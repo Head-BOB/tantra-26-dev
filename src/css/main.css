@@ -358,10 +358,11 @@ canvas {
   color: var(--ink); background: var(--gold); padding: 11px 18px;
   border-radius: 3px; clip-path: polygon(4% 0,100% 6%,96% 100%,0 92%);
   transition: background .3s, gap .3s; display: inline-flex; gap: 6px;
+  text-decoration: none;
 }
 .btn b { font-weight: 700; transition: transform .3s; }
-.card:hover .btn { background: var(--cream); }
-.card:hover .btn b { transform: translateX(5px); }
+.card:hover .btn, .btn:hover { background: var(--cream); text-decoration: none; }
+.card:hover .btn b, .btn:hover b { transform: translateX(5px); }
 
 /* Carousel arrows & dots */
 .arrow {

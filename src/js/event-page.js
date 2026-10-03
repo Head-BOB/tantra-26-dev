@@ -375,58 +375,6 @@ if (!ev) {
   updateMetaTag('meta[name="twitter:description"]', 'content', metaDesc);
   if (bannerImg) updateMetaTag('meta[name="twitter:image"]', 'content', bannerImg);
 
-  // Toast notification for sharing
-  let toastTimer = null;
-  function showToast(msg) {
-    const t = $('#share-toast');
-    if (!t) return;
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
-  }
-
-  // Setup Share Buttons (Top Nav and Bottom Action Bar)
-  const shareBtn = $('#share-btn');
-  const barShareBtn = $('#bar-share-btn');
-  const deptParam = (ev.slug || ev.deptSlug || D[0] || '').toLowerCase();
-  const shareUrl = `${window.location.origin}/event?d=${encodeURIComponent(deptParam)}&e=${encodeURIComponent(ev.id)}`;
-
-  const handleShare = async () => {
-    const shareData = {
-      title: `${ev.title} · Tantra 26`,
-      text: `${ev.title} · Tantra 26`,
-      url: shareUrl,
-    };
-
-    if (navigator.share && /mobile|android|iphone|ipad/i.test(navigator.userAgent)) {
-      try {
-        await navigator.share(shareData);
-        return;
-      } catch (err) {
-        if (err.name === 'AbortError') return;
-      }
-    }
-
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-      } else {
-        const inp = document.createElement('input');
-        inp.value = shareUrl;
-        document.body.appendChild(inp);
-        inp.select();
-        document.execCommand('copy');
-        document.body.removeChild(inp);
-      }
-      showToast('Link copied to clipboard');
-    } catch {
-      prompt('Copy event link:', shareUrl);
-    }
-  };
-
-  if (shareBtn) shareBtn.onclick = handleShare;
-  if (barShareBtn) barShareBtn.onclick = handleShare;
 
   function formatTitleSpan(text) {
     const symRe = /([µμΩωπΠλΛθΘαβγδΔσΣ∞≈≠≤≥±√∫°])/g;
