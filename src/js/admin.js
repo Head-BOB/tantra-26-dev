@@ -184,23 +184,16 @@ function allEventsFor(slug) {
   const admin = getAdminEvents()[slug] || [];
   const deleted = getDeletedEvents()[slug] || [];
 
-  const base = (STATIC_EVENTS[slug] || [])
-    .filter(e => !deleted.includes(e.id))
-    .map(e => {
-      const override = admin.find(a => a.id === e.id);
-      const ev = override ? { ...e, ...override, date: '7 Oct', _source: 'admin' } : { ...e, date: '7 Oct', _source: 'default' };
-      return { ...ev, accessCode: getEventAccessCode(ev) };
-    });
+  if (admin.length > 0) {
+    return admin
+      .filter(a => !deleted.includes(a.id))
+      .map(e => {
+        const ev = { ...e, date: '7 Oct', _source: 'admin' };
+        return { ...ev, accessCode: e.accessCode || e.access_code || getEventAccessCode(ev) };
+      });
+  }
 
-  const custom = admin
-    .filter(a => !STATIC_EVENTS[slug]?.some(s => s.id === a.id))
-    .filter(a => !deleted.includes(a.id))
-    .map(e => {
-      const ev = { ...e, date: '7 Oct', _source: 'admin' };
-      return { ...ev, accessCode: getEventAccessCode(ev) };
-    });
-
-  return [...base, ...custom];
+  return [];
 }
 function allCoordsFor(slug) {
   const stored = getAdminCoords()[slug];
@@ -482,8 +475,8 @@ async function syncDeptDataFromCloud(slug) {
         fee: e.fee,
         desc: e.description || e.desc || '',
         details: e.details || '',
-        banner: e.banner || '',
-        banners: e.banners || {},
+        banner: (typeof e.banner === 'string' && e.banner.startsWith('data:')) ? '' : (e.banner || ''),
+        banners: (e.banners && typeof e.banners === 'object') ? Object.fromEntries(Object.entries(e.banners).filter(([_, v]) => typeof v === 'string' && !v.startsWith('data:'))) : {},
         is_featured: Boolean(e.is_featured),
         featured_order: parseInt(e.featured_order, 10) || 1,
         prizes: e.prizes || [],

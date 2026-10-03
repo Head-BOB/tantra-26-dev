@@ -34,29 +34,50 @@ export function initDeptPage(CONFIG, EVENTS) {
     }
   })();
 
-  // Prefer the localStorage admin cache (real Supabase data from previous visits)
-  // over the stale static EVENTS files (which only have placeholder entries).
-  // This prevents users from seeing wrong event counts on first render.
+  const DEPT_CACHE_KEY = 'tantra26:cache:dept_events:' + CONFIG.slug;
+
+  function sanitizeForCache(eventsList) {
+    return (eventsList || []).map(e => {
+      const copy = { ...e };
+      if (typeof copy.banner === 'string' && copy.banner.startsWith('data:')) {
+        copy.banner = '';
+      }
+      if (copy.banners && typeof copy.banners === 'object') {
+        const b = {};
+        for (const k in copy.banners) {
+          if (typeof copy.banners[k] === 'string' && !copy.banners[k].startsWith('data:')) {
+            b[k] = copy.banners[k];
+          }
+        }
+        copy.banners = b;
+      }
+      return copy;
+    });
+  }
+
+  // Load real cached events from localStorage (available on repeat visits & refresh)
+  const cachedDeptEvents = (() => {
+    try {
+      const raw = localStorage.getItem(DEPT_CACHE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    if (adminEvents && adminEvents.length > 0) {
+      return adminEvents;
+    }
+    return null;
+  })();
+
   let allEvents = (() => {
-    // If we have a real cached list from a prior Supabase sync, use it directly
-    if (adminEvents.length > 0) {
-      return adminEvents
-        .filter(a => !deletedEvents.includes(a.id))
+    if (cachedDeptEvents && cachedDeptEvents.length > 0) {
+      return cachedDeptEvents
+        .filter(e => !deletedEvents.includes(e.id))
         .map(e => ({ ...e, date: '7 Oct' }));
     }
-    // Otherwise fall back to static data + admin overrides
-    const base = EVENTS
-      .filter(e => !deletedEvents.includes(e.id))
-      .map(e => {
-        const override = adminEvents.find(a => a.id === e.id);
-        if (override) return { ...e, ...override, date: '7 Oct' };
-        return { ...e, date: '7 Oct' };
-      });
-    const custom = adminEvents
-      .filter(a => !EVENTS.some(s => s.id === a.id))
-      .filter(a => !deletedEvents.includes(a.id))
-      .map(e => ({ ...e, date: '7 Oct' }));
-    return [...base, ...custom];
+    // Brand new visitor: start empty so shimmer skeleton is shown while real data loads in ~0.5s
+    return [];
   })();
 
   let coordinators = (() => {
@@ -206,18 +227,28 @@ export function initDeptPage(CONFIG, EVENTS) {
   // ---- Live async sync from backend / Supabase — always authoritative ----
   fetchDeptEvents(CONFIG.slug).then((backendEvents) => {
     if (backendEvents && Array.isArray(backendEvents) && backendEvents.length > 0) {
+      const cleanEvents = sanitizeForCache(backendEvents);
       // Apply deleted-events filter from localStorage to the live Supabase data too
-      const filtered = backendEvents.filter(e => !deletedEvents.includes(e.id));
-      allEvents = filtered.map(e => ({ ...e, date: '7 Oct' }));
-      updateChipsAndFilters();
-      draw();
+      const filtered = cleanEvents.filter(e => !deletedEvents.includes(e.id));
+      const nextEvents = filtered.map(e => ({ ...e, date: '7 Oct' }));
+
+      // Only re-draw if there is an actual difference from what is currently rendered
+      const currentSig = allEvents.map(e => `${e.id}:${e.fee}:${e.title}:${e.time}:${e.venue}`).join('|');
+      const nextSig = nextEvents.map(e => `${e.id}:${e.fee}:${e.title}:${e.time}:${e.venue}`).join('|');
+      if (allEvents.length === 0 || currentSig !== nextSig) {
+        allEvents = nextEvents;
+        updateChipsAndFilters();
+        draw();
+      }
       try {
+        localStorage.setItem(DEPT_CACHE_KEY, JSON.stringify(cleanEvents));
+
         const store = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
-        store[CONFIG.slug] = backendEvents;
+        store[CONFIG.slug] = cleanEvents;
         localStorage.setItem('tantra26:admin:events', JSON.stringify(store));
 
         const evStore = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
-        backendEvents.forEach((bev) => {
+        cleanEvents.forEach((bev) => {
           if (bev && bev.id) {
             evStore[(bev.slug || CONFIG.slug) + ':' + bev.id] = bev;
             evStore[bev.id] = bev;
@@ -230,7 +261,7 @@ export function initDeptPage(CONFIG, EVENTS) {
       try {
         const regRaw = JSON.parse(localStorage.getItem('tantra26:registrations') || '[]');
         if (Array.isArray(regRaw)) {
-          const backendEventIds = new Set(backendEvents.map(e => e.id));
+          const backendEventIds = new Set(cleanEvents.map(e => e.id));
           const updatedRegs = regRaw.filter(r => {
             if ((r.slug || r.dept_slug || '').toLowerCase() === CONFIG.slug.toLowerCase()) {
               return backendEventIds.has(r.eventId || r.event_id || r.id);
@@ -243,7 +274,9 @@ export function initDeptPage(CONFIG, EVENTS) {
         }
       } catch {}
     } else if (allEvents.length === 0) {
-      // Supabase returned nothing and we have no cached data — show empty state
+      // Supabase returned nothing and we have no cached data — fallback to static if available
+      allEvents = EVENTS.filter(e => !deletedEvents.includes(e.id)).map(e => ({ ...e, date: '7 Oct' }));
+      updateChipsAndFilters();
       draw();
     }
   });

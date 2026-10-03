@@ -169,6 +169,19 @@ function loadEvent(slug, id) {
     }
   } catch {}
 
+  // 1.5. Department fast cache
+  try {
+    const dSlug = (slug || '').toLowerCase();
+    if (dSlug) {
+      const deptList = JSON.parse(localStorage.getItem('tantra26:cache:dept_events:' + dSlug) || '[]');
+      const found = deptList.find((x) => x.id === targetId);
+      if (found) {
+        found.prizes = found.prizes || [];
+        return { slug: dSlug, ...found };
+      }
+    }
+  } catch {}
+
   // 2. Admin dashboard saved events
   try {
     const adminEvents = JSON.parse(localStorage.getItem(ADMIN_EV_KEY) || '{}');
