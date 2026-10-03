@@ -1720,6 +1720,14 @@ async function syncCentralPostersFromCloud() {
       save('tantra26:admin:showcase_posters', merged);
       renderCentralPosters();
       updateShowcaseBadge();
+
+      // Auto-sync any local-only posters (like an autoshow poster saved previously) up to the cloud
+      const cloudIds = new Set(cloudAttractions.map(c => c && c.id));
+      for (const p of existing) {
+        if (p && p.id && !cloudIds.has(p.id) && (p.title || '').trim()) {
+          apiSaveEvent(p).catch(e => console.warn('Auto-sync to cloud failed for poster:', p.id, e));
+        }
+      }
     }
   } catch (err) {
     console.warn('Could not sync central posters from cloud:', err);
@@ -1788,7 +1796,7 @@ function renderCentralPosters() {
   });
 }
 
-function compressPosterImage(file, maxDim = 1200, quality = 0.75) {
+function compressPosterImage(file, maxDim = 1080, quality = 0.70) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -1986,7 +1994,7 @@ function bindPosterModal() {
       closePosterModal();
     } catch (err) {
       console.warn('apiSaveEvent poster warning:', err);
-      toast('Poster saved locally ✓ (Cloud sync will retry)', 'info');
+      toast('Saved locally (Cloud: ' + (err.message || 'will retry') + ')', 'info');
       closePosterModal();
     } finally {
       if (submitBtn) {

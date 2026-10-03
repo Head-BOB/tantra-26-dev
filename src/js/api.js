@@ -514,6 +514,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
 
   if (supabaseClient) {
     try {
+      const isShowcase = Boolean(eventData.display_only || eventData.displayOnly || dbDept === 'central' || eventData.type === 'Special Attraction');
       const envelope = JSON.stringify({
         _meta: true,
         dept_slug: rawDept,
@@ -525,8 +526,9 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         accessCode,
         duration,
         fee: eventData.fee || 'Free',
-        banner: banners.event_desktop || banner,
-        banners,
+        // For showcase posters, do NOT duplicate massive base64 inside the envelope text!
+        banner: isShowcase ? '' : (banners.event_desktop || banner),
+        banners: isShowcase ? {} : banners,
         is_featured,
         featured_order,
         steps,
@@ -549,6 +551,17 @@ export async function apiSaveEvent(eventData, isEdit = false) {
           localStorage.removeItem('tantra26:cache:dept_events:' + rawDept);
           localStorage.removeItem('tantra26:cache:dept_events:' + dbDept);
         } catch {}
+      };
+
+      // Helper to update dedicated showcase vault in department_payments
+      const syncToVault = async (evObj) => {
+        if (isShowcase) {
+          try {
+            await apiSaveToShowcaseVault(evObj);
+          } catch (vErr) {
+            console.warn('⚠️ Vault sync warning:', vErr);
+          }
+        }
       };
 
       // 1. First attempt: Native schema columns that exist in Postgres table
@@ -582,6 +595,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
       let { data, error } = await supabaseClient.from('events').upsert([nativeRecord]).select().single();
       if (!error && data) {
         invalidateCaches();
+        await syncToVault(eventData);
         return unpackEventRecord(data);
       }
 
@@ -598,6 +612,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         const resNoCols = await supabaseClient.from('events').upsert([fallbackNative]).select().single();
         if (!resNoCols.error && resNoCols.data) {
           invalidateCaches();
+          await syncToVault(eventData);
           return unpackEventRecord(resNoCols.data);
         }
         error = resNoCols.error;
@@ -623,6 +638,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         let { data: fbData, error: fbErr } = await supabaseClient.from('events').upsert([fallbackRecord]).select().single();
         if (!fbErr && fbData) {
           invalidateCaches();
+          await syncToVault(eventData);
           return unpackEventRecord(fbData);
         }
 
@@ -632,17 +648,31 @@ export async function apiSaveEvent(eventData, isEdit = false) {
           const { data: fbData2, error: fbErr2 } = await supabaseClient.from('events').upsert([fallbackRecord]).select().single();
           if (!fbErr2 && fbData2) {
             try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
+            await syncToVault(eventData);
             return unpackEventRecord(fbData2);
           }
-          if (fbErr2) console.warn('⚠️ Supabase fallback event save error:', fbErr2.message);
+          if (fbErr2) error = fbErr2;
         } else if (fbErr) {
-          console.warn('⚠️ Supabase fallback event save error:', fbErr.message);
+          error = fbErr;
         }
-      } else if (error) {
+      }
+
+      // If all attempts to save into events table failed, but it's a showcase poster, save to dedicated vault!
+      if (isShowcase) {
+        const vaultOk = await apiSaveToShowcaseVault(eventData);
+        if (vaultOk) {
+          invalidateCaches();
+          return unpackEventRecord(eventData);
+        }
+      }
+
+      if (error) {
         console.warn('⚠️ Supabase event upsert error:', error.message);
+        throw new Error(error.message || 'Database save error');
       }
     } catch (err) {
       console.error('⚠️ Supabase event upsert exception:', err);
+      throw err;
     }
   }
 
@@ -881,6 +911,10 @@ export async function apiDeleteEvent(id) {
           description: JSON.stringify({ _meta: true, is_deleted: true, is_active: false })
         }).eq('id', id);
       }
+      // Also prune from dedicated showcase vault if present
+      try {
+        await apiDeleteFromShowcaseVault(id);
+      } catch {}
       return true;
     } catch (err) {
       console.error('⚠️ Supabase delete event exception:', err);
@@ -1169,10 +1203,131 @@ export function apiGetCachedFeaturedEvents() {
   return [];
 }
 
+// ─── Dedicated Showcase Vault Storage (Central Attractions) ─────
+export async function apiFetchShowcaseVault() {
+  if (!supabaseClient) return [];
+  try {
+    const { data, error } = await supabaseClient
+      .from('department_payments')
+      .select('qr_image_url')
+      .eq('dept_slug', 'central')
+      .maybeSingle();
+
+    if (!error && data && data.qr_image_url) {
+      try {
+        const parsed = JSON.parse(data.qr_image_url);
+        if (Array.isArray(parsed)) return parsed.map(unpackEventRecord);
+      } catch {}
+    }
+  } catch (err) {
+    console.warn('⚠️ apiFetchShowcaseVault error:', err);
+  }
+  return [];
+}
+
+export async function apiSaveToShowcaseVault(poster) {
+  if (!supabaseClient || !poster || !poster.id) return false;
+  try {
+    const { data: vData } = await supabaseClient
+      .from('department_payments')
+      .select('qr_image_url')
+      .eq('dept_slug', 'central')
+      .maybeSingle();
+
+    let list = [];
+    if (vData && vData.qr_image_url) {
+      try {
+        const parsed = JSON.parse(vData.qr_image_url);
+        if (Array.isArray(parsed)) list = parsed;
+      } catch {}
+    }
+
+    const b = poster.banners || {};
+    const deskImg = b.featured_desktop || poster.banner || b.event_desktop || '';
+    const mobImg = b.featured_mobile || b.event_mobile || deskImg;
+
+    const cleanPoster = {
+      id: poster.id,
+      title: poster.title || 'Special Attraction',
+      type: poster.type || 'Special Attraction',
+      venue: poster.venue || 'Campus Central',
+      date: poster.date || '7-8 Oct',
+      time: poster.time || 'All Day',
+      desc: poster.desc || poster.details || '',
+      fee: 'Viewing Only',
+      team_size: 1,
+      dept_slug: 'central',
+      slug: 'central',
+      display_only: true,
+      displayOnly: true,
+      is_featured: poster.is_featured !== false,
+      featured_order: parseInt(poster.featured_order || 1, 10),
+      banner: deskImg,
+      banners: {
+        featured_desktop: deskImg,
+        featured_mobile: mobImg,
+        event_desktop: deskImg,
+        event_mobile: mobImg,
+      },
+      is_active: true,
+      updated_at: new Date().toISOString()
+    };
+
+    const idx = list.findIndex(p => p && p.id === poster.id);
+    if (idx >= 0) list[idx] = cleanPoster;
+    else list.push(cleanPoster);
+
+    const { error } = await supabaseClient
+      .from('department_payments')
+      .upsert([{
+        dept_slug: 'central',
+        upi_id: 'central_showcase_vault',
+        qr_image_url: JSON.stringify(list),
+        updated_at: new Date().toISOString()
+      }]);
+
+    if (!error) return true;
+    console.warn('⚠️ apiSaveToShowcaseVault upsert error:', error.message);
+  } catch (err) {
+    console.warn('⚠️ apiSaveToShowcaseVault exception:', err);
+  }
+  return false;
+}
+
+export async function apiDeleteFromShowcaseVault(id) {
+  if (!supabaseClient || !id) return false;
+  try {
+    const { data: vData } = await supabaseClient
+      .from('department_payments')
+      .select('qr_image_url')
+      .eq('dept_slug', 'central')
+      .maybeSingle();
+
+    if (vData && vData.qr_image_url) {
+      try {
+        const list = JSON.parse(vData.qr_image_url);
+        if (Array.isArray(list)) {
+          const filtered = list.filter(p => p && p.id !== id);
+          await supabaseClient
+            .from('department_payments')
+            .upsert([{
+              dept_slug: 'central',
+              upi_id: 'central_showcase_vault',
+              qr_image_url: JSON.stringify(filtered),
+              updated_at: new Date().toISOString()
+            }]);
+          return true;
+        }
+      } catch {}
+    }
+  } catch {}
+  return false;
+}
+
 /**
  * Fetch all active events marked as featured, ordered by featured_order.
  * Uses targeted lightweight query to eliminate statement timeouts (Postgres 57014),
- * merges local showcase posters, and caches data.
+ * merges local showcase posters and dedicated showcase vault, and caches data.
  */
 export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
   const CACHE_KEY = 'tantra26:cache:featured_events';
@@ -1210,24 +1365,42 @@ export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
 
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
+      let unpacked = [];
       if (!error && Array.isArray(data)) {
-        let unpacked = data.map(unpackEventRecord).filter(ev => {
+        unpacked = data.map(unpackEventRecord).filter(ev => {
           if (!ev || delSet.has(ev.id) || ev.is_active === false) return false;
           const isFeat = Boolean(ev.is_featured || ev.isFeatured || ev.dept_slug === 'central' || ev.slug === 'central' || ev.display_only || ev.type === 'Special Attraction');
           return isFeat;
         });
+      }
 
-        // Merge local admin posters so newly created attractions appear immediately
-        try {
-          const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
-          const localPosters = adminEvents['central'] || [];
-          localPosters.forEach(p => {
-            if (p && !delSet.has(p.id) && (p.is_featured || p.isFeatured || p.type === 'Special Attraction' || p.display_only) && !unpacked.some(x => x.id === p.id)) {
-              unpacked.push(p);
+      // Merge items from dedicated showcase vault
+      try {
+        const vaultItems = await apiFetchShowcaseVault();
+        vaultItems.forEach(vp => {
+          if (vp && !delSet.has(vp.id) && vp.is_active !== false && (vp.is_featured !== false)) {
+            const existingIdx = unpacked.findIndex(x => x.id === vp.id);
+            if (existingIdx >= 0) {
+              unpacked[existingIdx] = { ...unpacked[existingIdx], ...vp };
+            } else {
+              unpacked.push(vp);
             }
-          });
-        } catch {}
+          }
+        });
+      } catch {}
 
+      // Merge local admin posters so newly created attractions appear immediately
+      try {
+        const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
+        const localPosters = adminEvents['central'] || [];
+        localPosters.forEach(p => {
+          if (p && !delSet.has(p.id) && (p.is_featured || p.isFeatured || p.type === 'Special Attraction' || p.display_only) && !unpacked.some(x => x.id === p.id)) {
+            unpacked.push(p);
+          }
+        });
+      } catch {}
+
+      if (unpacked.length > 0) {
         unpacked.sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0));
         const seenSlots = new Set();
         let curSlot = 1;
@@ -1292,13 +1465,29 @@ export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
 }
 
 /**
- * Fetch all special attractions / showcase posters from Supabase or admin storage
+ * Fetch all special attractions / showcase posters from Supabase or dedicated showcase vault
  */
 export async function apiFetchSpecialAttractions() {
   const delList = JSON.parse(localStorage.getItem('tantra26:deleted_events') || '[]');
   const delSet = new Set(delList);
+  const postersMap = new Map();
 
   if (supabaseClient) {
+    // 1. Fetch from dedicated showcase vault
+    try {
+      const vaultItems = await apiFetchShowcaseVault();
+      if (Array.isArray(vaultItems)) {
+        vaultItems.forEach(p => {
+          if (p && p.id && !delSet.has(p.id) && p.is_active !== false) {
+            postersMap.set(p.id, p);
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('⚠️ Showcase vault read warning:', err);
+    }
+
+    // 2. Fetch from events table
     try {
       const queryPromise = supabaseClient
         .from('events')
@@ -1314,12 +1503,27 @@ export async function apiFetchSpecialAttractions() {
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
       if (!error && Array.isArray(data)) {
-        return data.map(unpackEventRecord).filter(e => e && !delSet.has(e.id) && e.is_active !== false);
+        data.forEach(item => {
+          const unpacked = unpackEventRecord(item);
+          if (unpacked && !delSet.has(unpacked.id) && unpacked.is_active !== false) {
+            // If already present from vault with richer banner data, keep, otherwise set
+            if (!postersMap.has(unpacked.id)) {
+              postersMap.set(unpacked.id, unpacked);
+            } else {
+              postersMap.set(unpacked.id, { ...unpacked, ...postersMap.get(unpacked.id) });
+            }
+          }
+        });
       }
     } catch (err) {
       console.warn('⚠️ apiFetchSpecialAttractions error:', err);
     }
+
+    if (postersMap.size > 0) {
+      return Array.from(postersMap.values());
+    }
   }
+
   try {
     const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
     return (adminEvents['central'] || []).filter(e => e && !delSet.has(e.id));

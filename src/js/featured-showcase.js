@@ -18,6 +18,7 @@ const DEPT_MAP = {
   aei:   { code: 'AEI',  name: 'Applied Electronics & Instrumentation',  bg: '#2b6a4d', fg: '#efe8da' },
   civil: { code: 'CE',   name: 'Civil Engineering',                      bg: '#e3a72f', fg: '#141414' },
   mech:  { code: 'ME',   name: 'Mechanical Engineering',                 bg: '#182338', fg: '#efe8da' },
+  central: { code: 'CENTRAL', name: 'Special Attraction', bg: '#101a2d', fg: '#e3a72f' },
 };
 
 export const DEMO_FEATURED = [
