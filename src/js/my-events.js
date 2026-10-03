@@ -39,6 +39,15 @@ const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({
   "'": '&#39;',
 }[c]));
 
+export function formatTitleSpan(text) {
+  if (!text) return '';
+  const clean = String(text)
+    .replace(/\b(m|mu)learn\b/gi, 'µLearn')
+    .replace(/\b(m|mu)-learn\b/gi, 'µLearn');
+  const symRe = /([µμΩωπΠλΛθΘαβγδΔσΣ∞≈≠≤≥±√∫°])/g;
+  return esc(clean).replace(symRe, '<span class="sym" style="text-transform:none !important;font-family:\'Inter\',system-ui,sans-serif !important;display:inline-block;font-weight:700">$1</span>');
+}
+
 export function eventDurationMs(r) {
   if (r && r.duration) {
     const d = parseInt(r.duration, 10);
@@ -321,7 +330,7 @@ export function initMyEvents() {
         `</div>` +
         `<div class="body">` +
           `<p class="dp">${esc(d[0])}${r.etype ? ' &middot; ' + esc(r.etype) : ''}</p>` +
-          `<h3>${esc(r.event)}</h3>` +
+          `<h3>${formatTitleSpan(r.event)}</h3>` +
           `<dl>` +
             `<dt>Participant</dt><dd>${esc(r.name || 'Participant')}</dd>` +
             `<dt>When</dt><dd>${r.date ? esc(r.date) + ' &middot; ' + esc(r.time) : '7 Oct &middot; 10:00 AM'}</dd>` +
@@ -433,13 +442,13 @@ export function initMyEvents() {
       targetType = 'live';
       target = null;
       if (eyebrow) eyebrow.textContent = 'Right now';
-      if (heading) heading.textContent = `${r.event} is live now`;
+      if (heading) heading.innerHTML = formatTitleSpan(`${r.event} is live now`);
       if (slabsEl) slabsEl.innerHTML = '<div class="livebig">Live now</div>';
     } else if (r) {
       targetType = 'event';
       target = r._s;
       if (eyebrow) eyebrow.textContent = 'Next up';
-      if (heading) heading.textContent = `${r.event} starts in`;
+      if (heading) heading.innerHTML = formatTitleSpan(`${r.event} starts in`);
     } else {
       targetType = 'fest';
       target = EVENT_START;
@@ -452,7 +461,7 @@ export function initMyEvents() {
         const d = DEPTS[r.slug] || [r.dept || ''];
         card.innerHTML =
           `<span class="tag">${now >= r._s ? 'Live now' : 'Next up'}</span>` +
-          `<h2>${esc(r.event)}</h2>` +
+          `<h2>${formatTitleSpan(r.event)}</h2>` +
           `<p class="d">${esc(d[0])}${r.etype ? ' &middot; ' + esc(r.etype) : ''}</p>` +
           `<dl>` +
             `<dt>Participant</dt><dd>${esc(r.name || 'Participant')}</dd>` +

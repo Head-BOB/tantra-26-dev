@@ -426,8 +426,12 @@ function renderEvent(ev) {
 
 
   function formatTitleSpan(text) {
+    if (!text) return '';
+    const clean = String(text)
+      .replace(/\b(m|mu)learn\b/gi, 'µLearn')
+      .replace(/\b(m|mu)-learn\b/gi, 'µLearn');
     const symRe = /([µμΩωπΠλΛθΘαβγδΔσΣ∞≈≠≤≥±√∫°])/g;
-    return esc(text).replace(symRe, '<span class="sym" style="text-transform:none;font-family:\'Inter\',system-ui,sans-serif;display:inline-block">$1</span>');
+    return esc(clean).replace(symRe, '<span class="sym" style="text-transform:none !important;font-family:\'Inter\',system-ui,sans-serif !important;display:inline-block;font-weight:700">$1</span>');
   }
 
   // Animated title splitting
@@ -876,7 +880,7 @@ function renderEvent(ev) {
       `<div class="co-body">` +
         `<div class="co-event-card">` +
           `<span class="co-badge">Registering For</span>` +
-          `<h4>${esc(ev.title)}</h4>` +
+          `<h4>${formatTitleSpan(ev.title)}</h4>` +
           `<p>${esc(D[0])} &middot; ${esc(ev.date)} &middot; ${esc(curTimeRange)}</p>` +
         `</div>` +
         `<div class="co-clash-header">` +
@@ -936,7 +940,7 @@ function renderEvent(ev) {
     clearConflictWarning();
 
     $('#m-type').textContent = `${ev.type} · ${ev.date}`;
-    $('#m-title').textContent = ev.title;
+    $('#m-title').innerHTML = formatTitleSpan(ev.title);
 
     const feeDisp = $('#m-fee-display');
     if (feeDisp) feeDisp.textContent = ev.fee || 'Free';
@@ -1284,7 +1288,7 @@ function renderEvent(ev) {
 
   function populatePass(rec) {
     const ten = $('#ticket-event-name');
-    if (ten) ten.textContent = ev.title;
+    if (ten) ten.innerHTML = formatTitleSpan(ev.title);
     const tdt = $('#ticket-dept-tag');
     if (tdt) tdt.textContent = (ev.slug || 'T26').toUpperCase();
     const rid = $('#rid');
@@ -1300,7 +1304,7 @@ function renderEvent(ev) {
 
     const okMsg = $('#ok-msg');
     if (okMsg) {
-      okMsg.textContent = `Registered for ${ev.title} on ${ev.date} at ${ev.time} in ${ev.venue}.`;
+      okMsg.innerHTML = `Registered for ${formatTitleSpan(ev.title)} on ${esc(ev.date)} at ${esc(ev.time)} in ${esc(ev.venue)}.`;
     }
 
     const waLink = (ev.whatsapp_group || ev.whatsappGroup || '').trim();

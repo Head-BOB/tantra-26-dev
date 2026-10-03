@@ -900,7 +900,7 @@ export function initDeptPage(CONFIG, EVENTS) {
 
     const okMsg = $('#ok-msg');
     if (okMsg) {
-      okMsg.textContent = `Registered for ${curEvent.title} on ${curEvent.date} at ${curEvent.time} in ${curEvent.venue}.`;
+      okMsg.innerHTML = `Registered for ${formatTitleSpan(curEvent.title)} on ${esc(curEvent.date)} at ${esc(curEvent.time)} in ${esc(curEvent.venue)}.`;
     }
 
     const waLink = (curEvent?.whatsapp_group || curEvent?.whatsappGroup || '').trim();

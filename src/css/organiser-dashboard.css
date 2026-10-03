@@ -472,3 +472,11 @@ button {
     width: 100%;
   }
 }
+
+/* Prevent µ and symbols from being uppercased by text-transform */
+.sym {
+  text-transform: none !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-weight: 700 !important;
+  display: inline-block !important;
+}

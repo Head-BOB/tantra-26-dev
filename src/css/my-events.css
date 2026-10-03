@@ -768,3 +768,11 @@ dd {
   }
   .tk { opacity: 1; transform: none; }
 }
+
+/* ── Ensure µ and other symbols aren't uppercased by text-transform ── */
+.sym {
+  text-transform: none !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-weight: 700 !important;
+  display: inline-block !important;
+}

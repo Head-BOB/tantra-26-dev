@@ -1003,3 +1003,11 @@ h1,h2,h3 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; text-tran
   .row { grid-template-columns: 1fr; }
   .topbar-actions .tb-btn span { display: none; }
 }
+
+/* Prevent µ and symbols from being uppercased by text-transform */
+.sym {
+  text-transform: none !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-weight: 700 !important;
+  display: inline-block !important;
+}
