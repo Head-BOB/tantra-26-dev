@@ -152,16 +152,9 @@ export function initDeptPage(CONFIG, EVENTS) {
       a.style.transitionDelay = `${(i % 3) * 0.08}s`;
       const done = isReg(e.id);
       const eventUrl = `/event.html?d=${encodeURIComponent(CONFIG.slug)}&e=${encodeURIComponent(e.id)}`;
-      let actionBtn;
-      if (done) {
-        actionBtn =
-          `<div class="ev-btn-row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">` +
-            `<button class="reg done" disabled>Registered &#10003;</button>` +
-            `<a href="${eventUrl}" class="reg" data-id="${esc(e.id)}">View Event <b>&rarr;</b></a>` +
-          `</div>`;
-      } else {
-        actionBtn = `<a href="${eventUrl}" class="reg" data-id="${esc(e.id)}">${'View Event <b>&rarr;</b>'}</a>`;
-      }
+      const actionBtn = done
+        ? `<a href="${eventUrl}" class="reg done" data-id="${esc(e.id)}">&#10003; View Event <b>&rarr;</b></a>`
+        : `<a href="${eventUrl}" class="reg" data-id="${esc(e.id)}">View Event <b>&rarr;</b></a>`;
       a.innerHTML =
         `<div class="ev-top"><b>${esc(e.type)}</b><span>${esc(e.fee)}</span></div>` +
         `<div class="ev-body"><h3><a href="${eventUrl}" class="ev-card-title-link" style="text-decoration:none;color:inherit;transition:color .2s">${formatTitleSpan(e.title)}</a></h3><p class="desc">${esc(e.desc)}</p>` +
@@ -190,6 +183,15 @@ export function initDeptPage(CONFIG, EVENTS) {
         const store = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
         store[CONFIG.slug] = backendEvents;
         localStorage.setItem('tantra26:admin:events', JSON.stringify(store));
+
+        const evStore = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
+        backendEvents.forEach((bev) => {
+          if (bev && bev.id) {
+            evStore[(bev.slug || CONFIG.slug) + ':' + bev.id] = bev;
+            evStore[bev.id] = bev;
+          }
+        });
+        localStorage.setItem('tantra26:events', JSON.stringify(evStore));
       } catch {}
 
       // Prune local registrations for events that no longer exist in this department
@@ -864,6 +866,17 @@ export function initDeptPage(CONFIG, EVENTS) {
     const okMsg = $('#ok-msg');
     if (okMsg) {
       okMsg.textContent = `Registered for ${curEvent.title} on ${curEvent.date} at ${curEvent.time} in ${curEvent.venue}.`;
+    }
+
+    const waLink = (curEvent?.whatsapp_group || curEvent?.whatsappGroup || '').trim();
+    const waBtn = $('#ticket-whatsapp-btn');
+    if (waBtn) {
+      if (waLink) {
+        waBtn.href = waLink;
+        waBtn.style.display = 'inline-flex';
+      } else {
+        waBtn.style.display = 'none';
+      }
     }
   }
 

@@ -270,7 +270,7 @@ export async function updateEventByAccessCode(req, res) {
       return res.status(404).json({ error: 'Event not found for this access code.' });
     }
 
-    const { details, banner, banners, steps, rules, coord } = req.body;
+    const { details, banner, banners, steps, rules, coord, prizes, manual_prize_pool, prize_pool, whatsapp_group } = req.body;
     const updates = {
       updated_at: new Date().toISOString(),
     };
@@ -280,13 +280,27 @@ export async function updateEventByAccessCode(req, res) {
     if (steps !== undefined) updates.steps = Array.isArray(steps) ? steps : [];
     if (rules !== undefined) updates.rules = Array.isArray(rules) ? rules : [];
     if (coord !== undefined) updates.coord = (coord && typeof coord === 'object') ? coord : {};
+    if (prizes !== undefined) updates.prizes = Array.isArray(prizes) ? prizes : [];
+    if (manual_prize_pool !== undefined) updates.manual_prize_pool = Boolean(manual_prize_pool);
+    if (prize_pool !== undefined) updates.prize_pool = String(prize_pool || '').trim();
+    if (whatsapp_group !== undefined) updates.whatsapp_group = String(whatsapp_group || '').trim();
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('events')
       .update(updates)
       .eq('id', existing.id)
       .select()
       .single();
+
+    if (error && (error.message.includes('manual_prize_pool') || error.message.includes('prize_pool') || error.message.includes('prizes') || error.message.includes('whatsapp_group') || error.message.includes('schema cache'))) {
+      delete updates.manual_prize_pool;
+      delete updates.prize_pool;
+      delete updates.prizes;
+      delete updates.whatsapp_group;
+      const resRetry = await supabase.from('events').update(updates).eq('id', existing.id).select().single();
+      data = resRetry.data;
+      error = resRetry.error;
+    }
 
     if (error) throw error;
 

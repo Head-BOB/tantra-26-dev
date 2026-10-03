@@ -76,6 +76,9 @@ export function unpackEventRecord(ev) {
 
   const isFeatured = Boolean(ev.is_featured ?? ev.isFeatured ?? envelope.is_featured ?? false);
   const featuredOrder = parseInt(ev.featured_order ?? ev.featuredOrder ?? envelope.featured_order ?? 0, 10) || 0;
+  const whatsapp_group = (ev.whatsapp_group || ev.whatsappGroup || envelope.whatsapp_group || envelope.whatsappGroup || '').trim();
+  const manual_prize_pool = Boolean(ev.manual_prize_pool ?? ev.manualPrizePool ?? envelope.manual_prize_pool ?? envelope.manualPrizePool ?? false);
+  const prize_pool = String(ev.prize_pool || ev.prizePool || envelope.prize_pool || envelope.prizePool || '').trim();
 
   return {
     ...ev,
@@ -96,7 +99,13 @@ export function unpackEventRecord(ev) {
     steps,
     rules,
     prizes,
+    manual_prize_pool,
+    manualPrizePool: manual_prize_pool,
+    prize_pool,
+    prizePool: prize_pool,
     coord,
+    whatsapp_group,
+    whatsappGroup: whatsapp_group,
     team: ev.team_size ?? ev.team ?? 1,
     team_size: ev.team_size ?? ev.team ?? 1,
   };
@@ -413,6 +422,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
   const rules = Array.isArray(eventData.rules) ? eventData.rules : [];
   const prizes = Array.isArray(eventData.prizes) ? eventData.prizes : [];
   const coord = (eventData.coord && typeof eventData.coord === 'object') ? eventData.coord : { name: '', phone: '', email: '' };
+  const whatsapp_group = (eventData.whatsapp_group || eventData.whatsappGroup || '').trim();
 
   const banners = (eventData.banners && typeof eventData.banners === 'object')
     ? eventData.banners
@@ -446,7 +456,10 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         steps,
         rules,
         prizes,
+        manual_prize_pool: Boolean(eventData.manual_prize_pool || eventData.manualPrizePool),
+        prize_pool: String(eventData.prize_pool || eventData.prizePool || '').trim(),
         coord,
+        whatsapp_group,
         is_active: true,
         updated_at: new Date().toISOString(),
       };
@@ -454,13 +467,16 @@ export async function apiSaveEvent(eventData, isEdit = false) {
       let { data, error } = await supabaseClient.from('events').upsert([nativeRecord]).select().single();
       if (!error && data) return unpackEventRecord(data);
 
-      // If banners, is_featured, prizes or duration is missing from Supabase schema cache, retry progressively
-      if (error && (error.message.includes('banners') || error.message.includes('is_featured') || error.message.includes('prizes') || error.message.includes('duration') || error.message.includes('schema cache'))) {
+      // If banners, is_featured, prizes, duration, manual_prize_pool, prize_pool or whatsapp_group is missing from Supabase schema cache, retry progressively
+      if (error && (error.message.includes('banners') || error.message.includes('is_featured') || error.message.includes('prizes') || error.message.includes('duration') || error.message.includes('whatsapp_group') || error.message.includes('manual_prize_pool') || error.message.includes('prize_pool') || error.message.includes('schema cache'))) {
         const fallbackNative = { ...nativeRecord };
         delete fallbackNative.banners;
         delete fallbackNative.is_featured;
         delete fallbackNative.featured_order;
         delete fallbackNative.prizes;
+        delete fallbackNative.manual_prize_pool;
+        delete fallbackNative.prize_pool;
+        delete fallbackNative.whatsapp_group;
         const resNoCols = await supabaseClient.from('events').upsert([fallbackNative]).select().single();
         if (!resNoCols.error && resNoCols.data) {
           return unpackEventRecord(resNoCols.data);
@@ -483,7 +499,10 @@ export async function apiSaveEvent(eventData, isEdit = false) {
           steps,
           rules,
           prizes,
+          manual_prize_pool: Boolean(eventData.manual_prize_pool || eventData.manualPrizePool),
+          prize_pool: String(eventData.prize_pool || eventData.prizePool || '').trim(),
           coord,
+          whatsapp_group,
         });
         const fallbackRecord = {
           id: eventData.id,
@@ -570,7 +589,11 @@ export async function apiSaveOrganiserEvent(eventData) {
           banners: eventData.banners,
           steps: eventData.steps,
           rules: eventData.rules,
+          prizes: eventData.prizes,
+          manual_prize_pool: Boolean(eventData.manual_prize_pool || eventData.manualPrizePool),
+          prize_pool: String(eventData.prize_pool || eventData.prizePool || '').trim(),
           coord: eventData.coord,
+          whatsapp_group: eventData.whatsapp_group || eventData.whatsappGroup || '',
         }),
       });
       if (res.ok) {

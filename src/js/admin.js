@@ -806,7 +806,8 @@ function openEventModal(id) {
       f.date.value  = '7 Oct';
       f.time.value  = ev.time || '10:00 AM';
       if (f.duration) f.duration.value = Math.max(10, parseInt(ev.duration, 10) || 120);
-      f.venue.value = ev.venue || '';
+      const v = (ev.venue || '').trim();
+      f.venue.value = (v === '--' || v === '-') ? '' : v;
       f.team.value  = ev.team || 1;
       f.desc.value  = ev.desc || '';
       if (f.accessCode) f.accessCode.value = ev.accessCode || getEventAccessCode(ev);

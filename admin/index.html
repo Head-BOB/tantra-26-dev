@@ -301,9 +301,25 @@
             <span class="field-hint">Minimum 10 minutes required</span>
           </label>
           <label>Venue
-            <input name="venue" required data-slop="Venue" placeholder="e.g. CS Lab 1">
+            <input name="venue" required data-slop="Venue" placeholder="e.g. Varikkatu Hall or CS Lab 1" list="venue-presets" autocomplete="off">
+            <span class="field-hint">Specify hall, lab, or campus area</span>
           </label>
         </div>
+        <datalist id="venue-presets">
+          <option value="Varikkatu Hall">
+          <option value="Main Auditorium">
+          <option value="Seminar Hall">
+          <option value="CS Lab 1">
+          <option value="CS Lab 2">
+          <option value="AI Lab">
+          <option value="Design Studio">
+          <option value="Civil Workshop">
+          <option value="Workshop Ground">
+          <option value="CAD Lab">
+          <option value="Electronics Lab">
+          <option value="Communication Lab">
+          <option value="Campus Ground">
+        </datalist>
         <div class="row">
           <label>Max team size
             <input name="team" type="number" min="1" max="20" value="1">

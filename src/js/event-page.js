@@ -116,7 +116,15 @@ function demoEvent(kind) {
   return e;
 }
 
-function calculatePrizePool(prizes) {
+export function calculatePrizePool(prizes, ev) {
+  if (ev && (ev.manual_prize_pool || ev.manualPrizePool)) {
+    const raw = String(ev.prize_pool || ev.prizePool || '').trim();
+    if (raw) {
+      const num = parseInt(raw.replace(/[^0-9]/g, ''), 10);
+      const text = raw.startsWith('₹') ? raw : (isNaN(num) ? raw : `₹${num.toLocaleString('en-IN')}`);
+      return { total: isNaN(num) ? 0 : num, text };
+    }
+  }
   if (!Array.isArray(prizes) || prizes.length === 0) return null;
   let total = 0;
   let hasNumeric = false;
@@ -221,14 +229,41 @@ function loadEvent(slug, id) {
 const qs = new URLSearchParams(location.search);
 const rawSlug = (qs.get('d') || qs.get('dept') || qs.get('slug') || '').trim().toLowerCase();
 const rawId = (qs.get('e') || qs.get('id') || qs.get('eventId') || '').trim();
-if (rawSlug && $('#back')) {
-  $('#back').href = `/departments/${rawSlug}.html`;
+if (rawSlug) {
+  if ($('#back')) $('#back').href = `/departments/${rawSlug}.html`;
+  if ($('#back2')) $('#back2').href = `/departments/${rawSlug}.html`;
+  const gateLink = $('#gate a');
+  if (gateLink) {
+    gateLink.href = `/departments/${rawSlug}.html`;
+    gateLink.textContent = `Back to ${rawSlug.toUpperCase()} Department`;
+  }
 }
-let ev = loadEvent(rawSlug, rawId);
+const initialEv = loadEvent(rawSlug, rawId);
 
-if (!ev && (rawId || rawSlug)) {
+if (initialEv) {
+  renderEvent(initialEv);
+  if (rawId || rawSlug) {
+    const fetchId = rawId || rawSlug;
+    apiFetchSingleEvent(rawSlug, fetchId).then((cloudEv) => {
+      if (cloudEv) {
+        try {
+          const s = JSON.parse(localStorage.getItem(EV_KEY) || '{}');
+          s[(cloudEv.slug || rawSlug) + ':' + cloudEv.id] = cloudEv;
+          s[cloudEv.id] = cloudEv;
+          localStorage.setItem(EV_KEY, JSON.stringify(s));
+        } catch {}
+      }
+    }).catch(() => {});
+  }
+} else if (rawId || rawSlug) {
+  const loadingEl = $('#event-loading');
+  if (loadingEl) loadingEl.hidden = false;
+  const gateEl = $('#gate');
+  if (gateEl) gateEl.hidden = true;
+
   const fetchId = rawId || rawSlug;
   apiFetchSingleEvent(rawSlug, fetchId).then((cloudEv) => {
+    if (loadingEl) loadingEl.hidden = true;
     if (cloudEv) {
       try {
         const s = JSON.parse(localStorage.getItem(EV_KEY) || '{}');
@@ -236,14 +271,25 @@ if (!ev && (rawId || rawSlug)) {
         s[cloudEv.id] = cloudEv;
         localStorage.setItem(EV_KEY, JSON.stringify(s));
       } catch {}
-      location.reload();
+      renderEvent(cloudEv);
+    } else {
+      if (gateEl) gateEl.hidden = false;
     }
-  }).catch(() => {});
+  }).catch(() => {
+    if (loadingEl) loadingEl.hidden = true;
+    if (gateEl) gateEl.hidden = false;
+  });
+} else {
+  const gateEl = $('#gate');
+  if (gateEl) gateEl.hidden = false;
 }
 
-if (!ev) {
-  $('#gate').hidden = false;
-} else {
+function renderEvent(ev) {
+  if (!ev) return;
+  const loadingEl = $('#event-loading');
+  if (loadingEl) loadingEl.hidden = true;
+  const gateEl = $('#gate');
+  if (gateEl) gateEl.hidden = true;
   ev.steps = ev.steps || [];
   ev.rules = ev.rules || [];
   ev.coord = ev.coord || {};
@@ -339,7 +385,7 @@ if (!ev) {
     }
   }
   
-  const prizePool = calculatePrizePool(ev.prizes);
+  const prizePool = calculatePrizePool(ev.prizes, ev);
   let chipsHtml = `<span class="chip g">${esc(ev.type)}</span><span class="chip">${esc(ev.fee || 'Free')}</span>`;
   if (prizePool) {
     chipsHtml += `<span class="chip">Prize Pool &middot; ${esc(prizePool.text)}</span>`;
@@ -416,12 +462,7 @@ if (!ev) {
   const backBtn = $('#back');
   if (backBtn) {
     backBtn.href = backUrl;
-    backBtn.onclick = (e) => {
-      if (document.referrer && (document.referrer.includes(`/departments/${deptSlug}`) || document.referrer.includes(`${deptSlug}.html`))) {
-        e.preventDefault();
-        window.history.back();
-      }
-    };
+    backBtn.onclick = null;
   }
   const backBtn2 = $('#back2');
   if (backBtn2) {
@@ -663,7 +704,7 @@ if (!ev) {
     if (mode === 'done') {
       a.innerHTML = '<button class="reg" disabled>Event ended</button>';
     } else if (isUserRegistered()) {
-      a.innerHTML = '<a class="reg done" href="/my-events.html">Registered &#10003; View my events</a>';
+      a.innerHTML = '<a class="reg done" href="/my-events.html" title="View my events">&#10003; View Event</a>';
     } else {
       a.innerHTML = '<button class="reg" id="regbtn">Register <b>&rarr;</b></button>';
       const b = $('#regbtn');
@@ -1260,6 +1301,17 @@ if (!ev) {
     const okMsg = $('#ok-msg');
     if (okMsg) {
       okMsg.textContent = `Registered for ${ev.title} on ${ev.date} at ${ev.time} in ${ev.venue}.`;
+    }
+
+    const waLink = (ev.whatsapp_group || ev.whatsappGroup || '').trim();
+    const waBtn = $('#ticket-whatsapp-btn');
+    if (waBtn) {
+      if (waLink) {
+        waBtn.href = waLink;
+        waBtn.style.display = 'inline-flex';
+      } else {
+        waBtn.style.display = 'none';
+      }
     }
   }
 

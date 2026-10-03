@@ -205,6 +205,12 @@ function saveEvent(eventObj) {
         list[i].rules = eventObj.rules;
         list[i].prizes = eventObj.prizes;
         list[i].coord = eventObj.coord;
+        list[i].whatsapp_group = eventObj.whatsapp_group;
+        list[i].whatsappGroup = eventObj.whatsapp_group;
+        list[i].manual_prize_pool = eventObj.manual_prize_pool;
+        list[i].manualPrizePool = eventObj.manual_prize_pool;
+        list[i].prize_pool = eventObj.prize_pool;
+        list[i].prizePool = eventObj.prize_pool;
         found = true;
         break;
       }
@@ -345,6 +351,10 @@ export function initDashboard(ev, onSignOut = null) {
         if ($('#c-phone')) $('#c-phone').value = fresh.coord.phone || '';
         if ($('#c-email')) $('#c-email').value = fresh.coord.email || '';
       }
+      if ((fresh.whatsapp_group || fresh.whatsappGroup) && $('#c-whatsapp') && !$('#c-whatsapp').value) {
+        ev.whatsapp_group = fresh.whatsapp_group || fresh.whatsappGroup;
+        $('#c-whatsapp').value = ev.whatsapp_group;
+      }
     }
   }).catch(() => {});
 
@@ -410,6 +420,22 @@ export function initDashboard(ev, onSignOut = null) {
   if ($('#c-name')) $('#c-name').value = ev.coord.name || '';
   if ($('#c-phone')) $('#c-phone').value = ev.coord.phone || '';
   if ($('#c-email')) $('#c-email').value = ev.coord.email || '';
+  if ($('#c-whatsapp')) $('#c-whatsapp').value = ev.whatsapp_group || ev.whatsappGroup || '';
+
+  // Manual Prize Pool Toggle & Input initialization
+  const isManualPrize = Boolean(ev.manual_prize_pool || ev.manualPrizePool);
+  const toggleManualPrize = $('#toggle-manual-prize-pool');
+  const manualPrizeWrap = $('#manual-prize-pool-wrap');
+  const manualPrizeInput = $('#manual-prize-pool-input');
+  if (toggleManualPrize) {
+    toggleManualPrize.checked = isManualPrize;
+  }
+  if (manualPrizeWrap) {
+    manualPrizeWrap.style.display = isManualPrize ? 'flex' : 'none';
+  }
+  if (manualPrizeInput) {
+    manualPrizeInput.value = ev.prize_pool || ev.prizePool || '';
+  }
 
   // Banner handling
   ev.banners = (ev.banners && typeof ev.banners === 'object') ? ev.banners : {};
@@ -619,6 +645,21 @@ export function initDashboard(ev, onSignOut = null) {
     const badge = $('#prize-pool-badge');
     const val = $('#prize-pool-val');
     if (!badge || !val) return;
+
+    const isManual = $('#toggle-manual-prize-pool')?.checked;
+    if (isManual) {
+      const raw = ($('#manual-prize-pool-input')?.value || '').trim();
+      if (raw) {
+        const num = parseInt(raw.replace(/[^0-9]/g, ''), 10);
+        val.textContent = raw.startsWith('₹') ? raw : (isNaN(num) ? raw : `₹${num.toLocaleString('en-IN')}`);
+        badge.style.display = 'block';
+      } else {
+        val.textContent = '₹0';
+        badge.style.display = 'block';
+      }
+      return;
+    }
+
     const pb = $('#prizes');
     if (!pb) return;
     let total = 0;
@@ -676,6 +717,12 @@ export function initDashboard(ev, onSignOut = null) {
       phone: $('#c-phone')?.value?.trim() || '',
       email: $('#c-email')?.value?.trim() || '',
     };
+    ev.whatsapp_group = $('#c-whatsapp')?.value?.trim() || '';
+    ev.whatsappGroup = ev.whatsapp_group;
+    ev.manual_prize_pool = Boolean($('#toggle-manual-prize-pool')?.checked);
+    ev.manualPrizePool = ev.manual_prize_pool;
+    ev.prize_pool = ($('#manual-prize-pool-input')?.value || '').trim();
+    ev.prizePool = ev.prize_pool;
     if (isComp) {
       const stepsEl = $('#steps');
       if (stepsEl) {
@@ -789,6 +836,38 @@ export function initDashboard(ev, onSignOut = null) {
       drawPrizes();
       markDirty();
     };
+  }
+
+  // Handle manual prize pool toggle change and input typing
+  const toggleBtn = $('#toggle-manual-prize-pool');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('change', () => {
+      const isManual = toggleBtn.checked;
+      const wrap = $('#manual-prize-pool-wrap');
+      if (wrap) {
+        wrap.style.display = isManual ? 'flex' : 'none';
+      }
+      if (isManual) {
+        const inp = $('#manual-prize-pool-input');
+        if (inp && !inp.value.trim()) {
+          const currentBadge = $('#prize-pool-val')?.textContent || '';
+          if (currentBadge && currentBadge.includes('₹') && currentBadge !== '₹0') {
+            inp.value = currentBadge;
+          }
+        }
+        inp?.focus();
+      }
+      updatePrizePoolDisplay();
+      markDirty();
+    });
+  }
+
+  const manualInp = $('#manual-prize-pool-input');
+  if (manualInp) {
+    manualInp.addEventListener('input', () => {
+      updatePrizePoolDisplay();
+      markDirty();
+    });
   }
 
   function mover(box, kind) {

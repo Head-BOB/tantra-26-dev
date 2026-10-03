@@ -365,13 +365,16 @@ h1,h2,h3 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; text-tran
 
 /* Form inside sheet */
 .sheet form { padding: 24px; display: grid; gap: 16px; }
-.sheet label { display: grid; gap: 7px; font: 700 10px/1.3 'Inter'; letter-spacing: .16em; text-transform: uppercase; color: rgba(20,20,20,.7); }
+.sheet label { display: grid; gap: 7px; align-content: start; font: 700 10px/1.3 'Inter'; letter-spacing: .16em; text-transform: uppercase; color: rgba(20,20,20,.7); }
 .optional { font: 500 9px/1 'Inter'; letter-spacing: .1em; text-transform: none; color: rgba(20,20,20,.45); }
 .sheet input, .sheet textarea, .sheet select {
-  font: 500 14px/1.3 'Inter'; padding: 12px 14px;
+  font: 500 14px/1.3 'Inter'; padding: 11px 14px;
   border: 2px solid rgba(20,20,20,.2); border-radius: 8px;
-  background: #fff; color: var(--ink); width: 100%;
+  background: #fff; color: var(--ink); width: 100%; box-sizing: border-box;
   transition: border-color .2s, box-shadow .2s;
+}
+.sheet input, .sheet select {
+  height: 44px;
 }
 .sheet input:focus, .sheet textarea:focus, .sheet select:focus {
   outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(24,35,56,.1);
@@ -393,7 +396,7 @@ h1,h2,h3 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; text-tran
   color: rgba(20,20,20,.55);
   margin-top: 2px;
 }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
 .err { color: var(--red); font-size: .83rem; min-height: 1em; }
 .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 4px; }
 .cancel-btn {
