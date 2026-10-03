@@ -1376,6 +1376,18 @@ function saveCandidateBannersToSession() {
 async function syncCandidateBannersFromCloud(deptFilter = '') {
   if (isCandidateBannersSyncing) return;
   isCandidateBannersSyncing = true;
+
+  const indicator = $('feat-sync-indicator');
+  const indText = $('feat-sync-text');
+  if (indicator) {
+    indicator.hidden = false;
+    if (indText) {
+      indText.textContent = deptFilter
+        ? `Syncing candidate events & banners for ${deptFilter.toUpperCase()} from cloud…`
+        : 'Syncing candidate events & banners from cloud…';
+    }
+  }
+
   try {
     const records = await apiFetchCandidateFeaturedBanners(deptFilter || null);
     if (Array.isArray(records) && records.length > 0) {
@@ -1393,6 +1405,9 @@ async function syncCandidateBannersFromCloud(deptFilter = '') {
     console.warn('Could not sync candidate banners:', err);
   } finally {
     isCandidateBannersSyncing = false;
+    if (indicator) {
+      indicator.hidden = true;
+    }
   }
 }
 
