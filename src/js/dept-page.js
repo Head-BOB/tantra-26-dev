@@ -121,23 +121,15 @@ export function initDeptPage(CONFIG, EVENTS) {
   if (backLink) {
     backLink.addEventListener('click', (e) => {
       e.preventDefault();
-      const hasLocalReferrer = document.referrer && document.referrer.includes(window.location.host);
-      if (hasLocalReferrer || window.history.length > 1) {
-        window.history.back();
-      } else {
-        window.location.href = '/#depts';
-      }
+      window.location.href = '/#departments';
     });
   }
 
   const crumbLink = document.querySelector('.top a.crumb');
   if (crumbLink) {
     crumbLink.addEventListener('click', (e) => {
-      const ref = document.referrer || '';
-      if (ref.includes(window.location.host) && !ref.includes('/departments/')) {
-        e.preventDefault();
-        window.history.back();
-      }
+      e.preventDefault();
+      window.location.href = '/#departments';
     });
   }
 
