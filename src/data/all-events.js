@@ -1,6 +1,6 @@
 /**
  * all-events.js — Consolidated events catalog for Tantra 26.
- * Provides instant metadata lookup for any event by ID or title across all 9 departments.
+ * Provides instant metadata lookup for any event by ID or title across all 10 departments.
  */
 
 import { EVENTS as CSE_EVENTS } from './events/cse.js';
