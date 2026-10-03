@@ -166,6 +166,21 @@ h1, h2, h3 {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(43, 147, 94, 0.5);
 }
+.reg.closed,
+.reg.closed:disabled {
+  background: #c62828;
+  background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
+  color: #ffffff;
+  cursor: not-allowed;
+  opacity: 1;
+  box-shadow: 0 4px 14px rgba(211, 47, 47, 0.4);
+}
+.reg.closed:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ef5350 0%, #c62828 100%);
+  color: #ffffff; gap: 14px;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(229, 57, 53, 0.55);
+}
 
 /* ── Contact + other departments ── */
 .info {

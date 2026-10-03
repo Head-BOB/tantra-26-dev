@@ -197,10 +197,16 @@ export function initDeptPage(CONFIG, EVENTS) {
       a.className = 'ev';
       a.style.transitionDelay = `${(i % 3) * 0.08}s`;
       const done = isReg(e.id);
+      const isClosed = Boolean(e.is_closed || e.isClosed || (e.max_registrations > 0 && (e.reg_count || 0) >= e.max_registrations));
       const eventUrl = `/event.html?d=${encodeURIComponent(CONFIG.slug)}&e=${encodeURIComponent(e.id)}`;
-      const actionBtn = done
-        ? `<a href="${eventUrl}" class="reg done" data-id="${esc(e.id)}">&#10003; View Event <b>&rarr;</b></a>`
-        : `<a href="${eventUrl}" class="reg" data-id="${esc(e.id)}">View Event <b>&rarr;</b></a>`;
+      let actionBtn;
+      if (done) {
+        actionBtn = `<a href="${eventUrl}" class="reg done" data-id="${esc(e.id)}">&#10003; View Event <b>&rarr;</b></a>`;
+      } else if (isClosed) {
+        actionBtn = `<a href="${eventUrl}" class="reg closed" data-id="${esc(e.id)}">Closed &middot; View Event <b>&rarr;</b></a>`;
+      } else {
+        actionBtn = `<a href="${eventUrl}" class="reg" data-id="${esc(e.id)}">View Event <b>&rarr;</b></a>`;
+      }
       a.innerHTML =
         `<div class="ev-top"><b>${esc(e.type)}</b><span>${esc(e.fee)}</span></div>` +
         `<div class="ev-body"><h3><a href="${eventUrl}" class="ev-card-title-link" style="text-decoration:none;color:inherit;transition:color .2s">${formatTitleSpan(e.title)}</a></h3><p class="desc">${esc(e.desc)}</p>` +

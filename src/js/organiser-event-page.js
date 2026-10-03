@@ -142,6 +142,8 @@ function loadEventByCode(rawCode) {
             rules: e.rules || [],
             prizes: e.prizes || [],
             coord: e.coord || { name: '', phone: '', email: '' },
+            max_registrations: e.max_registrations || e.maxRegistrations || 0,
+            is_closed: Boolean(e.is_closed || e.isClosed),
           };
         }
       }
@@ -172,6 +174,8 @@ function loadEventByCode(rawCode) {
         rules: se.rules || [],
         prizes: se.prizes || [],
         coord: se.coord || { name: '', phone: '', email: '' },
+        max_registrations: se.max_registrations || se.maxRegistrations || 0,
+        is_closed: Boolean(se.is_closed || se.isClosed),
       };
     }
   }
@@ -211,6 +215,10 @@ function saveEvent(eventObj) {
         list[i].manualPrizePool = eventObj.manual_prize_pool;
         list[i].prize_pool = eventObj.prize_pool;
         list[i].prizePool = eventObj.prize_pool;
+        list[i].max_registrations = eventObj.max_registrations;
+        list[i].maxRegistrations = eventObj.max_registrations;
+        list[i].is_closed = eventObj.is_closed;
+        list[i].isClosed = eventObj.is_closed;
         found = true;
         break;
       }
@@ -355,6 +363,16 @@ export function initDashboard(ev, onSignOut = null) {
         ev.whatsapp_group = fresh.whatsapp_group || fresh.whatsappGroup;
         $('#c-whatsapp').value = ev.whatsapp_group;
       }
+      if (fresh.max_registrations !== undefined && $('#c-max-regs') && !$('#c-max-regs').value) {
+        ev.max_registrations = fresh.max_registrations;
+        $('#c-max-regs').value = fresh.max_registrations || '';
+        if (typeof updateCapacityDisplay === 'function') updateCapacityDisplay();
+      }
+      if (fresh.is_closed !== undefined && $('#c-is-closed')) {
+        ev.is_closed = Boolean(fresh.is_closed);
+        $('#c-is-closed').checked = ev.is_closed;
+        if (typeof updateCapacityDisplay === 'function') updateCapacityDisplay();
+      }
     }
   }).catch(() => {});
 
@@ -411,7 +429,7 @@ export function initDashboard(ev, onSignOut = null) {
     ['s-about', 'Description'],
     ['s-banners', 'Banners'],
   ].concat(isComp ? [['s-guide', 'Guide'], ['s-rules', 'Rules']] : [])
-   .concat([['s-prizes', 'Prizes'], ['s-coord', 'Coordinator'], ['s-regs', 'Registrations']]);
+   .concat([['s-prizes', 'Prizes'], ['s-coord', 'Coordinator'], ['s-capacity', 'Capacity'], ['s-regs', 'Registrations']]);
 
   $('#jump').innerHTML = links.map((l) => `<a href="#${l[0]}">${l[1]}</a>`).join('');
 
@@ -421,6 +439,59 @@ export function initDashboard(ev, onSignOut = null) {
   if ($('#c-phone')) $('#c-phone').value = ev.coord.phone || '';
   if ($('#c-email')) $('#c-email').value = ev.coord.email || '';
   if ($('#c-whatsapp')) $('#c-whatsapp').value = ev.whatsapp_group || ev.whatsappGroup || '';
+
+  // Capacity & Status inputs
+  const maxRegsInput = $('#c-max-regs');
+  const isClosedCheckbox = $('#c-is-closed');
+  if (maxRegsInput) {
+    const mr = ev.max_registrations || ev.maxRegistrations;
+    maxRegsInput.value = mr ? mr : '';
+  }
+  if (isClosedCheckbox) {
+    isClosedCheckbox.checked = Boolean(ev.is_closed || ev.isClosed);
+  }
+
+  function updateCapacityDisplay() {
+    const regCount = (typeof regs !== 'undefined' && Array.isArray(regs)) ? regs.length : 0;
+    const maxLimit = parseInt(maxRegsInput?.value || 0, 10);
+    const isManuallyClosed = Boolean(isClosedCheckbox?.checked);
+    const isFull = maxLimit > 0 && regCount >= maxLimit;
+
+    const statusText = $('#capacity-status-text');
+    const badge = $('#capacity-badge');
+    if (statusText) {
+      if (maxLimit > 0) {
+        statusText.textContent = `${regCount} / ${maxLimit} seats filled (${Math.max(0, maxLimit - regCount)} remaining)`;
+      } else {
+        statusText.textContent = `Capacity: Unlimited · ${regCount} registered`;
+      }
+    }
+    if (badge) {
+      if (isManuallyClosed) {
+        badge.textContent = 'MANUALLY CLOSED';
+        badge.style.background = '#d32f2f';
+      } else if (isFull) {
+        badge.textContent = 'CAPACITY FULL';
+        badge.style.background = '#d32f2f';
+      } else {
+        badge.textContent = 'OPEN';
+        badge.style.background = '#1e7e4e';
+      }
+    }
+  }
+
+  if (maxRegsInput) {
+    maxRegsInput.addEventListener('input', () => {
+      markDirty();
+      updateCapacityDisplay();
+    });
+  }
+  if (isClosedCheckbox) {
+    isClosedCheckbox.addEventListener('change', () => {
+      markDirty();
+      updateCapacityDisplay();
+    });
+  }
 
   // Manual Prize Pool Toggle & Input initialization
   const isManualPrize = Boolean(ev.manual_prize_pool || ev.manualPrizePool);
@@ -723,6 +794,10 @@ export function initDashboard(ev, onSignOut = null) {
     ev.manualPrizePool = ev.manual_prize_pool;
     ev.prize_pool = ($('#manual-prize-pool-input')?.value || '').trim();
     ev.prizePool = ev.prize_pool;
+    ev.max_registrations = parseInt($('#c-max-regs')?.value || '0', 10) || 0;
+    ev.maxRegistrations = ev.max_registrations;
+    ev.is_closed = Boolean($('#c-is-closed')?.checked);
+    ev.isClosed = ev.is_closed;
     if (isComp) {
       const stepsEl = $('#steps');
       if (stepsEl) {
@@ -1015,6 +1090,9 @@ export function initDashboard(ev, onSignOut = null) {
     ).join('');
 
     $('#noregs').hidden = rows.length > 0;
+    if (typeof updateCapacityDisplay === 'function') {
+      updateCapacityDisplay();
+    }
   }
 
   $('#q').addEventListener('input', drawRegs);

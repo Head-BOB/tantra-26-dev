@@ -417,7 +417,37 @@ input:checked + .toggle-slider::before{transform:translateX(22px);background-col
     </div>
   </section>
 
-  <!-- 6. REGISTRATIONS -->
+  <!-- 6. REGISTRATION CAPACITY & STATUS -->
+  <section class="pn" id="s-capacity">
+    <div class="pn-h">
+      <h2>Registration Capacity &amp; Status</h2>
+      <p>Set a participant seat limit or close registrations when the event is full.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:20px;align-items:start">
+      <div>
+        <label>Participant Seat Limit (Max Registrations)
+          <input id="c-max-regs" type="number" min="0" step="1" placeholder="e.g. 10 (0 or blank = Unlimited)" autocomplete="off">
+        </label>
+        <p style="font-size:12px;opacity:0.7;margin-top:6px">Leave blank or 0 for unlimited. Once reached, registration closes automatically.</p>
+      </div>
+      <div>
+        <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:24px">
+          <input id="c-is-closed" type="checkbox" style="width:20px;height:20px;accent-color:#d32f2f;cursor:pointer">
+          <span style="font-weight:700;font-size:14px;color:#ff6b6b">Manually Close Registrations</span>
+        </label>
+        <p style="font-size:12px;opacity:0.7;margin-top:6px">Forces registrations closed immediately regardless of current participant count.</p>
+      </div>
+    </div>
+    <div id="capacity-meter" style="margin-top:20px;padding:16px 20px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);font-weight:700">Live Status</div>
+        <div id="capacity-status-text" style="font-size:15px;font-weight:600;margin-top:2px">Capacity: Unlimited · 0 registered</div>
+      </div>
+      <span id="capacity-badge" style="font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:6px 14px;border-radius:4px;background:#1e7e4e;color:#fff">OPEN</span>
+    </div>
+  </section>
+
+  <!-- 7. REGISTRATIONS -->
   <section class="pn" id="s-regs">
     <div class="pn-h"><h2>Registrations</h2><p>Everyone who has registered for this event.</p></div>
     <div class="stats" id="stats"></div>

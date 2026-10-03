@@ -48,8 +48,8 @@ function fart(slug) {
 function fmedia(f) {
   const b = f.banners || {};
   const d = DEPT_MAP[f.deptSlug || f.slug] || { code: f.code || 'T26', name: f.dept || 'Tantra 26', bg: f.bg || '#182338', fg: f.fg || '#efe8da' };
-  const deskImg = b.featured_desktop || f.img || '';
-  const mobImg  = b.featured_mobile  || deskImg;
+  const deskImg = b.featured_desktop || f.banner || b.event_desktop || f.img || '';
+  const mobImg  = b.featured_mobile  || b.event_mobile || deskImg;
 
   if (deskImg) {
     return `
@@ -91,35 +91,36 @@ export async function initFeaturedShowcase() {
     featuredEvents = DEMO_FEATURED;
   } else {
     // 1. Fetch live featured events
-    featuredEvents = await apiFetchFeaturedEvents();
+    featuredEvents = (await apiFetchFeaturedEvents()) || [];
 
-    // If none from API cache, check local organiser/admin stores
-    if (!featuredEvents || featuredEvents.length === 0) {
-      try {
-        const localEvents = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
-        const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
-        const allMerged = [];
+    // 2. Always merge any local showcase posters / featured events from admin storage
+    try {
+      const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
+      const localEvents = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
 
-        // Check admin events
-        Object.keys(adminEvents).forEach(slug => {
-          (adminEvents[slug] || []).forEach(e => {
-            if (e.is_featured) allMerged.push({ ...e, deptSlug: slug });
-          });
-        });
+      // Central showcase posters
+      (adminEvents['central'] || []).forEach(p => {
+        if (p && (p.is_featured || p.isFeatured) && !featuredEvents.some(x => x.id === p.id)) {
+          featuredEvents.push(p);
+        }
+      });
 
-        // Check organiser events
-        Object.values(localEvents).forEach(e => {
-          if (e && e.is_featured && !allMerged.some(x => x.id === e.id)) {
-            allMerged.push(e);
+      // Other admin featured events
+      Object.keys(adminEvents).forEach(slug => {
+        (adminEvents[slug] || []).forEach(e => {
+          if (e && (e.is_featured || e.isFeatured) && !featuredEvents.some(x => x.id === e.id)) {
+            featuredEvents.push({ ...e, deptSlug: slug });
           }
         });
+      });
 
-        if (allMerged.length > 0) {
-          allMerged.sort((a, b) => (a.featured_order || 1) - (b.featured_order || 1));
-          featuredEvents = allMerged;
+      // Organiser featured events
+      Object.values(localEvents).forEach(e => {
+        if (e && (e.is_featured || e.isFeatured) && !featuredEvents.some(x => x.id === e.id)) {
+          featuredEvents.push(e);
         }
-      } catch {}
-    }
+      });
+    } catch {}
   }
 
   // Ensure unique distinct order
@@ -169,25 +170,32 @@ export async function initFeaturedShowcase() {
     const dept = (f.deptSlug || f.slug || '').toLowerCase();
     let prizePool = f.prize_pool || (Array.isArray(f.prizes) && f.prizes.length > 0 ? (f.prizes[0]?.reward || f.prizes[0]?.amount) : '');
     if (typeof prizePool === 'string') prizePool = prizePool.replace(/^₹\s*/, '');
+    const isDisplayOnly = Boolean(f.display_only || f.displayOnly);
     const targetUrl = isDemo
       ? `/departments/${dept}.html#events`
       : `/event.html?d=${encodeURIComponent(dept)}&e=${encodeURIComponent(f.id)}`;
 
     // Slide
     const sl = document.createElement('article');
-    sl.className = 'slide';
+    sl.className = 'slide' + (isDisplayOnly ? ' slide-display-only' : '');
     sl.innerHTML = `
       ${fmedia(f)}
       <div class="finfo">
         <div class="fchips">
-          <span class="fchip">Featured</span>
-          <span class="fchip c2">${fesc(f.type || 'Event')}</span>
-          ${prizePool ? `<span class="fchip prize">Prize: ₹${fesc(prizePool)}</span>` : ''}
+          ${isDisplayOnly
+            ? `<span class="fchip" style="background:var(--gold);color:#101a2d;font-weight:700">${fesc(f.type || 'Special Attraction')}</span>`
+            : `
+              <span class="fchip">Featured</span>
+              <span class="fchip c2">${fesc(f.type || 'Event')}</span>
+              ${prizePool ? `<span class="fchip prize">Prize: ₹${fesc(prizePool)}</span>` : ''}
+            `}
         </div>
         <h3>${fesc(f.title)}</h3>
-        <p class="fdept">${fesc(d.name || d.code)}</p>
-        <p class="fmeta">${fesc(dateStr)}${timeStr ? ` &middot; ${fesc(timeStr)}` : ''}${venueStr ? ` &middot; ${fesc(venueStr)}` : ''}</p>
-        <a class="btn" href="${targetUrl}">Register <b>&rarr;</b></a>
+        <p class="fdept">${fesc(isDisplayOnly ? (f.venue || 'Campus Central') : (d.name || d.code))}</p>
+        <p class="fmeta">${fesc(dateStr)}${timeStr ? ` &middot; ${fesc(timeStr)}` : ''}${venueStr && !isDisplayOnly ? ` &middot; ${fesc(venueStr)}` : ''}</p>
+        ${isDisplayOnly
+          ? ''
+          : `<a class="btn" href="${targetUrl}">Register <b>&rarr;</b></a>`}
       </div>
     `;
     fst.insertBefore(sl, fcnt);
@@ -200,7 +208,7 @@ export async function initFeaturedShowcase() {
       <div class="tp">${fmedia(f)}</div>
       <div class="tl">
         ${fesc(f.title)}
-        <small>${fesc(d.code)} &middot; ${fesc(dateStr)}</small>
+        <small>${fesc(isDisplayOnly ? 'Attraction' : d.code)} &middot; ${fesc(dateStr)}</small>
       </div>
     `;
     th.onclick = () => fgo(i, true);

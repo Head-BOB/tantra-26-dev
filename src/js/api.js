@@ -79,11 +79,15 @@ export function unpackEventRecord(ev) {
   const whatsapp_group = (ev.whatsapp_group || ev.whatsappGroup || envelope.whatsapp_group || envelope.whatsappGroup || '').trim();
   const manual_prize_pool = Boolean(ev.manual_prize_pool ?? ev.manualPrizePool ?? envelope.manual_prize_pool ?? envelope.manualPrizePool ?? false);
   const prize_pool = String(ev.prize_pool || ev.prizePool || envelope.prize_pool || envelope.prizePool || '').trim();
+  const display_only = Boolean(ev.display_only ?? ev.displayOnly ?? envelope.display_only ?? envelope.displayOnly ?? false);
+  const max_registrations = parseInt(ev.max_registrations ?? ev.maxRegistrations ?? envelope.max_registrations ?? envelope.maxRegistrations ?? 0, 10) || 0;
+  const is_closed = Boolean(ev.is_closed ?? ev.isClosed ?? envelope.is_closed ?? envelope.isClosed ?? false);
 
   return {
     ...ev,
-    slug: (ev.dept_slug || ev.slug || '').toLowerCase(),
-    dept_slug: (ev.dept_slug || ev.slug || '').toLowerCase(),
+    slug: (envelope.dept_slug || envelope.slug || ev.dept_slug || ev.slug || '').toLowerCase(),
+    dept_slug: (envelope.dept_slug || envelope.slug || ev.dept_slug || ev.slug || '').toLowerCase(),
+    date: envelope.date || ev.date || '7 Oct',
     desc,
     description: desc,
     details,
@@ -103,6 +107,12 @@ export function unpackEventRecord(ev) {
     manualPrizePool: manual_prize_pool,
     prize_pool,
     prizePool: prize_pool,
+    display_only,
+    displayOnly: display_only,
+    max_registrations,
+    maxRegistrations: max_registrations,
+    is_closed,
+    isClosed: is_closed,
     coord,
     whatsapp_group,
     whatsappGroup: whatsapp_group,
@@ -139,7 +149,25 @@ export async function fetchDeptEvents(slug) {
       }
 
       if (!error && data) {
-        return data.map(unpackEventRecord);
+        let eventsList = data.map(unpackEventRecord);
+        try {
+          const { data: regRows } = await supabaseClient
+            .from('registrations')
+            .select('event_id')
+            .eq('dept_slug', slug.toLowerCase());
+          if (regRows && Array.isArray(regRows)) {
+            const counts = {};
+            regRows.forEach(r => {
+              if (r.event_id) counts[r.event_id] = (counts[r.event_id] || 0) + 1;
+            });
+            eventsList = eventsList.map(e => ({
+              ...e,
+              reg_count: counts[e.id] || 0,
+            }));
+          }
+        } catch {}
+        eventsList = eventsList.filter(e => !e.display_only && !e.displayOnly);
+        return eventsList;
       }
     } catch (err) {
       console.warn('fetchDeptEvents Supabase error:', err);
@@ -239,6 +267,30 @@ export async function submitRegistration(payload) {
   // 1. Direct Supabase Submission (Zero-server Vercel mode)
   if (supabaseClient) {
     try {
+      // Check if event is closed or has reached capacity limit
+      const { data: evCheck } = await supabaseClient
+        .from('events')
+        .select('*')
+        .eq('id', payload.event_id)
+        .maybeSingle();
+
+      if (evCheck) {
+        const u = unpackEventRecord(evCheck);
+        if (u && (u.is_closed || u.registration_closed)) {
+          throw new Error('Registrations for this event are closed.');
+        }
+        const maxRegs = parseInt(u?.max_registrations || 0, 10);
+        if (maxRegs > 0) {
+          const { count } = await supabaseClient
+            .from('registrations')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', payload.event_id);
+          if (typeof count === 'number' && count >= maxRegs) {
+            throw new Error(`Registration limit reached (${maxRegs} seats full). Registrations are closed.`);
+          }
+        }
+      }
+
       // Check duplicate registration
       const { data: existing } = await supabaseClient
         .from('registrations')
@@ -446,15 +498,20 @@ export async function apiSaveEvent(eventData, isEdit = false) {
 
   const duration = Math.max(10, parseInt(eventData.duration || 120, 10));
 
+  const validDepts = ['cse', 'cscy', 'ai', 'csd', 'csbs', 'eee', 'ece', 'aei', 'civil', 'mech'];
+  let rawDept = (eventData.dept_slug || eventData.slug || 'cse').toLowerCase();
+  let dbDept = validDepts.includes(rawDept) ? rawDept : 'cse';
+  const eventDate = eventData.date || '7 Oct';
+
   if (supabaseClient) {
     try {
       // 1. First attempt: Native schema columns
       const nativeRecord = {
         id: eventData.id,
-        dept_slug: (eventData.dept_slug || eventData.slug || '').toLowerCase(),
+        dept_slug: dbDept,
         type: eventData.type || 'Competition',
         title: eventData.title || 'Event',
-        date: '7 Oct',
+        date: eventDate,
         time: eventData.time || '10:00 AM',
         duration,
         venue: eventData.venue || 'Campus',
@@ -474,15 +531,21 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         prize_pool: String(eventData.prize_pool || eventData.prizePool || '').trim(),
         coord,
         whatsapp_group,
+        display_only: Boolean(eventData.display_only || eventData.displayOnly),
+        max_registrations: parseInt(eventData.max_registrations ?? eventData.maxRegistrations ?? 0, 10) || 0,
+        is_closed: Boolean(eventData.is_closed || eventData.isClosed),
         is_active: true,
         updated_at: new Date().toISOString(),
       };
 
       let { data, error } = await supabaseClient.from('events').upsert([nativeRecord]).select().single();
-      if (!error && data) return unpackEventRecord(data);
+      if (!error && data) {
+        try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
+        return unpackEventRecord(data);
+      }
 
-      // If banners, is_featured, prizes, duration, manual_prize_pool, prize_pool or whatsapp_group is missing from Supabase schema cache, retry progressively
-      if (error && (error.message.includes('banners') || error.message.includes('is_featured') || error.message.includes('prizes') || error.message.includes('duration') || error.message.includes('whatsapp_group') || error.message.includes('manual_prize_pool') || error.message.includes('prize_pool') || error.message.includes('schema cache'))) {
+      // If custom columns are missing from Supabase schema cache, retry progressively
+      if (error && (error.message.includes('banners') || error.message.includes('is_featured') || error.message.includes('prizes') || error.message.includes('duration') || error.message.includes('whatsapp_group') || error.message.includes('manual_prize_pool') || error.message.includes('prize_pool') || error.message.includes('display_only') || error.message.includes('max_registrations') || error.message.includes('is_closed') || error.message.includes('schema cache'))) {
         const fallbackNative = { ...nativeRecord };
         delete fallbackNative.banners;
         delete fallbackNative.is_featured;
@@ -491,8 +554,12 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         delete fallbackNative.manual_prize_pool;
         delete fallbackNative.prize_pool;
         delete fallbackNative.whatsapp_group;
+        delete fallbackNative.display_only;
+        delete fallbackNative.max_registrations;
+        delete fallbackNative.is_closed;
         const resNoCols = await supabaseClient.from('events').upsert([fallbackNative]).select().single();
         if (!resNoCols.error && resNoCols.data) {
+          try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
           return unpackEventRecord(resNoCols.data);
         }
         error = resNoCols.error;
@@ -502,6 +569,9 @@ export async function apiSaveEvent(eventData, isEdit = false) {
       if (error) {
         const envelope = JSON.stringify({
           _meta: true,
+          dept_slug: rawDept,
+          slug: rawDept,
+          date: eventDate,
           desc,
           details,
           accessCode,
@@ -517,13 +587,16 @@ export async function apiSaveEvent(eventData, isEdit = false) {
           prize_pool: String(eventData.prize_pool || eventData.prizePool || '').trim(),
           coord,
           whatsapp_group,
+          display_only: Boolean(eventData.display_only || eventData.displayOnly),
+          max_registrations: parseInt(eventData.max_registrations ?? eventData.maxRegistrations ?? 0, 10) || 0,
+          is_closed: Boolean(eventData.is_closed || eventData.isClosed),
         });
         const fallbackRecord = {
           id: eventData.id,
-          dept_slug: (eventData.dept_slug || eventData.slug || '').toLowerCase(),
+          dept_slug: dbDept,
           type: eventData.type || 'Competition',
           title: eventData.title || 'Event',
-          date: '7 Oct',
+          date: eventDate,
           time: eventData.time || '10:00 AM',
           venue: eventData.venue || 'Campus',
           team_size: parseInt(eventData.team_size || eventData.team || 1, 10) || 1,
@@ -534,13 +607,19 @@ export async function apiSaveEvent(eventData, isEdit = false) {
           updated_at: new Date().toISOString(),
         };
         let { data: fbData, error: fbErr } = await supabaseClient.from('events').upsert([fallbackRecord]).select().single();
-        if (!fbErr && fbData) return unpackEventRecord(fbData);
+        if (!fbErr && fbData) {
+          try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
+          return unpackEventRecord(fbData);
+        }
 
         // If access_code column also not in schema, fallback to storing accessCode inside envelope
         if (fbErr && (fbErr.message.includes('access_code') || fbErr.message.includes('schema cache'))) {
           delete fallbackRecord.access_code;
           const { data: fbData2, error: fbErr2 } = await supabaseClient.from('events').upsert([fallbackRecord]).select().single();
-          if (!fbErr2 && fbData2) return unpackEventRecord(fbData2);
+          if (!fbErr2 && fbData2) {
+            try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
+            return unpackEventRecord(fbData2);
+          }
           if (fbErr2) console.warn('⚠️ Supabase fallback event save error:', fbErr2.message);
         } else if (fbErr) {
           console.warn('⚠️ Supabase fallback event save error:', fbErr.message);
@@ -695,7 +774,17 @@ export async function apiFetchSingleEvent(slug, id) {
         .maybeSingle();
 
       if (!error && data) {
-        return unpackEventRecord(data);
+        const item = unpackEventRecord(data);
+        if (item) {
+          try {
+            const { count: regCount } = await supabaseClient
+              .from('registrations')
+              .select('*', { count: 'exact', head: true })
+              .eq('event_id', id);
+            item.reg_count = regCount || 0;
+          } catch {}
+        }
+        return item;
       }
     } catch {}
   }
@@ -1033,11 +1122,23 @@ export async function apiFetchFeaturedEvents() {
         .order('featured_order', { ascending: true });
 
       if (!error && data) {
-        const unpacked = data.map(unpackEventRecord).filter(ev => {
-          // Strictly verify event has both featured banners
+        let unpacked = data.map(unpackEventRecord).filter(ev => {
+          // Strictly verify event has both featured banners or is a display_only showcase poster
           const b = ev.banners || {};
-          return Boolean(b.featured_desktop && b.featured_mobile);
+          return Boolean((b.featured_desktop && b.featured_mobile) || (ev.display_only && (b.featured_desktop || ev.banner || b.event_desktop)));
         });
+
+        // Merge local admin posters so newly created attractions appear immediately
+        try {
+          const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
+          const localPosters = adminEvents['central'] || [];
+          localPosters.forEach(p => {
+            if (p && (p.is_featured || p.isFeatured) && !unpacked.some(x => x.id === p.id)) {
+              unpacked.push(p);
+            }
+          });
+        } catch {}
+
         unpacked.sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0));
         const seenSlots = new Set();
         let curSlot = 1;
@@ -1072,7 +1173,7 @@ export async function apiFetchFeaturedEvents() {
       if (!ev || !ev.id || seen.has(ev.id)) return;
       if (ev.is_featured || ev.isFeatured) {
         const b = ev.banners || {};
-        if (b.featured_desktop && b.featured_mobile) {
+        if ((b.featured_desktop && b.featured_mobile) || (ev.display_only && (b.featured_desktop || ev.banner))) {
           list.push(ev);
           seen.add(ev.id);
         }

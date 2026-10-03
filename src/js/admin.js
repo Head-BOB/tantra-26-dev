@@ -300,6 +300,7 @@ function showApp() {
   bindExcelModal();
   bindRegistrationsView();
   bindCentralAdminViews();
+  bindPosterModal();
 
   // If department admin, immediately select their department
   if (currentUser.role === 'dept_admin') {
@@ -360,13 +361,14 @@ function refreshSidebar() {
     const count = allEventsFor(btn.dataset.slug).length;
     const badge = btn.querySelector('.badge');
     if (badge) badge.textContent = count;
-    btn.classList.toggle('active', btn.dataset.slug === activeDept && !['central-qrs', 'central-regs', 'central-featured'].includes(currentView));
+    btn.classList.toggle('active', btn.dataset.slug === activeDept && !['central-qrs', 'central-regs', 'central-featured', 'central-posters'].includes(currentView));
   });
 
   // Central buttons active states
   $('nav-central-qrs').classList.toggle('active', currentView === 'central-qrs');
   $('nav-central-regs').classList.toggle('active', currentView === 'central-regs');
   if ($('nav-central-featured')) $('nav-central-featured').classList.toggle('active', currentView === 'central-featured');
+  if ($('nav-central-posters')) $('nav-central-posters').classList.toggle('active', currentView === 'central-posters');
 
   updateRegsBadge();
 }
@@ -380,6 +382,11 @@ function updateRegsBadge() {
   if ($('central-featured-badge')) {
     const featCount = getAllFeaturedCandidateEvents().filter(e => e.is_featured).length;
     $('central-featured-badge').textContent = featCount > 0 ? featCount : '★';
+  }
+
+  if ($('central-posters-badge')) {
+    const posterCount = typeof getAllShowcasePosters === 'function' ? getAllShowcasePosters().length : 0;
+    $('central-posters-badge').textContent = posterCount > 0 ? posterCount : 'Ad';
   }
 }
 
@@ -417,6 +424,7 @@ function hideAllViews() {
   $('view-central-qrs').hidden    = true;
   $('view-central-regs').hidden   = true;
   if ($('view-central-featured')) $('view-central-featured').hidden = true;
+  if ($('view-central-posters')) $('view-central-posters').hidden = true;
 }
 
 function selectDept(slug) {
@@ -1105,6 +1113,24 @@ function bindCentralAdminViews() {
     };
   }
 
+  if ($('nav-central-posters')) {
+    $('nav-central-posters').onclick = () => {
+      if (currentUser.role !== 'superadmin') return;
+      currentView = 'central-posters';
+      hideAllViews();
+      $('main-header').hidden = true;
+      $('view-central-posters').hidden = false;
+      refreshSidebar();
+      renderCentralPosters();
+    };
+  }
+
+  if ($('add-poster-btn')) {
+    $('add-poster-btn').onclick = () => {
+      openPosterModal();
+    };
+  }
+
   $('central-dept-filter').onchange = () => {
     renderCentralRegs();
   };
@@ -1633,6 +1659,294 @@ function renderCentralFeatured() {
 
     grid.appendChild(card);
   });
+}
+
+// ─── Central View 4: Showcase Posters & Attractions Manager ───
+let currentPosterDeskImg = '';
+let currentPosterMobImg = '';
+
+function getAllShowcasePosters() {
+  const adminEvents = getAdminEvents();
+  const posters = [];
+  const seen = new Set();
+
+  const centralList = adminEvents['central'] || [];
+  centralList.forEach(e => {
+    if (e && (e.display_only || e.displayOnly || e.dept_slug === 'central')) {
+      posters.push(e);
+      seen.add(e.id);
+    }
+  });
+
+  Object.keys(adminEvents).forEach(slug => {
+    (adminEvents[slug] || []).forEach(e => {
+      if (e && (e.display_only || e.displayOnly) && !seen.has(e.id)) {
+        posters.push(e);
+        seen.add(e.id);
+      }
+    });
+  });
+
+  return posters;
+}
+
+function renderCentralPosters() {
+  const grid = $('central-posters-grid');
+  const empty = $('posters-empty-state');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const posters = getAllShowcasePosters();
+  if (posters.length === 0) {
+    if (empty) empty.hidden = false;
+    return;
+  }
+  if (empty) empty.hidden = true;
+
+  posters.forEach(p => {
+    const card = document.createElement('div');
+    const isFeat = Boolean(p.is_featured);
+    card.className = `feat-card ${isFeat ? 'is-featured' : ''}`;
+    const b = p.banners || {};
+    const deskImg = b.featured_desktop || p.banner || b.event_desktop || '';
+    const mobImg  = b.featured_mobile  || b.event_mobile || deskImg;
+
+    card.innerHTML = `
+      <div class="feat-card-head" style="--acc: #182338; --accfg: #efe8da">
+        <div class="feat-card-title-col">
+          <span class="feat-dept-label">Central Attraction · ${esc(p.venue || 'Campus Ground')}</span>
+          <h4>${formatTitleSpan(expandMathShortcuts(p.title))}</h4>
+        </div>
+        <span class="feat-type-badge">${esc(p.type || 'Special Attraction')}</span>
+      </div>
+      <div class="feat-card-body">
+        <div class="feat-meta-row">
+          <span>${esc(p.date || '7-8 Oct')} · ${esc(p.time || 'All Day')} · Viewing Only</span>
+        </div>
+        <div>
+          <span class="feat-status-badge ${isFeat ? 'active-featured' : ''}">${isFeat ? '★ Spotlight Active on Homepage' : 'Hidden from Homepage'}</span>
+        </div>
+        <div class="feat-banner-previews">
+          <div class="f-prev-slot">
+            <span>Desktop Poster (16:8)</span>
+            ${deskImg ? `<img src="${esc(deskImg)}" alt="Desktop Preview" style="width:100%;height:100%;object-fit:cover">` : `<div class="f-no-img">No Banner</div>`}
+          </div>
+          <div class="f-prev-slot">
+            <span>Mobile Poster (4:5)</span>
+            ${mobImg ? `<img src="${esc(mobImg)}" alt="Mobile Preview" style="width:100%;height:100%;object-fit:cover">` : `<div class="f-no-img">No Banner</div>`}
+          </div>
+        </div>
+        <div class="feat-card-actions" style="margin-top:auto;display:flex;gap:10px;justify-content:flex-end;align-items:center">
+          <button type="button" class="feat-toggle-btn edit-poster-btn">Edit Poster</button>
+          <button type="button" class="tb-btn tb-btn--danger delete-poster-btn" style="padding:7px 14px;font-size:11px;font-weight:700">Delete</button>
+        </div>
+      </div>
+    `;
+
+    card.querySelector('.edit-poster-btn').onclick = () => openPosterModal(p);
+    card.querySelector('.delete-poster-btn').onclick = () => deleteShowcasePoster(p);
+    grid.appendChild(card);
+  });
+}
+
+function compressPosterImage(file, maxDim = 1600, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function openPosterModal(poster = null) {
+  const modal = $('poster-modal');
+  if (!modal) return;
+
+  $('pm-id').value = poster?.id || '';
+  $('pm-mode').textContent = poster ? 'Edit Attraction' : 'Showcase Attraction';
+  $('pm-title').textContent = poster ? 'Edit Showcase Poster' : 'New Showcase Poster';
+  $('pm-title-input').value = poster?.title || '';
+  $('pm-type').value = poster?.type || 'Special Attraction';
+  $('pm-venue').value = poster?.venue || 'Campus Central Ground';
+  $('pm-date').value = poster?.date || '7-8 Oct';
+  $('pm-time').value = poster?.time || 'All Day';
+  $('pm-desc').value = poster?.desc || poster?.details || '';
+  $('pm-is-featured').checked = poster ? Boolean(poster.is_featured) : true;
+
+  const b = poster?.banners || {};
+  currentPosterDeskImg = b.featured_desktop || poster?.banner || '';
+  currentPosterMobImg = b.featured_mobile || currentPosterDeskImg;
+
+  if (currentPosterDeskImg) {
+    $('pm-desk-preview').style.display = 'block';
+    $('pm-desk-img').src = currentPosterDeskImg;
+  } else {
+    $('pm-desk-preview').style.display = 'none';
+    $('pm-desk-img').src = '';
+  }
+
+  if (currentPosterMobImg) {
+    $('pm-mob-preview').style.display = 'block';
+    $('pm-mob-img').src = currentPosterMobImg;
+  } else {
+    $('pm-mob-preview').style.display = 'none';
+    $('pm-mob-img').src = '';
+  }
+
+  $('pm-banner-desk-file').value = '';
+  $('pm-banner-mob-file').value = '';
+
+  modal.classList.add('open');
+}
+
+function closePosterModal() {
+  const modal = $('poster-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+function bindPosterModal() {
+  const modal = $('poster-modal');
+  if (!modal) return;
+
+  $('pm-close').onclick = closePosterModal;
+  $('pm-cancel').onclick = closePosterModal;
+
+  $('pm-banner-desk-file').onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = await compressPosterImage(file);
+      currentPosterDeskImg = dataUrl;
+      $('pm-desk-preview').style.display = 'block';
+      $('pm-desk-img').src = dataUrl;
+      if (!currentPosterMobImg) {
+        currentPosterMobImg = dataUrl;
+        $('pm-mob-preview').style.display = 'block';
+        $('pm-mob-img').src = dataUrl;
+      }
+    } catch {
+      toast('Failed to process desktop image', 'error');
+    }
+  };
+
+  $('pm-banner-mob-file').onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = await compressPosterImage(file, 1200, 0.82);
+      currentPosterMobImg = dataUrl;
+      $('pm-mob-preview').style.display = 'block';
+      $('pm-mob-img').src = dataUrl;
+    } catch {
+      toast('Failed to process mobile image', 'error');
+    }
+  };
+
+  $('poster-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const title = $('pm-title-input').value.trim();
+    if (!title) {
+      toast('Please enter a title for this poster', 'error');
+      return;
+    }
+
+    const id = $('pm-id').value.trim() || ('attraction-' + Date.now().toString(36));
+    const isFeatured = $('pm-is-featured').checked;
+
+    const posterObj = {
+      id,
+      title,
+      type: $('pm-type').value.trim() || 'Special Attraction',
+      venue: $('pm-venue').value.trim() || 'Campus',
+      date: $('pm-date').value.trim() || '7-8 Oct',
+      time: $('pm-time').value.trim() || 'All Day',
+      desc: $('pm-desc').value.trim(),
+      details: $('pm-desc').value.trim(),
+      fee: 'Viewing Only',
+      team: 1,
+      slug: 'central',
+      deptSlug: 'central',
+      dept_slug: 'central',
+      display_only: true,
+      displayOnly: true,
+      is_featured: isFeatured,
+      featured_order: 1,
+      banners: {
+        featured_desktop: currentPosterDeskImg,
+        featured_mobile: currentPosterMobImg || currentPosterDeskImg,
+        event_desktop: currentPosterDeskImg,
+        event_mobile: currentPosterMobImg || currentPosterDeskImg,
+      },
+      banner: currentPosterDeskImg,
+    };
+
+    // Save to adminEvents['central']
+    const adminEvents = getAdminEvents();
+    if (!adminEvents['central']) adminEvents['central'] = [];
+    const idx = adminEvents['central'].findIndex(x => x.id === id);
+    if (idx >= 0) {
+      adminEvents['central'][idx] = posterObj;
+    } else {
+      adminEvents['central'].push(posterObj);
+    }
+    setAdminEvents(adminEvents);
+    try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
+
+    closePosterModal();
+    toast('Showcase poster saved ✓');
+    renderCentralPosters();
+    updateRegsBadge();
+
+    // Async save to cloud database
+    apiSaveEvent(posterObj).then(() => {
+      toast('Poster synced to database ✓', 'info');
+    }).catch(err => {
+      console.warn('apiSaveEvent poster warning:', err);
+    });
+  };
+}
+
+async function deleteShowcasePoster(poster) {
+  if (!confirm(`Are you sure you want to delete the showcase poster "${poster.title}"?`)) return;
+
+  const adminEvents = getAdminEvents();
+  if (adminEvents['central']) {
+    adminEvents['central'] = adminEvents['central'].filter(x => x.id !== poster.id);
+  }
+  Object.keys(adminEvents).forEach(s => {
+    adminEvents[s] = (adminEvents[s] || []).filter(x => x.id !== poster.id);
+  });
+  setAdminEvents(adminEvents);
+  try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
+
+  toast(`Deleted "${poster.title}"`);
+  renderCentralPosters();
+  updateRegsBadge();
+
+  apiDeleteEvent(poster.id).catch(console.error);
 }
 
 function getDepartmentEventsList(slug) {

@@ -265,6 +265,7 @@ if (initialEv) {
           s[cloudEv.id] = cloudEv;
           localStorage.setItem(EV_KEY, JSON.stringify(s));
         } catch {}
+        renderEvent(cloudEv);
       }
     }).catch(() => {});
   }
@@ -399,7 +400,11 @@ function renderEvent(ev) {
   }
   
   const prizePool = calculatePrizePool(ev.prizes, ev);
+  const isClosed = Boolean(ev.is_closed || ev.isClosed || (ev.max_registrations > 0 && (ev.reg_count || 0) >= ev.max_registrations));
   let chipsHtml = `<span class="chip g">${esc(ev.type)}</span><span class="chip">${esc(ev.fee || 'Free')}</span>`;
+  if (isClosed) {
+    chipsHtml += `<span class="chip" style="background:#c62828;color:#fff;font-weight:700;border:1px solid rgba(255,255,255,0.2)">CLOSED</span>`;
+  }
   if (prizePool) {
     chipsHtml += `<span class="chip">Prize Pool &middot; ${esc(prizePool.text)}</span>`;
   }
@@ -718,10 +723,13 @@ function renderEvent(ev) {
     $('#bar-t').innerHTML = formatTitleSpan(ev.title);
     $('#bar-s').textContent = `${ev.date} · ${ev.time} · ${ev.fee || 'Free'}`;
     const a = $('#bar-act');
+    const isClosed = Boolean(ev.is_closed || ev.isClosed || (ev.max_registrations > 0 && (ev.reg_count || 0) >= ev.max_registrations));
     if (mode === 'done') {
       a.innerHTML = '<button class="reg" disabled>Event ended</button>';
     } else if (isUserRegistered()) {
       a.innerHTML = '<a class="reg done" href="/my-events.html" title="View my events">&#10003; View Event</a>';
+    } else if (isClosed) {
+      a.innerHTML = '<button class="reg closed" disabled style="cursor:not-allowed">Closed</button>';
     } else {
       a.innerHTML = '<button class="reg" id="regbtn">Register <b>&rarr;</b></button>';
       const b = $('#regbtn');
@@ -948,6 +956,11 @@ function renderEvent(ev) {
   }
 
   function openModal() {
+    const isClosed = Boolean(ev.is_closed || ev.isClosed || (ev.max_registrations > 0 && (ev.reg_count || 0) >= ev.max_registrations));
+    if (isClosed) {
+      alert('Registrations for this event are closed.');
+      return;
+    }
     curData  = null;
     conflictConfirmed = false;
     clearConflictWarning();

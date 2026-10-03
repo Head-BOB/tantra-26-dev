@@ -81,6 +81,10 @@
           <span>Featured Events</span>
           <span class="badge" id="central-featured-badge">★</span>
         </button>
+        <button class="dept-btn" id="nav-central-posters">
+          <span>Showcase Posters</span>
+          <span class="badge" id="central-posters-badge">Ad</span>
+        </button>
       </div>
     </aside>
 
@@ -254,6 +258,27 @@
         </div>
       </div>
 
+      <!-- VIEW 6: Super Admin Central - Showcase Posters & Attractions -->
+      <div id="view-central-posters" hidden>
+        <div class="central-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px">
+          <div>
+            <div class="main-eyebrow">Central Administration</div>
+            <h2>Homepage Showcase Posters &amp; Attractions</h2>
+            <p class="central-sub">Add display-only posters and special attractions (e.g. AutoShow, ProShow, Mega Exhibits) to feature on the homepage showcase. These items are strictly for viewing—no registration or checkout flow.</p>
+          </div>
+          <button id="add-poster-btn" class="add-btn" type="button" style="white-space:nowrap">+ Add Showcase Poster</button>
+        </div>
+
+        <div class="featured-manager-grid" id="central-posters-grid"></div>
+        <div id="posters-empty-state" hidden>
+          <div class="empty-state-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </div>
+          <p>No showcase posters added yet.</p>
+          <p>Click <strong>+ Add Showcase Poster</strong> to add an AutoShow or special attraction poster to the homepage.</p>
+        </div>
+      </div>
+
     </main>
 
   </div><!-- /layout -->
@@ -412,6 +437,77 @@
           <button type="button" class="sub" id="excel-modal-download">Download .xlsx</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ── Add / Edit Showcase Poster Modal ── -->
+  <div class="modal" id="poster-modal" role="dialog" aria-modal="true" aria-labelledby="pm-title">
+    <div class="sheet">
+      <div class="sheet-h">
+        <div>
+          <small id="pm-mode">Showcase Attraction</small>
+          <h3 id="pm-title">New Showcase Poster</h3>
+        </div>
+        <button class="x" id="pm-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="poster-form" novalidate>
+        <input type="hidden" name="id" id="pm-id">
+        <label>Poster / Event Title
+          <input name="title" id="pm-title-input" required autocomplete="off" placeholder="e.g. MEGA AUTOSHOW 2026">
+        </label>
+        <div class="row">
+          <label>Category / Badge
+            <input name="type" id="pm-type" required placeholder="e.g. Special Attraction, AutoShow, Expo" value="Special Attraction">
+          </label>
+          <label>Venue / Location
+            <input name="venue" id="pm-venue" required placeholder="e.g. College Football Ground or Campus Central">
+          </label>
+        </div>
+        <div class="row">
+          <label>Schedule / Date
+            <input name="date" id="pm-date" value="7-8 Oct" required placeholder="e.g. 7 Oct or 7-8 Oct">
+          </label>
+          <label>Time
+            <input name="time" id="pm-time" placeholder="e.g. All Day or 10:00 AM - 5:00 PM" value="All Day">
+          </label>
+        </div>
+        <label>Description / Highlights
+          <textarea name="desc" id="pm-desc" rows="3" placeholder="Brief details about the exhibition, vehicles on display, attractions, etc."></textarea>
+        </label>
+
+        <!-- Banners upload -->
+        <div style="margin-top:16px">
+          <div style="font-weight:700;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:10px">Showcase Artwork &amp; Banners</div>
+          <div class="row">
+            <div>
+              <label>Desktop Showcase Poster (16:8 or Landscape)
+                <input type="file" id="pm-banner-desk-file" accept="image/*" style="margin-top:6px;font-size:12px">
+              </label>
+              <div id="pm-desk-preview" style="margin-top:8px;max-height:100px;overflow:hidden;border-radius:4px;border:1px solid rgba(255,255,255,0.1);display:none">
+                <img id="pm-desk-img" style="width:100%;height:100px;object-fit:cover">
+              </div>
+            </div>
+            <div>
+              <label>Mobile Showcase Poster (4:5 or Portrait)
+                <input type="file" id="pm-banner-mob-file" accept="image/*" style="margin-top:6px;font-size:12px">
+              </label>
+              <div id="pm-mob-preview" style="margin-top:8px;max-height:100px;overflow:hidden;border-radius:4px;border:1px solid rgba(255,255,255,0.1);display:none">
+                <img id="pm-mob-img" style="width:100%;height:100px;object-fit:cover">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;align-items:center;gap:12px">
+          <input type="checkbox" id="pm-is-featured" checked style="width:18px;height:18px;accent-color:var(--gold)">
+          <label for="pm-is-featured" style="cursor:pointer;font-weight:600;font-size:13px;margin:0">Feature on Homepage Spotlight</label>
+        </div>
+
+        <div class="form-actions" style="margin-top:24px">
+          <button type="button" class="cancel-btn" id="pm-cancel">Cancel</button>
+          <button type="submit" class="sub" id="pm-submit">Save Showcase Poster</button>
+        </div>
+      </form>
     </div>
   </div>
 
