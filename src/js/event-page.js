@@ -251,6 +251,29 @@ if (rawSlug) {
     gateLink.textContent = `Back to ${rawSlug.toUpperCase()} Department`;
   }
 }
+function saveToLocalCaches(ev) {
+  if (!ev || !ev.id) return;
+  try {
+    const s = JSON.parse(localStorage.getItem(EV_KEY) || '{}');
+    const sSlug = (ev.slug || rawSlug || '').toLowerCase();
+    if (sSlug) s[sSlug + ':' + ev.id] = ev;
+    s[ev.id] = ev;
+    localStorage.setItem(EV_KEY, JSON.stringify(s));
+
+    if (sSlug) {
+      const dKey = 'tantra26:cache:dept_events:' + sSlug;
+      const deptList = JSON.parse(localStorage.getItem(dKey) || '[]');
+      const idx = deptList.findIndex((x) => x.id === ev.id);
+      if (idx >= 0) {
+        deptList[idx] = { ...deptList[idx], ...ev };
+      } else {
+        deptList.push(ev);
+      }
+      localStorage.setItem(dKey, JSON.stringify(deptList));
+    }
+  } catch {}
+}
+
 const initialEv = loadEvent(rawSlug, rawId);
 
 if (initialEv) {
@@ -259,12 +282,7 @@ if (initialEv) {
     const fetchId = rawId || rawSlug;
     apiFetchSingleEvent(rawSlug, fetchId).then((cloudEv) => {
       if (cloudEv) {
-        try {
-          const s = JSON.parse(localStorage.getItem(EV_KEY) || '{}');
-          s[(cloudEv.slug || rawSlug) + ':' + cloudEv.id] = cloudEv;
-          s[cloudEv.id] = cloudEv;
-          localStorage.setItem(EV_KEY, JSON.stringify(s));
-        } catch {}
+        saveToLocalCaches(cloudEv);
         renderEvent(cloudEv);
       }
     }).catch(() => {});
@@ -279,12 +297,7 @@ if (initialEv) {
   apiFetchSingleEvent(rawSlug, fetchId).then((cloudEv) => {
     if (loadingEl) loadingEl.hidden = true;
     if (cloudEv) {
-      try {
-        const s = JSON.parse(localStorage.getItem(EV_KEY) || '{}');
-        s[(cloudEv.slug || rawSlug) + ':' + cloudEv.id] = cloudEv;
-        s[cloudEv.id] = cloudEv;
-        localStorage.setItem(EV_KEY, JSON.stringify(s));
-      } catch {}
+      saveToLocalCaches(cloudEv);
       renderEvent(cloudEv);
     } else {
       if (gateEl) gateEl.hidden = false;
@@ -380,24 +393,38 @@ function renderEvent(ev) {
   const mobUrl = (b.event_mobile || b.featured_mobile || deskUrl).replace(/"/g, '').trim();
   const hasBanner = Boolean(deskUrl && deskUrl !== 'null' && deskUrl !== 'undefined');
 
-  if (hasBanner) {
+  function applyHeroBanner() {
+    if (!hasBanner) {
+      hero.classList.remove('img', 'has-banner');
+      hero.style.removeProperty('--banner-desk');
+      hero.style.removeProperty('--banner-mob');
+      hero.style.backgroundImage = '';
+      if ($('#ghost')) {
+        $('#ghost').style.display = '';
+        $('#ghost').textContent = D[3];
+      }
+      return;
+    }
+
     hero.classList.add('img', 'has-banner');
     hero.style.setProperty('--banner-desk', `url("${deskUrl}")`);
     hero.style.setProperty('--banner-mob', `url("${mobUrl}")`);
+
+    // Dynamic responsive fallback: phones reliably receive mobile banner, desktops receive desktop banner
+    const isMob = window.innerWidth <= 768 || (window.innerWidth <= 920 && window.matchMedia('(orientation: portrait)').matches) || window.matchMedia('(pointer: coarse) and (orientation: portrait)').matches;
+    const activeUrl = (isMob && mobUrl) ? mobUrl : (deskUrl || mobUrl);
+    if (activeUrl) {
+      hero.style.backgroundImage = `url("${activeUrl}")`;
+    }
     if ($('#ghost')) {
       $('#ghost').style.display = 'none';
       $('#ghost').textContent = '';
     }
-  } else {
-    hero.classList.remove('img', 'has-banner');
-    hero.style.removeProperty('--banner-desk');
-    hero.style.removeProperty('--banner-mob');
-    hero.style.backgroundImage = '';
-    if ($('#ghost')) {
-      $('#ghost').style.display = '';
-      $('#ghost').textContent = D[3];
-    }
   }
+  applyHeroBanner();
+  if (hero._onResize) window.removeEventListener('resize', hero._onResize);
+  hero._onResize = applyHeroBanner;
+  window.addEventListener('resize', hero._onResize, { passive: true });
   
   const prizePool = calculatePrizePool(ev.prizes, ev);
   const isClosed = Boolean(ev.is_closed || ev.isClosed || (ev.max_registrations > 0 && (ev.reg_count || 0) >= ev.max_registrations));
@@ -641,79 +668,6 @@ function renderEvent(ev) {
   }
   tick();
   setInterval(tick, 500);
-
-  // Fetch fresh state from cloud database to reflect any updates made by organisers
-  if (rawId) {
-    apiFetchSingleEvent(rawSlug, rawId).then((cloudEv) => {
-      if (!cloudEv) return;
-      let needsCache = false;
-      if (cloudEv.details && cloudEv.details !== ev.details) {
-        ev.details = cloudEv.details;
-        const fullText = ev.details || ev.desc || '';
-        const paras = fullText.split(/\n\s*\n/).filter(Boolean);
-        const aboutT = $('#about-t');
-        if (aboutT) aboutT.innerHTML = paras.map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
-        needsCache = true;
-      }
-      if (cloudEv.banner && cloudEv.banner !== ev.banner) {
-        ev.banner = cloudEv.banner;
-        const heroEl = $('#hero');
-        if (heroEl) {
-          heroEl.classList.add('img');
-          heroEl.style.backgroundImage = `url("${ev.banner.replace(/"/g, '')}")`;
-        }
-        needsCache = true;
-      }
-      if (cloudEv.steps && Array.isArray(cloudEv.steps) && cloudEv.steps.length > 0) {
-        ev.steps = cloudEv.steps;
-        if (ev.type === 'Competition') {
-          const sSteps = $('#s-steps');
-          const stepsEl = $('#steps');
-          if (sSteps) sSteps.hidden = false;
-          if (stepsEl) {
-            stepsEl.innerHTML = ev.steps.map((s, i) =>
-              `<div class="step reveal in" style="transition-delay:${(i % 3) * 0.08}s">` +
-              `<i>${i < 9 ? '0' : ''}${i + 1}</i><h3>${esc(s.t)}</h3><p>${esc(s.x)}</p></div>`
-            ).join('');
-          }
-        }
-        needsCache = true;
-      }
-      if (cloudEv.rules && Array.isArray(cloudEv.rules) && cloudEv.rules.length > 0) {
-        ev.rules = cloudEv.rules;
-        if (ev.type === 'Competition') {
-          const sRules = $('#s-rules');
-          const rulesEl = $('#rules');
-          if (sRules) sRules.hidden = false;
-          if (rulesEl) {
-            rulesEl.innerHTML = ev.rules.map((r, i) =>
-              `<li><b>${i + 1}</b><span>${esc(r)}</span></li>`
-            ).join('');
-          }
-        }
-        needsCache = true;
-      }
-      if (cloudEv.coord && (cloudEv.coord.name || cloudEv.coord.phone)) {
-        ev.coord = cloudEv.coord;
-        const sCoord = $('#s-coord');
-        const cName = $('#c-name');
-        const cActs = $('#c-acts');
-        if (sCoord) sCoord.hidden = false;
-        if (cName) cName.textContent = ev.coord.name || 'Event Coordinator';
-        if (cActs && ev.coord.phone) {
-          cActs.innerHTML = `<a class="cb" href="tel:${esc(ev.coord.phone.replace(/[^\d+]/g, ''))}">Call ${esc(ev.coord.phone)}</a>`;
-        }
-        needsCache = true;
-      }
-      if (needsCache) {
-        try {
-          const s = JSON.parse(localStorage.getItem(EV_KEY) || '{}');
-          s[(ev.slug || rawSlug) + ':' + ev.id] = { ...ev, ...cloudEv };
-          localStorage.setItem(EV_KEY, JSON.stringify(s));
-        } catch {}
-      }
-    }).catch(() => {});
-  }
 
   function isUserRegistered() {
     return readLocalRegs().some((r) => r.slug === ev.slug && (r.eventId === ev.id || r.event === ev.title));

@@ -112,6 +112,10 @@ async function fetchEventData(deptSlug, eventId) {
         const row = rows[0];
         let banners = row.banners || {};
         let prizes = row.prizes || [];
+        let fee = row.fee || 'Free';
+        let duration = row.duration || 120;
+        let eventDate = row.date || '7 Oct';
+        let eventTime = row.time || '';
 
         // Check if envelope JSON was stored in description
         if (typeof row.description === 'string' && row.description.startsWith('{"_meta":true')) {
@@ -119,7 +123,12 @@ async function fetchEventData(deptSlug, eventId) {
             const parsed = JSON.parse(row.description);
             if (parsed.banners) banners = { ...banners, ...parsed.banners };
             if (parsed.prizes) prizes = parsed.prizes;
-            if (parsed.text) row.description = parsed.text;
+            if (parsed.fee) fee = parsed.fee;
+            if (parsed.duration) duration = parsed.duration;
+            if (parsed.date) eventDate = parsed.date;
+            if (parsed.time) eventTime = parsed.time;
+            if (parsed.desc || parsed.details) row.description = parsed.details || parsed.desc;
+            else if (parsed.text) row.description = parsed.text;
           } catch {}
         }
 
@@ -128,10 +137,11 @@ async function fetchEventData(deptSlug, eventId) {
           title: row.title,
           dept_slug: row.dept_slug || deptSlug,
           type: row.type || 'Event',
-          date: row.date || '7 Oct',
-          time: row.time || '',
+          date: eventDate,
+          time: eventTime,
+          duration,
           venue: row.venue || 'Campus',
-          fee: row.fee || 'Free',
+          fee,
           description: row.description || '',
           banner: row.banner || '',
           banners,

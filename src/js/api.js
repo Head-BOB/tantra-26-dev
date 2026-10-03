@@ -60,9 +60,16 @@ export function unpackEventRecord(ev) {
   const rules = Array.isArray(ev.rules) ? ev.rules : (Array.isArray(envelope.rules) ? envelope.rules : []);
   const prizes = Array.isArray(ev.prizes) ? ev.prizes : (Array.isArray(envelope.prizes) ? envelope.prizes : []);
   const coord = (ev.coord && typeof ev.coord === 'object') ? ev.coord : ((envelope.coord && typeof envelope.coord === 'object') ? envelope.coord : { name: '', phone: '', email: '' });
-  const duration = Math.max(10, parseInt(ev.duration || envelope.duration || 120, 10));
+  
+  // Envelope values represent latest admin/organiser edits; take priority over un-migrated column defaults
+  const duration = Math.max(10, parseInt(envelope.duration || ev.duration || 120, 10));
+  const fee = envelope.fee || ev.fee || 'Free';
+  const time = envelope.time || ev.time || '10:00 AM';
+  const date = envelope.date || ev.date || '7 Oct';
 
-  const rawBanners = (ev.banners && typeof ev.banners === 'object') ? ev.banners : ((envelope.banners && typeof envelope.banners === 'object') ? envelope.banners : {});
+  const rawBanners = (ev.banners && typeof ev.banners === 'object' && Object.keys(ev.banners).length > 0)
+    ? ev.banners
+    : ((envelope.banners && typeof envelope.banners === 'object') ? envelope.banners : {});
   const evDesk = rawBanners.event_desktop || banner || '';
   const evMob  = rawBanners.event_mobile || '';
   const featDesk = rawBanners.featured_desktop || evDesk || '';
@@ -87,13 +94,15 @@ export function unpackEventRecord(ev) {
     ...ev,
     slug: (envelope.dept_slug || envelope.slug || ev.dept_slug || ev.slug || '').toLowerCase(),
     dept_slug: (envelope.dept_slug || envelope.slug || ev.dept_slug || ev.slug || '').toLowerCase(),
-    date: envelope.date || ev.date || '7 Oct',
+    date,
+    time,
+    duration,
+    fee,
     desc,
     description: desc,
     details,
     accessCode,
     access_code: accessCode,
-    duration,
     banner: banners.event_desktop || banner,
     banners,
     is_featured: isFeatured,
@@ -505,7 +514,43 @@ export async function apiSaveEvent(eventData, isEdit = false) {
 
   if (supabaseClient) {
     try {
-      // 1. First attempt: Native schema columns
+      const envelope = JSON.stringify({
+        _meta: true,
+        dept_slug: rawDept,
+        slug: rawDept,
+        date: eventDate,
+        time: eventData.time || '10:00 AM',
+        desc,
+        details,
+        accessCode,
+        duration,
+        fee: eventData.fee || 'Free',
+        banner: banners.event_desktop || banner,
+        banners,
+        is_featured,
+        featured_order,
+        steps,
+        rules,
+        prizes,
+        manual_prize_pool: Boolean(eventData.manual_prize_pool || eventData.manualPrizePool),
+        prize_pool: String(eventData.prize_pool || eventData.prizePool || '').trim(),
+        coord,
+        whatsapp_group,
+        display_only: Boolean(eventData.display_only || eventData.displayOnly),
+        max_registrations: parseInt(eventData.max_registrations ?? eventData.maxRegistrations ?? 0, 10) || 0,
+        is_closed: Boolean(eventData.is_closed || eventData.isClosed),
+      });
+
+      // Invalidate relevant local storage caches
+      const invalidateCaches = () => {
+        try {
+          localStorage.removeItem('tantra26:cache:featured_events');
+          localStorage.removeItem('tantra26:cache:dept_events:' + rawDept);
+          localStorage.removeItem('tantra26:cache:dept_events:' + dbDept);
+        } catch {}
+      };
+
+      // 1. First attempt: Native schema columns (with envelope preserved in description as safety fallback)
       const nativeRecord = {
         id: eventData.id,
         dept_slug: dbDept,
@@ -517,7 +562,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         venue: eventData.venue || 'Campus',
         team_size: parseInt(eventData.team_size || eventData.team || 1, 10) || 1,
         fee: eventData.fee || 'Free',
-        description: desc,
+        description: envelope,
         access_code: accessCode,
         details,
         banner: banners.event_desktop || banner,
@@ -540,11 +585,11 @@ export async function apiSaveEvent(eventData, isEdit = false) {
 
       let { data, error } = await supabaseClient.from('events').upsert([nativeRecord]).select().single();
       if (!error && data) {
-        try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
+        invalidateCaches();
         return unpackEventRecord(data);
       }
 
-      // If custom columns are missing from Supabase schema cache, retry progressively
+      // If custom columns are missing from Supabase schema cache, retry progressively with envelope in description
       if (error && (error.message.includes('banners') || error.message.includes('is_featured') || error.message.includes('prizes') || error.message.includes('duration') || error.message.includes('whatsapp_group') || error.message.includes('manual_prize_pool') || error.message.includes('prize_pool') || error.message.includes('display_only') || error.message.includes('max_registrations') || error.message.includes('is_closed') || error.message.includes('schema cache'))) {
         const fallbackNative = { ...nativeRecord };
         delete fallbackNative.banners;
@@ -557,9 +602,11 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         delete fallbackNative.display_only;
         delete fallbackNative.max_registrations;
         delete fallbackNative.is_closed;
+        // Keep description: envelope so mobile banners, duration, fee etc. are preserved!
+        fallbackNative.description = envelope;
         const resNoCols = await supabaseClient.from('events').upsert([fallbackNative]).select().single();
         if (!resNoCols.error && resNoCols.data) {
-          try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
+          invalidateCaches();
           return unpackEventRecord(resNoCols.data);
         }
         error = resNoCols.error;
@@ -567,30 +614,6 @@ export async function apiSaveEvent(eventData, isEdit = false) {
 
       // 2. Second attempt: Fallback metadata envelope
       if (error) {
-        const envelope = JSON.stringify({
-          _meta: true,
-          dept_slug: rawDept,
-          slug: rawDept,
-          date: eventDate,
-          desc,
-          details,
-          accessCode,
-          duration,
-          banner: banners.event_desktop || banner,
-          banners,
-          is_featured,
-          featured_order,
-          steps,
-          rules,
-          prizes,
-          manual_prize_pool: Boolean(eventData.manual_prize_pool || eventData.manualPrizePool),
-          prize_pool: String(eventData.prize_pool || eventData.prizePool || '').trim(),
-          coord,
-          whatsapp_group,
-          display_only: Boolean(eventData.display_only || eventData.displayOnly),
-          max_registrations: parseInt(eventData.max_registrations ?? eventData.maxRegistrations ?? 0, 10) || 0,
-          is_closed: Boolean(eventData.is_closed || eventData.isClosed),
-        });
         const fallbackRecord = {
           id: eventData.id,
           dept_slug: dbDept,
@@ -608,7 +631,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         };
         let { data: fbData, error: fbErr } = await supabaseClient.from('events').upsert([fallbackRecord]).select().single();
         if (!fbErr && fbData) {
-          try { localStorage.removeItem('tantra26:cache:featured_events'); } catch {}
+          invalidateCaches();
           return unpackEventRecord(fbData);
         }
 

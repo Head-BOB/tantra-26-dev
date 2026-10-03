@@ -239,8 +239,8 @@ export function initDeptPage(CONFIG, EVENTS) {
       const nextEvents = filtered.map(e => ({ ...e, date: '7 Oct' }));
 
       // Only re-draw if there is an actual difference from what is currently rendered
-      const currentSig = allEvents.map(e => `${e.id}:${e.fee}:${e.title}:${e.time}:${e.venue}`).join('|');
-      const nextSig = nextEvents.map(e => `${e.id}:${e.fee}:${e.title}:${e.time}:${e.venue}`).join('|');
+      const currentSig = allEvents.map(e => `${e.id}:${e.fee}:${e.title}:${e.time}:${e.duration}:${e.venue}:${e.is_closed}:${e.max_registrations}`).join('|');
+      const nextSig = nextEvents.map(e => `${e.id}:${e.fee}:${e.title}:${e.time}:${e.duration}:${e.venue}:${e.is_closed}:${e.max_registrations}`).join('|');
       if (allEvents.length === 0 || currentSig !== nextSig) {
         allEvents = nextEvents;
         updateChipsAndFilters();
