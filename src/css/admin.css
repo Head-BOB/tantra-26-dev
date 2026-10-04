@@ -849,11 +849,18 @@ h1,h2,h3 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; text-tran
 .f-prev-slot {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font: 700 9px/1 'Inter';
-  letter-spacing: .16em;
+  gap: 6px;
+  font: 700 9px/1.2 'Inter';
+  letter-spacing: .14em;
   text-transform: uppercase;
   color: rgba(239,232,218,.6);
+  flex: 1;
+}
+.f-prev-slot span {
+  display: flex;
+  align-items: flex-end;
+  min-height: 22px;
+  line-height: 1.25;
 }
 .f-prev-slot img {
   width: 100%;
@@ -862,6 +869,8 @@ h1,h2,h3 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; text-tran
   border-radius: 4px;
   border: 1px solid rgba(239,232,218,.15);
   background: #000;
+  margin-top: auto;
+  box-sizing: border-box;
 }
 .f-prev-slot .f-no-img {
   width: 100%;
@@ -872,6 +881,8 @@ h1,h2,h3 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; text-tran
   place-items: center;
   color: rgba(239,232,218,.4);
   font: 600 9px/1 'Inter';
+  margin-top: auto;
+  box-sizing: border-box;
 }
 .feat-status-badge {
   font: 700 10px/1 'Inter';

@@ -1606,14 +1606,14 @@ function renderCentralFeatured() {
 
         <div class="feat-banner-previews">
           <div class="f-prev-slot">
-            <span>Featured Desktop (16:8)</span>
+            <span>Desktop (16:8)</span>
             ${hasFeatDesktop
               ? `<img src="${esc(b.featured_desktop)}" alt="Featured Desktop Preview" loading="lazy" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';"><div class="f-no-img" style="display:none">No Banner Uploaded</div>`
               : `<div class="f-no-img">No Banner Uploaded</div>`
             }
           </div>
           <div class="f-prev-slot">
-            <span>Featured Mobile (4:5)</span>
+            <span>Mobile (4:5)</span>
             ${hasFeatMobile
               ? `<img src="${esc(b.featured_mobile)}" alt="Featured Mobile Preview" loading="lazy" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';"><div class="f-no-img" style="display:none">No Banner Uploaded</div>`
               : `<div class="f-no-img">No Banner Uploaded</div>`
