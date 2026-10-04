@@ -27,14 +27,14 @@ export const STATIC_EVENT_CODES = {
   // Artificial Intelligence & Data Science (AI)
   'ai:model-arena': 'MA7R3B',
   'ai:prompt-wars': 'PW4X8G',
-  'ai:vision-lab': 'VL9K2H',
+  'ai:vision-lab': 'ENWEC9',
   'ai:ai-talk': 'AT6N5E',
 
   // Computer Science & Design (CSD)
-  'csd:design-sprint': 'DS8W2M',
-  'csd:poster-slam': 'PS3V7K',
+  'csd:design-sprint': 'PITCHH',
+  'csd:poster-slam': 'STMBLE',
   'csd:figma-frontend': 'FF9T4C',
-  'csd:design-talk': 'DT5Y8L',
+  'csd:design-talk': 'PLYBCK',
 
   // Computer Science & Business Systems (CSBS)
   'csbs:startup-pitch': 'SP7K4N',
@@ -44,7 +44,7 @@ export const STATIC_EVENT_CODES = {
 
   // Electrical & Electronics Engineering (EEE)
   'eee:circuit-debug': 'CD7T3K',
-  'eee:line-follower': 'LF9M5P',
+  'eee:line-follower': '84YK4U',
   'eee:pcb-workshop': 'PB8N2A',
   'eee:spark-quiz': 'SQ4K7E',
 
@@ -62,10 +62,10 @@ export const STATIC_EVENT_CODES = {
 
   // Civil Engineering (CIVIL)
   'civil:bridge-builders': 'BB8X3M',
-  'civil:bridge-craft': 'BB8X3M', // Alias
+  'civil:bridge-craft': '000003', // Updated
   'civil:cad-showdown': 'CS7K5W',
-  'civil:cad-clash': 'CS7K5W',    // Alias
-  'civil:survey-sprint': 'SS4M9P',
+  'civil:cad-clash': '000002',    // Updated
+  'civil:survey-sprint': '000001',
   'civil:site-talk': 'ST8T2R',
 
   // Mechanical Engineering (MECH)

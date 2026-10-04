@@ -762,6 +762,22 @@ export async function apiSaveOrganiserEvent(eventData) {
     } catch {}
   }
 
+  // Security verification: ensure the submitted passcode matches the current database passcode
+  if (supabaseClient && eventData.id) {
+    try {
+      const { data: current } = await supabaseClient
+        .from('events')
+        .select('id, access_code')
+        .eq('id', eventData.id)
+        .maybeSingle();
+
+      if (current && current.access_code && current.access_code.trim().toUpperCase() !== code) {
+        console.warn('apiSaveOrganiserEvent rejected: passcode mismatch (revoked or regenerated)');
+        return null;
+      }
+    } catch {}
+  }
+
   // Save via direct Supabase upsert
   return await apiSaveEvent({
     ...eventData,

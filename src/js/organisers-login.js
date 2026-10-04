@@ -278,14 +278,17 @@ async function init() {
 
   if (code && code.length === 6) {
     let matched = null;
+    let cloudChecked = false;
     try {
       const cloudEv = await apiFetchEventByCode(code);
+      cloudChecked = true;
       if (cloudEv && cloudEv.is_active !== false && !cloudEv.is_deleted) {
         matched = cloudEv;
       }
     } catch {}
 
-    if (!matched) {
+    // Only allow local fallback if network completely failed (offline mode)
+    if (!matched && !cloudChecked) {
       const allEvents = gatherAllEvents();
       matched = allEvents.find(ev => (ev.accessCode || getEventAccessCode(ev)).toUpperCase() === code);
     }
@@ -294,8 +297,9 @@ async function init() {
       showDashboard(matched);
       return;
     } else {
+      try { sessionStorage.removeItem(SESS_KEY); } catch {}
       showLogin();
-      fail(`Passcode "${code}" was not found.`);
+      fail(`Passcode "${code}" was not found or has been revoked.`);
       return;
     }
   }
@@ -324,22 +328,30 @@ if (formEl) {
     goBtn.textContent = 'Verifying…';
 
     try {
-      // 1. Check live database first so renamed titles & updated fees always apply
+      // 1. Authoritative check in live database
       let matched = null;
+      let cloudChecked = false;
       try {
         const cloudEvent = await apiFetchEventByCode(code);
+        cloudChecked = true;
         if (cloudEvent && cloudEvent.is_active !== false && !cloudEvent.is_deleted) {
           matched = cloudEvent;
         }
-      } catch {}
+      } catch (err) {
+        console.warn('apiFetchEventByCode network error:', err);
+      }
 
-      // 2. Fallback to local memory or static catalog
-      if (!matched) {
+      // 2. Fallback to local memory ONLY if network failed completely (offline mode)
+      if (!matched && !cloudChecked) {
         const allEvents = gatherAllEvents();
         matched = allEvents.find(ev => {
           const evCode = (ev.accessCode || getEventAccessCode(ev)).toUpperCase();
           return evCode === code;
         });
+      }
+
+      if (!matched) {
+        return fail(`Passcode "${code}" was not found or has been revoked.`);
       }
 
       if (matched) {

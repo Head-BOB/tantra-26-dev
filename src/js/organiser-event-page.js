@@ -348,27 +348,42 @@ async function bootstrap() {
     return;
   }
 
-  // 1. Try local storage / static catalog first
-  let ev = loadEventByCode(codeParam);
-
-  // 2. If not present in local storage, fetch live from Supabase / Backend API
-  if (!ev) {
-    try {
-      const cloudEv = await apiFetchEventByCode(codeParam);
-      if (cloudEv) {
-        ev = cloudEv;
-        saveEvent(cloudEv);
-      }
-    } catch (err) {
-      console.warn('Error fetching cloud event by code:', err);
+  // 1. Authoritative check in live database first
+  let ev = null;
+  let cloudChecked = false;
+  try {
+    const cloudEv = await apiFetchEventByCode(codeParam);
+    cloudChecked = true;
+    if (cloudEv && cloudEv.is_active !== false && !cloudEv.is_deleted) {
+      ev = cloudEv;
+      saveEvent(cloudEv);
     }
+  } catch (err) {
+    console.warn('Error fetching cloud event by code:', err);
   }
 
-  // 3. If still not found after cloud lookup
+  // 2. Fallback to local storage ONLY if network failed completely (offline mode)
+  if (!ev && !cloudChecked) {
+    ev = loadEventByCode(codeParam);
+  }
+
+  // 3. If passcode not found or revoked
   if (!ev) {
+    // Purge any stale stored copy of this revoked code from local storage
+    try {
+      const s = readEvents();
+      for (const k in s) {
+        if (s[k] && ((s[k].code || s[k].accessCode || '').toUpperCase() === codeParam.toUpperCase())) {
+          delete s[k];
+        }
+      }
+      localStorage.setItem(EV_KEY, JSON.stringify(s));
+      sessionStorage.removeItem('tantra26:organiser_session');
+    } catch {}
+
     $('#app').hidden = true;
     $('#gate').hidden = false;
-    $('#gate-msg').textContent = `Passcode "${codeParam}" was not found. Please double-check the 6-digit code or ask your department administrator.`;
+    $('#gate-msg').textContent = `Passcode "${codeParam}" was not found or has been revoked. Please check with your department administrator for the updated passcode.`;
     return;
   }
 
