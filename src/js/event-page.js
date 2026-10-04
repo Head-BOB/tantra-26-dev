@@ -7,8 +7,21 @@
 
 import QRCode from 'qrcode';
 import { getAllEvents, getEventMetadata } from '../data/all-events.js';
-import { submitRegistration, apiFetchSingleEvent } from './api.js';
+import { submitRegistration, apiFetchSingleEvent, fetchDeptPayment } from './api.js';
 import { generatePassId } from './access-code.js';
+
+export const DEPT_FALLBACK_UPI = {
+  ai:    'qr.aivjec@sib',
+  cse:   'qr.cshod@sib',
+  cscy:  'qr.hodcscs@sib',
+  csbs:  'qr.hodcsbs@sib',
+  csd:   'qr.csd@sib',
+  ece:   'qr.ece@sib',
+  eee:   'qr.eee@sib',
+  civil: 'qr.civil@sib',
+  mech:  'qr.mfeng@sib',
+  aei:   'qr.endivjec@sib',
+};
 
 export const DEPTS = {
   cse:   ['Computer Science & Engineering',           '#2b6a4d', '#efe8da', 'CSE'],
@@ -309,6 +322,22 @@ if (initialEv) {
 } else {
   const gateEl = $('#gate');
   if (gateEl) gateEl.hidden = false;
+}
+
+const targetDeptSlug = (rawSlug || '').toLowerCase();
+if (targetDeptSlug) {
+  fetchDeptPayment(targetDeptSlug).then((cloudPay) => {
+    if (cloudPay) {
+      try {
+        const store = JSON.parse(localStorage.getItem('tantra26:admin:dept_payment') || '{}');
+        store[targetDeptSlug] = {
+          upiId: cloudPay.upi_id,
+          qrImage: cloudPay.qr_image_url,
+        };
+        localStorage.setItem('tantra26:admin:dept_payment', JSON.stringify(store));
+      } catch {}
+    }
+  }).catch(() => {});
 }
 
 function renderEvent(ev) {
@@ -1082,19 +1111,34 @@ function renderEvent(ev) {
           }
         }
       } else {
-        preparePaymentStep();
-        setStep(2);
+        preparePaymentStep().then(() => setStep(2));
       }
     }
   });
 
   // Step 2: Payment step
-  function preparePaymentStep() {
-    const deptPayments = (() => {
+  async function preparePaymentStep() {
+    const deptKey = (ev.slug || ev.dept_slug || targetDeptSlug || '').toLowerCase();
+    let deptPayments = (() => {
       try { return JSON.parse(localStorage.getItem('tantra26:admin:dept_payment') || '{}'); } catch { return {}; }
     })();
-    const deptCfg = deptPayments[ev.slug] || {};
-    const upiId = deptCfg.upiId || `tantra26.${ev.slug}@okhdfcbank`;
+
+    // If payment config is not yet cached, fetch directly from cloud
+    if (!deptPayments[deptKey] && deptKey) {
+      try {
+        const cloudPay = await fetchDeptPayment(deptKey);
+        if (cloudPay) {
+          deptPayments[deptKey] = {
+            upiId: cloudPay.upi_id,
+            qrImage: cloudPay.qr_image_url,
+          };
+          localStorage.setItem('tantra26:admin:dept_payment', JSON.stringify(deptPayments));
+        }
+      } catch {}
+    }
+
+    const deptCfg = deptPayments[deptKey] || {};
+    const upiId = deptCfg.upiId || DEPT_FALLBACK_UPI[deptKey] || `tantra26.${deptKey}@okhdfcbank`;
     const qrImage = deptCfg.qrImage;
 
     const numFee = (ev.fee || '').replace(/[^0-9.]/g, '') || '100';

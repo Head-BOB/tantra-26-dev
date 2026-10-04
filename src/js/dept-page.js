@@ -9,6 +9,19 @@ import { fetchDeptEvents, fetchDeptCoords, fetchDeptPayment, submitRegistration,
 import { getEventMetadata } from '../data/all-events.js';
 import { generatePassId } from './access-code.js';
 
+export const DEPT_FALLBACK_UPI = {
+  ai:    'qr.aivjec@sib',
+  cse:   'qr.cshod@sib',
+  cscy:  'qr.hodcscs@sib',
+  csbs:  'qr.hodcsbs@sib',
+  csd:   'qr.csd@sib',
+  ece:   'qr.ece@sib',
+  eee:   'qr.eee@sib',
+  civil: 'qr.civil@sib',
+  mech:  'qr.mfeng@sib',
+  aei:   'qr.endivjec@sib',
+};
+
 export function initDeptPage(CONFIG, EVENTS) {
   const $ = (x) => document.querySelector(x);
   const esc = (t) =>
@@ -723,20 +736,34 @@ export function initDeptPage(CONFIG, EVENTS) {
           }
         }
       } else {
-        preparePaymentStep();
-        setStep(2);
+        preparePaymentStep().then(() => setStep(2));
       }
     }
   });
 
   // ── Step 2: Prepare & render UPI QR code ────────────────────
-  function preparePaymentStep() {
-    // Check department-specific payment config from admin
-    const deptPayments = (() => {
+  async function preparePaymentStep() {
+    const deptKey = (CONFIG.slug || '').toLowerCase();
+    let deptPayments = (() => {
       try { return JSON.parse(localStorage.getItem('tantra26:admin:dept_payment') || '{}'); } catch { return {}; }
     })();
-    const deptCfg = deptPayments[CONFIG.slug] || {};
-    const upiId = deptCfg.upiId || `tantra26.${CONFIG.slug}@okhdfcbank`;
+
+    // If payment config is not yet cached, fetch directly from cloud
+    if (!deptPayments[deptKey] && deptKey) {
+      try {
+        const cloudPay = await fetchDeptPayment(deptKey);
+        if (cloudPay) {
+          deptPayments[deptKey] = {
+            upiId: cloudPay.upi_id,
+            qrImage: cloudPay.qr_image_url,
+          };
+          localStorage.setItem('tantra26:admin:dept_payment', JSON.stringify(deptPayments));
+        }
+      } catch {}
+    }
+
+    const deptCfg = deptPayments[deptKey] || {};
+    const upiId = deptCfg.upiId || DEPT_FALLBACK_UPI[deptKey] || `tantra26.${deptKey}@okhdfcbank`;
     const qrImage = deptCfg.qrImage; // Base64 data URL if uploaded
 
     const numFee = (curEvent.fee || '').replace(/[^0-9.]/g, '') || '100';
