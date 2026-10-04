@@ -413,7 +413,24 @@ export function initDashboard(ev, onSignOut = null) {
       }
       if (fresh.banner && $('#banner') && !$('#banner').value) {
         ev.banner = fresh.banner;
-        $('#banner').value = fresh.banner;
+        if ($('#banner')) $('#banner').value = fresh.banner;
+      }
+      if (fresh.banners && typeof fresh.banners === 'object') {
+        ev.banners = ev.banners || {};
+        let updatedBanners = false;
+        ['event_desktop', 'event_mobile', 'featured_desktop', 'featured_mobile'].forEach(slot => {
+          if (!ev.banners[slot] && fresh.banners[slot]) {
+            ev.banners[slot] = fresh.banners[slot];
+            updatedBanners = true;
+          }
+        });
+        if (fresh.banner && !ev.banner) {
+          ev.banner = fresh.banner;
+          updatedBanners = true;
+        }
+        if (updatedBanners && typeof renderBannerPreviews === 'function') {
+          renderBannerPreviews();
+        }
       }
       if (fresh.coord && fresh.coord.name && $('#c-name') && !$('#c-name').value) {
         ev.coord = fresh.coord;

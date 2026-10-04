@@ -142,8 +142,13 @@ export function calculatePrizePool(prizes, ev) {
   let total = 0;
   let hasNumeric = false;
   for (const p of prizes) {
-    if (!p || !p.reward) continue;
-    const num = parseInt(String(p.reward).replace(/[^0-9]/g, ''), 10);
+    if (!p) continue;
+    const rew = String(p.reward || '');
+    const lab = String(p.label || '');
+    let num = parseInt(rew.replace(/[^0-9]/g, ''), 10);
+    if ((isNaN(num) || num <= 0) && lab && (lab.includes('₹') || /\b(?:rs\.?|inr)\b/i.test(lab))) {
+      num = parseInt(lab.replace(/[^0-9]/g, ''), 10);
+    }
     if (!isNaN(num) && num > 0) {
       total += num;
       hasNumeric = true;
@@ -590,8 +595,12 @@ function renderEvent(ev) {
       const isFirst = pos === 1;
       const numStr = pad2(pos);
       const rankTag = getRankTag(pos);
-      const title = p.label || `${getOrdinal(pos)} Prize`;
-      const reward = p.reward || 'Certificate';
+      let title = p.label || `${getOrdinal(pos)} Prize`;
+      let reward = p.reward || 'Certificate';
+      const isCurrency = s => typeof s === 'string' && (s.includes('₹') || /\b(?:rs\.?|inr)\b/i.test(s));
+      if (isCurrency(title) && !isCurrency(reward)) {
+        const t = title; title = reward; reward = t;
+      }
 
       return `
         <div class="pz-card ${isFirst ? 'pz-first' : ''} reveal" style="transition-delay:${(i % 3) * 0.08}s">

@@ -500,9 +500,30 @@ export async function apiSaveEvent(eventData, isEdit = false) {
   const coord = (eventData.coord && typeof eventData.coord === 'object') ? eventData.coord : { name: '', phone: '', email: '' };
   const whatsapp_group = (eventData.whatsapp_group || eventData.whatsappGroup || '').trim();
 
-  const banners = (eventData.banners && typeof eventData.banners === 'object')
-    ? eventData.banners
+  let banners = (eventData.banners && typeof eventData.banners === 'object')
+    ? { ...eventData.banners }
     : { event_desktop: banner, event_mobile: '', featured_desktop: '', featured_mobile: '' };
+
+  // If saving an existing event and no banners are provided in the payload (e.g. text-only admin edit), preserve existing database banners
+  if (supabaseClient && eventData.id) {
+    const hasAnyNewBanner = Boolean(banners.event_desktop || banners.featured_desktop || banners.event_mobile || banners.featured_mobile || banner);
+    if (!hasAnyNewBanner) {
+      try {
+        const { data: existing } = await supabaseClient.from('events').select('banner, banners').eq('id', eventData.id).maybeSingle();
+        if (existing) {
+          const eb = existing.banners || {};
+          if (eb.event_desktop || eb.featured_desktop || eb.event_mobile || eb.featured_mobile || existing.banner) {
+            banners = {
+              event_desktop: eb.event_desktop || existing.banner || '',
+              event_mobile: eb.event_mobile || '',
+              featured_desktop: eb.featured_desktop || '',
+              featured_mobile: eb.featured_mobile || '',
+            };
+          }
+        }
+      } catch {}
+    }
+  }
   const is_featured = Boolean(eventData.is_featured ?? eventData.isFeatured ?? false);
   const featured_order = parseInt(eventData.featured_order ?? eventData.featuredOrder ?? 0, 10) || 0;
 
@@ -1366,12 +1387,23 @@ export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
 
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
+      const hasValidBanner = (ev) => {
+        if (!ev) return false;
+        const b = ev.banners || {};
+        const desk = b.featured_desktop || b.event_desktop || ev.banner || ev.img || '';
+        const mob  = b.featured_mobile  || b.event_mobile  || '';
+        return Boolean(
+          (typeof desk === 'string' && desk.trim().length > 10) ||
+          (typeof mob === 'string' && mob.trim().length > 10)
+        );
+      };
+
       let unpacked = [];
       if (!error && Array.isArray(data)) {
         unpacked = data.map(unpackEventRecord).filter(ev => {
           if (!ev || delSet.has(ev.id) || ev.is_active === false) return false;
           const isFeat = Boolean(ev.is_featured || ev.isFeatured || ev.dept_slug === 'central' || ev.slug === 'central' || ev.display_only || ev.type === 'Special Attraction');
-          return isFeat;
+          return isFeat && hasValidBanner(ev);
         });
       }
 
@@ -1379,7 +1411,7 @@ export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
       try {
         const vaultItems = await apiFetchShowcaseVault();
         vaultItems.forEach(vp => {
-          if (vp && !delSet.has(vp.id) && vp.is_active !== false && (vp.is_featured !== false)) {
+          if (vp && !delSet.has(vp.id) && vp.is_active !== false && (vp.is_featured !== false) && hasValidBanner(vp)) {
             const existingIdx = unpacked.findIndex(x => x.id === vp.id);
             if (existingIdx >= 0) {
               unpacked[existingIdx] = { ...unpacked[existingIdx], ...vp };
@@ -1395,7 +1427,7 @@ export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
         const adminEvents = JSON.parse(localStorage.getItem('tantra26:admin:events') || '{}');
         const localPosters = adminEvents['central'] || [];
         localPosters.forEach(p => {
-          if (p && !delSet.has(p.id) && (p.is_featured || p.isFeatured || p.type === 'Special Attraction' || p.display_only) && !unpacked.some(x => x.id === p.id)) {
+          if (p && !delSet.has(p.id) && (p.is_featured || p.isFeatured || p.type === 'Special Attraction' || p.display_only) && hasValidBanner(p) && !unpacked.some(x => x.id === p.id)) {
             unpacked.push(p);
           }
         });
@@ -1434,7 +1466,11 @@ export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
 
     const checkAndAdd = ev => {
       if (!ev || !ev.id || seen.has(ev.id) || delSet.has(ev.id)) return;
-      if (ev.is_featured || ev.isFeatured || ev.type === 'Special Attraction' || ev.display_only) {
+      const b = ev.banners || {};
+      const desk = b.featured_desktop || b.event_desktop || ev.banner || ev.img || '';
+      const mob  = b.featured_mobile  || b.event_mobile  || '';
+      const hasImg = Boolean((typeof desk === 'string' && desk.trim().length > 10) || (typeof mob === 'string' && mob.trim().length > 10));
+      if ((ev.is_featured || ev.isFeatured || ev.type === 'Special Attraction' || ev.display_only) && hasImg) {
         list.push(ev);
         seen.add(ev.id);
       }
