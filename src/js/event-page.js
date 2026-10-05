@@ -1170,7 +1170,6 @@ function renderEvent(ev) {
         txnInp.addEventListener('input', () => {
           txnInp.classList.remove('input-error');
           txnInp.style.borderColor = '';
-          txnInp.setCustomValidity('');
           const pe = $('#pay-err');
           if (pe) pe.textContent = '';
         });
@@ -1242,8 +1241,6 @@ function renderEvent(ev) {
         }
         if (txnInput) {
           txnInput.classList.add('input-error');
-          txnInput.setCustomValidity(msg);
-          txnInput.reportValidity();
           txnInput.focus();
         }
         return;
@@ -1256,8 +1253,6 @@ function renderEvent(ev) {
         }
         if (txnInput) {
           txnInput.classList.add('input-error');
-          txnInput.setCustomValidity(msg);
-          txnInput.reportValidity();
           txnInput.focus();
         }
         return;
@@ -1265,7 +1260,6 @@ function renderEvent(ev) {
       if (txnInput) {
         txnInput.value = cleanTxn;
         txnInput.classList.remove('input-error');
-        txnInput.setCustomValidity('');
       }
 
       const isTxnUsed = readLocalRegs().some((r) =>

@@ -786,7 +786,6 @@ export function initDeptPage(CONFIG, EVENTS) {
         txnInp.addEventListener('input', () => {
           txnInp.classList.remove('input-error');
           txnInp.style.borderColor = '';
-          txnInp.setCustomValidity('');
           const pe = $('#pay-err');
           if (pe) pe.textContent = '';
         });
@@ -863,8 +862,6 @@ export function initDeptPage(CONFIG, EVENTS) {
         }
         if (txnInput) {
           txnInput.classList.add('input-error');
-          txnInput.setCustomValidity(msg);
-          txnInput.reportValidity();
           txnInput.focus();
         }
         return;
@@ -877,8 +874,6 @@ export function initDeptPage(CONFIG, EVENTS) {
         }
         if (txnInput) {
           txnInput.classList.add('input-error');
-          txnInput.setCustomValidity(msg);
-          txnInput.reportValidity();
           txnInput.focus();
         }
         return;
@@ -886,7 +881,6 @@ export function initDeptPage(CONFIG, EVENTS) {
       if (txnInput) {
         txnInput.value = cleanTxn;
         txnInput.classList.remove('input-error');
-        txnInput.setCustomValidity('');
       }
 
       // Check if this transaction ID was already used across all registrations
