@@ -281,7 +281,7 @@ export async function initFeaturedShowcase() {
 
   // 2. Background live cloud sync (non-blocking)
   if (!isDemo) {
-    apiFetchFeaturedEvents().then(liveEvents => {
+    apiFetchFeaturedEvents({ forceRefresh: true }).then(liveEvents => {
       if (liveEvents && liveEvents.length > 0) {
         const keyFn = (e) => {
           const b = e.banners || {};
@@ -301,7 +301,7 @@ export async function initFeaturedShowcase() {
     // 3. React to live update broadcasts from admin
     window.addEventListener('tantra26:featured:updated', async () => {
       try {
-        const fresh = await apiFetchFeaturedEvents();
+        const fresh = await apiFetchFeaturedEvents({ forceRefresh: true });
         if (fresh && fresh.length > 0) {
           renderSlides(fresh);
         }

@@ -1392,13 +1392,13 @@ export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
     try {
       const queryPromise = supabaseClient
         .from('events')
-        .select('id, dept_slug, type, title, date, time, venue, fee, is_featured, featured_order, banner, banners, description, is_active, created_at')
+        .select('id, dept_slug, type, title, date, time, venue, fee, is_featured, featured_order, banner, banners, prizes, is_active, created_at')
         .eq('is_active', true)
-        .or('is_featured.eq.true,dept_slug.eq.central,type.eq.Special Attraction,type.ilike.%attraction%,type.ilike.%showcase%')
+        .or('is_featured.eq.true,dept_slug.eq.central,type.eq.Special Attraction')
         .order('featured_order', { ascending: true });
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Supabase query timeout')), 3500)
+        setTimeout(() => reject(new Error('Supabase query timeout')), 10000)
       );
 
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
@@ -1463,10 +1463,15 @@ export async function apiFetchFeaturedEvents({ forceRefresh = false } = {}) {
           seenSlots.add(o);
         });
         unpacked.sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0));
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(unpacked));
-          localStorage.setItem(CACHE_TIME_KEY, String(Date.now()));
-        } catch {}
+
+        // Protect cache: only overwrite if query returned healthy data, never on degraded single-item fallback
+        const shouldSaveCache = unpacked.length >= cached.length || cached.length <= 1;
+        if (shouldSaveCache) {
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(unpacked));
+            localStorage.setItem(CACHE_TIME_KEY, String(Date.now()));
+          } catch {}
+        }
         return unpacked;
       }
     } catch (err) {
