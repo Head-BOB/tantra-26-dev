@@ -39,8 +39,8 @@
 <style>
 :root{--cream:#efe8da;--ink:#141414;--red:#c23b22;--gold:#e3a72f;--green:#2b6a4d;--navy:#182338;box-sizing:border-box}
 *{margin:0;padding:0;box-sizing:inherit}
-html{scroll-behavior:smooth}
-body{background:var(--navy);color:var(--cream);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;padding-bottom:0}
+html{scroll-behavior:smooth;overflow-anchor:none;-webkit-overflow-scrolling:touch}
+body{background:var(--navy);color:var(--cream);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;overflow-anchor:none;padding-bottom:0}
 [hidden]{display:none!important}
 h1,h2,h3{font-family:'Anton',Impact,'Arial Narrow Bold',sans-serif;font-weight:400;text-transform:uppercase}
 a{color:inherit}
@@ -52,7 +52,7 @@ a{color:inherit}
 }
 
 /* ---------- hero ---------- */
-.hero{position:relative;background:var(--c,#e3a72f);color:var(--t,#141414);min-height:100vh;min-height:100dvh;display:flex;align-items:flex-end;overflow:hidden;border-bottom:6px solid var(--ink)}
+.hero{position:relative;background:var(--c,#e3a72f);color:var(--t,#141414);min-height:100vh;min-height:100svh;display:flex;align-items:flex-end;overflow:hidden;border-bottom:6px solid var(--ink)}
 .hero.img{color:var(--cream);background-size:cover;background-position:center}
 .hero.has-banner{background-image:var(--banner-desk);background-size:cover;background-position:center}
 @media(max-width:768px),(max-width:920px) and (orientation:portrait),(pointer:coarse) and (orientation:portrait){.hero.has-banner{background-image:var(--banner-mob)!important}}
@@ -166,7 +166,7 @@ input:focus,textarea:focus{outline:none;box-shadow:3px 3px 0 var(--gold)}
   .row{grid-template-columns:1fr}
   .bar b{font-size:1.05rem}
   .reg{padding:15px 18px}
-  .hero{min-height:100vh;min-height:100dvh}
+  .hero{min-height:100vh;min-height:100svh}
   .hero.has-banner{background-position:82% center!important;background-size:cover}
   .hero.img::before{background:linear-gradient(to top,rgba(8,12,24,.92) 0%,rgba(8,12,24,.68) 48%,rgba(8,12,24,.42) 100%)!important}
   .hero-in{padding-top:104px!important;padding-bottom:100px!important}
