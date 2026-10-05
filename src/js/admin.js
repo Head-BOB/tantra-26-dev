@@ -27,7 +27,7 @@ import {
   apiFetchSpecialAttractions,
   apiFetchCandidateFeaturedBanners,
 } from './api.js';
-import { generateRandomCode, generateUniqueAccessCode, getEventAccessCode } from './access-code.js';
+import { generateRandomCode, generateUniqueAccessCode, getEventAccessCode, STATIC_EVENT_CODES } from './access-code.js';
 import { SlopGuard } from './slop-guard.js';
 
 import { EVENTS as CSE_EV }   from '../data/events/cse.js';
@@ -191,7 +191,9 @@ function allEventsFor(slug) {
       .filter(a => !deleted.includes(a.id))
       .map(e => {
         const ev = { ...e, date: '7 Oct', _source: 'admin' };
-        return { ...ev, accessCode: e.accessCode || e.access_code || getEventAccessCode(ev) };
+        const rawCode = (e.accessCode || e.access_code || '').trim().toUpperCase();
+        const staticCode = (STATIC_EVENT_CODES[`${slug}:${e.id}`] || '').toUpperCase();
+        return { ...ev, accessCode: rawCode || staticCode };
       });
   }
 
@@ -814,7 +816,12 @@ function openEventModal(id) {
       f.venue.value = (v === '--' || v === '-') ? '' : v;
       f.team.value  = ev.team || 1;
       f.desc.value  = ev.desc || '';
-      if (f.accessCode) f.accessCode.value = ev.accessCode || getEventAccessCode(ev);
+      if (f.accessCode) {
+        // Use the verified DB/static code; never fall back to a random generator
+        const slug = activeDept || '';
+        const staticCode = (STATIC_EVENT_CODES[`${slug}:${ev.id}`] || '').toUpperCase();
+        f.accessCode.value = ev.accessCode || ev.access_code || staticCode || '';
+      }
     }
   } else {
     $('em-mode').textContent  = 'Add Event';
@@ -2134,11 +2141,17 @@ function getDepartmentEventsList(slug) {
   if (!slug || slug === 'all') return [];
   const list = [...(allEventsFor(slug) || [])];
   const allRegs = getAllRegistrations();
+  // Track both IDs and titles — a renamed event shares the same ID, so
+  // checking only the title would add it as a phantom duplicate.
+  const knownIds    = new Set(list.map(e => e.id).filter(Boolean));
   const knownTitles = new Set(list.map(e => (e.title || '').trim().toLowerCase()));
 
   allRegs.filter(r => r.slug === slug).forEach(r => {
-    if (r.event && !knownTitles.has(r.event.trim().toLowerCase())) {
-      knownTitles.add(r.event.trim().toLowerCase());
+    const titleKey = (r.event || '').trim().toLowerCase();
+    // Only add if neither the event ID nor the title is already covered
+    if (r.event && !knownIds.has(r.eventId) && !knownTitles.has(titleKey)) {
+      knownIds.add(r.eventId);
+      knownTitles.add(titleKey);
       list.push({ id: r.eventId || r.event, title: r.event });
     }
   });

@@ -1,81 +1,118 @@
 /**
- * Artificial Intelligence — department config & event data.
- * Edit CONFIG.coordinators, CONFIG.endpoint, and EVENTS here.
+ * Artificial Intelligence & Data Science — department config & event data.
  */
 
 export const CONFIG = {
   dept: 'Artificial Intelligence & Data Science',
   slug: 'ai',
-
-  /*
-   * WHERE REGISTRATIONS GO.
-   * Leave '' and registrations are only saved in the visitor's own browser
-   * (fine for testing, NOT enough for the real fest — you will not receive them).
-   * For real use paste a URL that accepts a POST, e.g.
-   *   - a Google Apps Script web-app URL that appends the JSON to a Google Sheet, or
-   *   - a Formspree / Getform endpoint.
-   * The page sends JSON: {dept, eventId, event, name, email, phone, college, team, regId, time}.
-   */
   endpoint: '',
 
-  /** Department contacts shown under "Questions?" (PLACEHOLDERS) */
   coordinators: [
-    { name: 'Coordinator Name', phone: '+91 00000 00000' },
-    { name: 'Coordinator Name', phone: '+91 00000 00000' },
+    { name: 'Niharika Ranjith', phone: '+91 73560 49587' },
+    { name: 'Jeo Joji', phone: '+91 96335 52747' },
+    { name: 'Vysakh K V', phone: '+91 80869 09806' },
+    { name: 'Neha M V', phone: '+91 94973 54696' },
   ],
 };
 
-/**
- * EVENTS — PLACEHOLDER DATA, replace with the real events.
- * type   : 'Competition' | 'Workshop' | 'Talk'   (drives the filter buttons)
- * team   : max team size (1 = individual)
- * fee    : text shown on the card ('Free', '₹100' …)
- * regUrl : OPTIONAL. If set (e.g. a Google Form link) the Register button opens
- *          that link instead of the built-in form.
- */
 export const EVENTS = [
   {
-    id: 'model-arena',
+    id: 'mus3dvc1jgus',
     type: 'Competition',
-    title: 'Model Arena',
+    title: 'NodeHunt',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'G31',
+    team: 1,
+    fee: '₹20',
+    desc: 'Solve clues, discover hidden locations, and race to find the treasure.',
+  },
+  {
+    id: 'mus36hx91y0t',
+    type: 'Workshop',
+    title: 'Workshop and Talk Session',
+    date: '7 Oct',
+    time: '09:50 AM',
+    venue: 'S3 ADS A',
+    team: 1,
+    fee: '₹99',
+    desc: 'A 2-hour workshop on Agentic AI, its applications, real-world uses, and practical demonstrations.',
+  },
+  {
+    id: 'mus3995z0w8k',
+    type: 'Competition',
+    title: 'Robo Soccer',
+    date: '7 Oct',
+    time: '11:30 AM',
+    venue: 'LAB 12',
+    team: 2,
+    fee: '₹25',
+    desc: 'Robo Soccer is a robotic football game where players control rover robots to score goals and compete.',
+  },
+  {
+    id: 'mus3cnx8fowz',
+    type: 'Competition',
+    title: 'Zero to apk',
     date: '7 Oct',
     time: '10:30 AM',
-    venue: 'AI Lab',
+    venue: 'LAB 6',
+    team: 1,
+    fee: '₹30',
+    desc: 'A hands-on Android app workshop and competition using Codex and Android Studio to turn ideas into apps.',
+  },
+  {
+    id: 'ai-talk',
+    type: 'Competition',
+    title: 'Typing Kombat',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'LAB 6',
+    team: 1,
+    fee: '₹20',
+    desc: 'Typing Kombat is a fast-paced competition where participants race against the clock to achieve the highest typing speed and accuracy.',
+  },
+  {
+    id: 'mus3ay39a3cv',
+    type: 'Competition',
+    title: 'MindMaze',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'S5 ADS A(F29)',
+    team: 1,
+    fee: '₹25',
+    desc: 'MindMaze — a mind-bending puzzle and logic challenge to test reasoning and deduction.',
+  },
+  {
+    id: 'vision-lab',
+    type: 'Competition',
+    title: 'FC 26',
+    date: '7 Oct',
+    time: '10:00 AM',
+    venue: 'G32',
     team: 2,
-    fee: '₹100',
-    desc: 'Same dataset, same clock. Build the most accurate model and take the top of the leaderboard.',
+    fee: '₹30',
+    desc: 'FC 26 2v2 Tournament, where teams of two players compete head-to-head in intense football matches.',
+  },
+  {
+    id: 'mus329op5yc5',
+    type: 'Workshop',
+    title: 'Game Development Workshop',
+    date: '7 Oct',
+    time: '09:20 AM',
+    venue: 'LAB 12',
+    team: 1,
+    fee: '₹60',
+    desc: 'A hands-on workshop on basic game development using the Godot game engine.',
   },
   {
     id: 'prompt-wars',
     type: 'Competition',
-    title: 'Prompt Wars',
+    title: 'Rigging',
     date: '7 Oct',
-    time: '3:00 PM',
-    venue: 'Seminar Hall',
-    team: 1,
-    fee: '₹50',
-    desc: 'Head-to-head prompt challenges. Get the best result out of the machine in the fewest tries.',
-  },
-  {
-    id: 'vision-lab',
-    type: 'Workshop',
-    title: 'Vision Lab',
-    date: '7 Oct',
-    time: '11:00 AM',
-    venue: 'AI Lab',
-    team: 1,
-    fee: 'Free',
-    desc: 'Build an image-recognition pipeline from scratch and see how it learns.',
-  },
-  {
-    id: 'ai-talk',
-    type: 'Talk',
-    title: 'Where AI Goes Next',
-    date: '7 Oct',
-    time: '10:00 AM',
-    venue: 'Main Auditorium',
-    team: 1,
-    fee: 'Free',
-    desc: 'An open talk on what is changing in AI and what it means for engineers.',
+    time: '10:50 AM',
+    venue: 'LAB 12',
+    team: 2,
+    fee: '₹25',
+    desc: 'Rapid Rigging tests speed, hardware skills, precision, and safe computer assembly under time pressure.',
   },
 ];
