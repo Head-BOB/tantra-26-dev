@@ -191,7 +191,12 @@ function allEventsFor(slug) {
       .filter(a => !deleted.includes(a.id))
       .map(e => {
         const ev = { ...e, date: '7 Oct', _source: 'admin' };
-        return { ...ev, accessCode: e.accessCode || e.access_code || getEventAccessCode(ev) };
+        // Use the code stored in the DB cache only.
+        // Never fall back to a random generator — that produces phantom codes
+        // (e.g. DUEV37) that don't exist in Supabase and will always fail auth.
+        // If the cache hasn't synced yet the code will be '' and the card
+        // will show '—'; it self-corrects once syncDeptDataFromCloud() finishes.
+        return { ...ev, accessCode: (e.accessCode || e.access_code || '').trim().toUpperCase() };
       });
   }
 
@@ -814,7 +819,12 @@ function openEventModal(id) {
       f.venue.value = (v === '--' || v === '-') ? '' : v;
       f.team.value  = ev.team || 1;
       f.desc.value  = ev.desc || '';
-      if (f.accessCode) f.accessCode.value = ev.accessCode || getEventAccessCode(ev);
+      if (f.accessCode) {
+        // Use the code from the DB cache only — never a random fallback.
+        // If cache hasn't synced yet, field will be empty; the admin can
+        // hit Randomize or wait for syncDeptDataFromCloud() to finish.
+        f.accessCode.value = ev.accessCode || ev.access_code || '';
+      }
     }
   } else {
     $('em-mode').textContent  = 'Add Event';
@@ -2134,11 +2144,17 @@ function getDepartmentEventsList(slug) {
   if (!slug || slug === 'all') return [];
   const list = [...(allEventsFor(slug) || [])];
   const allRegs = getAllRegistrations();
+  // Track both IDs and titles — a renamed event shares the same ID, so
+  // checking only the title would add it as a phantom duplicate.
+  const knownIds    = new Set(list.map(e => e.id).filter(Boolean));
   const knownTitles = new Set(list.map(e => (e.title || '').trim().toLowerCase()));
 
   allRegs.filter(r => r.slug === slug).forEach(r => {
-    if (r.event && !knownTitles.has(r.event.trim().toLowerCase())) {
-      knownTitles.add(r.event.trim().toLowerCase());
+    const titleKey = (r.event || '').trim().toLowerCase();
+    // Only add if neither the event ID nor the title is already covered
+    if (r.event && !knownIds.has(r.eventId) && !knownTitles.has(titleKey)) {
+      knownIds.add(r.eventId);
+      knownTitles.add(titleKey);
       list.push({ id: r.eventId || r.event, title: r.event });
     }
   });

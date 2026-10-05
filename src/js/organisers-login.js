@@ -287,8 +287,8 @@ async function init() {
       }
     } catch {}
 
-    // Only allow local fallback if network completely failed (offline mode)
-    if (!matched && !cloudChecked) {
+    // 2. Fallback to local memory / catalog if cloud check didn't match
+    if (!matched) {
       const allEvents = gatherAllEvents();
       matched = allEvents.find(ev => (ev.accessCode || getEventAccessCode(ev)).toUpperCase() === code);
     }
@@ -341,8 +341,8 @@ if (formEl) {
         console.warn('apiFetchEventByCode network error:', err);
       }
 
-      // 2. Fallback to local memory ONLY if network failed completely (offline mode)
-      if (!matched && !cloudChecked) {
+      // 2. Fallback to local memory / catalog if cloud didn't match
+      if (!matched) {
         const allEvents = gatherAllEvents();
         matched = allEvents.find(ev => {
           const evCode = (ev.accessCode || getEventAccessCode(ev)).toUpperCase();
@@ -355,20 +355,32 @@ if (formEl) {
       }
 
       if (matched) {
-        // Store event locally
+        // Store event locally (strip heavy base64 banners to protect localStorage 5MB quota)
         try {
           const store = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
-          store[(matched.slug || matched.dept_slug) + ':' + matched.id] = matched;
+          const { banner, banners, ...cleanEvent } = matched;
+          store[(matched.slug || matched.dept_slug) + ':' + matched.id] = cleanEvent;
           localStorage.setItem('tantra26:events', JSON.stringify(store));
         } catch {}
 
-        // Store session
-        const sessionData = {
-          event: matched,
-          accessCode: code,
-          loginTime: new Date().toISOString(),
-        };
-        sessionStorage.setItem(SESS_KEY, JSON.stringify(sessionData));
+        // Store session (safe against browser QuotaExceededError)
+        try {
+          const sessionData = {
+            event: matched,
+            accessCode: code,
+            loginTime: new Date().toISOString(),
+          };
+          sessionStorage.setItem(SESS_KEY, JSON.stringify(sessionData));
+        } catch {
+          try {
+            const { banner, banners, ...cleanEvent } = matched;
+            sessionStorage.setItem(SESS_KEY, JSON.stringify({
+              event: cleanEvent,
+              accessCode: code,
+              loginTime: new Date().toISOString(),
+            }));
+          } catch {}
+        }
 
         if (window.history && window.history.replaceState) {
           window.history.replaceState({}, '', `/organisers?code=${encodeURIComponent(code)}`);

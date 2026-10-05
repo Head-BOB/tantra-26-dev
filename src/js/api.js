@@ -814,10 +814,10 @@ export async function apiFetchEventByCode(rawCode) {
         return unpackEventRecord(data);
       }
 
-      // Second attempt: scan active events for unpacked accessCode
+      // Second attempt: scan active events for unpacked accessCode (exclude heavy banners to prevent 50MB payload)
       const { data: allEvs } = await supabaseClient
         .from('events')
-        .select('*')
+        .select('id, dept_slug, type, title, date, time, venue, team_size, fee, description, details, access_code, coord, is_active, is_featured, featured_order, prizes, duration, created_at, updated_at, max_registrations, is_closed')
         .eq('is_active', true);
 
       if (allEvs && allEvs.length > 0) {

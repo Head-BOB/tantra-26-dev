@@ -27,7 +27,7 @@ export const STATIC_EVENT_CODES = {
   // Artificial Intelligence & Data Science (AI)
   'ai:model-arena': 'MA7R3B',
   'ai:prompt-wars': 'PW4X8G',
-  'ai:vision-lab': 'ENWEC9',
+  'ai:vision-lab': '7QZ2E8',
   'ai:ai-talk': 'AT6N5E',
 
   // Computer Science & Design (CSD)
