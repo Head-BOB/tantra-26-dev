@@ -456,8 +456,14 @@ function renderEvent(ev) {
     }
   }
   applyHeroBanner();
+  let lastHeroW = window.innerWidth;
   if (hero._onResize) window.removeEventListener('resize', hero._onResize);
-  hero._onResize = applyHeroBanner;
+  hero._onResize = () => {
+    const nw = window.innerWidth;
+    if (nw === lastHeroW) return;
+    lastHeroW = nw;
+    applyHeroBanner();
+  };
   window.addEventListener('resize', hero._onResize, { passive: true });
   
   const prizePool = calculatePrizePool(ev.prizes, ev);
