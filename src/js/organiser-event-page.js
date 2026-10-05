@@ -362,8 +362,8 @@ async function bootstrap() {
     console.warn('Error fetching cloud event by code:', err);
   }
 
-  // 2. Fallback to local storage ONLY if network failed completely (offline mode)
-  if (!ev && !cloudChecked) {
+  // 2. Fallback to local storage or catalog if cloud lookup did not match
+  if (!ev) {
     ev = loadEventByCode(codeParam);
   }
 
