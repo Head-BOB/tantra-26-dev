@@ -595,6 +595,29 @@ input:focus, textarea:focus {
   font-family: monospace; font-size: 15px; letter-spacing: .08em;
   font-weight: 600; background: #ffffff;
 }
+#pay-txn-id.input-error {
+  border-color: #c23b22 !important;
+  background: #fff5f5 !important;
+  box-shadow: 0 0 0 3px rgba(194, 59, 34, 0.25) !important;
+}
+#pay-err:not(:empty) {
+  display: block !important;
+  color: #c23b22 !important;
+  background: rgba(194, 59, 34, 0.1) !important;
+  border: 1.5px solid rgba(194, 59, 34, 0.4) !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  margin: 4px 0 2px !important;
+  animation: err-shake 0.3s ease-in-out;
+}
+@keyframes err-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
 
 /* ── Panel 3: Ticket Pass Confirmation ── */
 .ok { padding: 8px 4px 16px; text-align: center; display: grid; gap: 12px; }

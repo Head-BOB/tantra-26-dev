@@ -1168,7 +1168,9 @@ function renderEvent(ev) {
       if (!txnInp._hasInputClear) {
         txnInp._hasInputClear = true;
         txnInp.addEventListener('input', () => {
+          txnInp.classList.remove('input-error');
           txnInp.style.borderColor = '';
+          txnInp.setCustomValidity('');
           const pe = $('#pay-err');
           if (pe) pe.textContent = '';
         });
@@ -1233,24 +1235,37 @@ function renderEvent(ev) {
       const cleanTxn = rawTxn.replace(/[\s-]/g, '');
 
       if (!cleanTxn) {
-        if (payErr) payErr.textContent = 'Please enter your 12-digit UPI Transaction ID / UTR number.';
+        const msg = 'Please enter your 12-digit UPI Transaction ID / UTR number.';
+        if (payErr) {
+          payErr.textContent = msg;
+          payErr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
         if (txnInput) {
-          txnInput.style.borderColor = 'var(--red, #c23b22)';
+          txnInput.classList.add('input-error');
+          txnInput.setCustomValidity(msg);
+          txnInput.reportValidity();
           txnInput.focus();
         }
         return;
       }
       if (!/^\d{12}$/.test(cleanTxn)) {
-        if (payErr) payErr.textContent = 'Please enter the correct 12-digit UTR number (digits only).';
+        const msg = 'Please enter the correct 12-digit UTR number (digits only).';
+        if (payErr) {
+          payErr.textContent = msg;
+          payErr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
         if (txnInput) {
-          txnInput.style.borderColor = 'var(--red, #c23b22)';
+          txnInput.classList.add('input-error');
+          txnInput.setCustomValidity(msg);
+          txnInput.reportValidity();
           txnInput.focus();
         }
         return;
       }
       if (txnInput) {
         txnInput.value = cleanTxn;
-        txnInput.style.borderColor = '';
+        txnInput.classList.remove('input-error');
+        txnInput.setCustomValidity('');
       }
 
       const isTxnUsed = readLocalRegs().some((r) =>
