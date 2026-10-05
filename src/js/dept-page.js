@@ -778,8 +778,17 @@ export function initDeptPage(CONFIG, EVENTS) {
     const txnInp = $('#pay-txn-id');
     if (txnInp) {
       txnInp.value = '';
+      txnInp.style.borderColor = '';
       txnInp.setAttribute('inputmode', 'numeric');
       txnInp.setAttribute('maxlength', '14');
+      if (!txnInp._hasInputClear) {
+        txnInp._hasInputClear = true;
+        txnInp.addEventListener('input', () => {
+          txnInp.style.borderColor = '';
+          const pe = $('#pay-err');
+          if (pe) pe.textContent = '';
+        });
+      }
     }
 
     const canvas = $('#pay-qr');
@@ -845,16 +854,25 @@ export function initDeptPage(CONFIG, EVENTS) {
       const cleanTxn = rawTxn.replace(/[\s-]/g, '');
 
       if (!cleanTxn) {
-        if (payErr) payErr.textContent = 'Please paste the UPI Transaction ID / UTR number from your payment app.';
-        if (txnInput) txnInput.focus();
+        if (payErr) payErr.textContent = 'Please enter your 12-digit UPI Transaction ID / UTR number.';
+        if (txnInput) {
+          txnInput.style.borderColor = 'var(--red, #c23b22)';
+          txnInput.focus();
+        }
         return;
       }
       if (!/^\d{12}$/.test(cleanTxn)) {
-        if (payErr) payErr.textContent = 'UPI Transaction ID / UTR must be exactly 12 numeric digits (e.g. 428190348210).';
-        if (txnInput) txnInput.focus();
+        if (payErr) payErr.textContent = 'Please enter the correct 12-digit UTR number (digits only).';
+        if (txnInput) {
+          txnInput.style.borderColor = 'var(--red, #c23b22)';
+          txnInput.focus();
+        }
         return;
       }
-      if (txnInput) txnInput.value = cleanTxn;
+      if (txnInput) {
+        txnInput.value = cleanTxn;
+        txnInput.style.borderColor = '';
+      }
 
       // Check if this transaction ID was already used across all registrations
       const isTxnUsed = loadRegs().some((r) =>
@@ -865,7 +883,10 @@ export function initDeptPage(CONFIG, EVENTS) {
       );
       if (isTxnUsed) {
         if (payErr) payErr.textContent = 'This UPI Transaction ID / UTR number has already been used for another registration.';
-        if (txnInput) txnInput.focus();
+        if (txnInput) {
+          txnInput.style.borderColor = 'var(--red, #c23b22)';
+          txnInput.focus();
+        }
         return;
       }
 
