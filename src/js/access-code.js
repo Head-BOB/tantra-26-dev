@@ -25,15 +25,10 @@ export const STATIC_EVENT_CODES = {
   'cscy:forensics-talk': 'FT5M9D',
 
   // Artificial Intelligence & Data Science (AI)
+  'ai:model-arena': 'MA7R3B',
   'ai:prompt-wars': 'PW4X8G',
+  'ai:vision-lab': 'ENWEC9',
   'ai:ai-talk': 'AT6N5E',
-  'ai:vision-lab': '7QZ2E8',
-  'ai:mus329op5yc5': 'DFJ6AT',
-  'ai:mus36hx91y0t': 'F99HQ5',
-  'ai:mus3995z0w8k': '6WXAVL',
-  'ai:mus3ay39a3cv': '6A8JEQ',
-  'ai:mus3cnx8fowz': '9S8QW3',
-  'ai:mus3dvc1jgus': 'M56A5F',
 
   // Computer Science & Design (CSD)
   'csd:design-sprint': 'PITCHH',

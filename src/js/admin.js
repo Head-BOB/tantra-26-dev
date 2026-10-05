@@ -27,7 +27,7 @@ import {
   apiFetchSpecialAttractions,
   apiFetchCandidateFeaturedBanners,
 } from './api.js';
-import { generateRandomCode, generateUniqueAccessCode, getEventAccessCode, STATIC_EVENT_CODES } from './access-code.js';
+import { generateRandomCode, generateUniqueAccessCode, getEventAccessCode } from './access-code.js';
 import { SlopGuard } from './slop-guard.js';
 
 import { EVENTS as CSE_EV }   from '../data/events/cse.js';
@@ -191,9 +191,12 @@ function allEventsFor(slug) {
       .filter(a => !deleted.includes(a.id))
       .map(e => {
         const ev = { ...e, date: '7 Oct', _source: 'admin' };
-        const rawCode = (e.accessCode || e.access_code || '').trim().toUpperCase();
-        const staticCode = (STATIC_EVENT_CODES[`${slug}:${e.id}`] || '').toUpperCase();
-        return { ...ev, accessCode: rawCode || staticCode };
+        // Use the code stored in the DB cache only.
+        // Never fall back to a random generator — that produces phantom codes
+        // (e.g. DUEV37) that don't exist in Supabase and will always fail auth.
+        // If the cache hasn't synced yet the code will be '' and the card
+        // will show '—'; it self-corrects once syncDeptDataFromCloud() finishes.
+        return { ...ev, accessCode: (e.accessCode || e.access_code || '').trim().toUpperCase() };
       });
   }
 
@@ -817,10 +820,10 @@ function openEventModal(id) {
       f.team.value  = ev.team || 1;
       f.desc.value  = ev.desc || '';
       if (f.accessCode) {
-        // Use the verified DB/static code; never fall back to a random generator
-        const slug = activeDept || '';
-        const staticCode = (STATIC_EVENT_CODES[`${slug}:${ev.id}`] || '').toUpperCase();
-        f.accessCode.value = ev.accessCode || ev.access_code || staticCode || '';
+        // Use the code from the DB cache only — never a random fallback.
+        // If cache hasn't synced yet, field will be empty; the admin can
+        // hit Randomize or wait for syncDeptDataFromCloud() to finish.
+        f.accessCode.value = ev.accessCode || ev.access_code || '';
       }
     }
   } else {
