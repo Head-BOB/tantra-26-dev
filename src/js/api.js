@@ -312,14 +312,20 @@ export async function submitRegistration(payload) {
         throw new Error('This email address is already registered for this event.');
       }
 
-      // Check duplicate UPI transaction ID / UTR
+      // Check duplicate and validity of UPI transaction ID / UTR
       const cleanTxn = (payload.txn_id || '').trim();
       const isBypassTxn = cleanTxn.toUpperCase() === 'FREE-REGISTRATION' || cleanTxn.toUpperCase() === 'PAY-AT-VENUE';
+      let finalTxn = cleanTxn;
       if (cleanTxn && !isBypassTxn) {
+        const sanitizedTxn = cleanTxn.replace(/[\s-]/g, '');
+        if (!/^\d{12}$/.test(sanitizedTxn)) {
+          throw new Error('UPI Transaction ID / UTR must be exactly 12 numeric digits.');
+        }
+        finalTxn = sanitizedTxn;
         const { data: existingTxn } = await supabaseClient
           .from('registrations')
           .select('id')
-          .eq('txn_id', cleanTxn)
+          .eq('txn_id', finalTxn)
           .maybeSingle();
 
         if (existingTxn) {
@@ -377,7 +383,7 @@ export async function submitRegistration(payload) {
         college: payload.college.trim(),
         team_members: payload.team_members || null,
         fee: payload.fee || 'Free',
-        txn_id: cleanTxn || 'FREE-REGISTRATION',
+        txn_id: finalTxn || 'FREE-REGISTRATION',
         created_at: new Date().toISOString(),
       };
 

@@ -776,7 +776,11 @@ export function initDeptPage(CONFIG, EVENTS) {
     const payErr = $('#pay-err');
     if (payErr) payErr.textContent = '';
     const txnInp = $('#pay-txn-id');
-    if (txnInp) txnInp.value = '';
+    if (txnInp) {
+      txnInp.value = '';
+      txnInp.setAttribute('inputmode', 'numeric');
+      txnInp.setAttribute('maxlength', '14');
+    }
 
     const canvas = $('#pay-qr');
     const qrImg  = $('#pay-qr-img');
@@ -837,21 +841,22 @@ export function initDeptPage(CONFIG, EVENTS) {
       if (isProcessing) return;
       const txnInput = $('#pay-txn-id');
       const payErr   = $('#pay-err');
-      const txnId    = txnInput ? txnInput.value.trim() : '';
+      const rawTxn   = txnInput ? txnInput.value.trim() : '';
+      const cleanTxn = rawTxn.replace(/[\s-]/g, '');
 
-      if (!txnId) {
+      if (!cleanTxn) {
         if (payErr) payErr.textContent = 'Please paste the UPI Transaction ID / UTR number from your payment app.';
         if (txnInput) txnInput.focus();
         return;
       }
-      if (txnId.length < 6) {
-        if (payErr) payErr.textContent = 'Transaction ID / UTR must be at least 6 characters.';
+      if (!/^\d{12}$/.test(cleanTxn)) {
+        if (payErr) payErr.textContent = 'UPI Transaction ID / UTR must be exactly 12 numeric digits (e.g. 428190348210).';
         if (txnInput) txnInput.focus();
         return;
       }
+      if (txnInput) txnInput.value = cleanTxn;
 
       // Check if this transaction ID was already used across all registrations
-      const cleanTxn = txnId.trim();
       const isTxnUsed = loadRegs().some((r) =>
         r.txnId &&
         r.txnId.toUpperCase() !== 'FREE-REGISTRATION' &&
@@ -878,7 +883,7 @@ export function initDeptPage(CONFIG, EVENTS) {
 
       try {
         await new Promise((r) => setTimeout(r, 1000));
-        await finalizeRegistration(txnId);
+        await finalizeRegistration(cleanTxn);
       } catch (submitErr) {
         if (payErr) payErr.textContent = submitErr.message || 'Verification failed. Please try again.';
       } finally {
@@ -916,7 +921,7 @@ export function initDeptPage(CONFIG, EVENTS) {
         passRegId = res.pass.regId;
       }
     } catch (err) {
-      if (err.message && (err.message.includes('already registered') || err.message.includes('already been used'))) {
+      if (err.message && (err.message.includes('already registered') || err.message.includes('already been used') || err.message.includes('12 numeric digits'))) {
         throw err;
       }
       console.warn('Backend note:', err.message);
