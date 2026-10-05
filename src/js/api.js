@@ -64,6 +64,7 @@ export function unpackEventRecord(ev) {
   // Envelope values represent latest admin/organiser edits; take priority over un-migrated column defaults
   const duration = Math.max(10, parseInt(envelope.duration || ev.duration || 120, 10));
   const fee = envelope.fee || ev.fee || 'Free';
+  const venue = ev.venue || envelope.venue || 'Campus';
   const time = envelope.time || ev.time || '10:00 AM';
   const date = envelope.date || ev.date || '7 Oct';
 
@@ -96,6 +97,7 @@ export function unpackEventRecord(ev) {
     dept_slug: (envelope.dept_slug || envelope.slug || ev.dept_slug || ev.slug || '').toLowerCase(),
     date,
     time,
+    venue,
     duration,
     fee,
     desc,
@@ -140,7 +142,7 @@ export async function fetchDeptEvents(slug) {
       // Exclude heavy base64 banners in list view to reduce payload from 10.4MB down to 21KB (500x speedup)
       let { data, error } = await supabaseClient
         .from('events')
-        .select('id, dept_slug, type, title, date, time, venue, team_size, fee, description, details, access_code, coord, is_active, is_featured, featured_order, prizes, duration, created_at, updated_at')
+        .select('id, dept_slug, type, title, date, time, venue, team_size, fee, description, details, access_code, coord, is_active, is_featured, featured_order, prizes, duration, steps, rules, created_at, updated_at')
         .eq('dept_slug', slug.toLowerCase())
         .eq('is_active', true)
         .order('created_at', { ascending: true });
@@ -500,9 +502,9 @@ export async function apiSaveEvent(eventData, isEdit = false) {
   const desc = eventData.desc || eventData.description || '';
   const details = eventData.details || desc || '';
   const banner = eventData.banner || '';
-  const steps = Array.isArray(eventData.steps) ? eventData.steps : [];
-  const rules = Array.isArray(eventData.rules) ? eventData.rules : [];
-  const prizes = Array.isArray(eventData.prizes) ? eventData.prizes : [];
+  let steps = Array.isArray(eventData.steps) ? eventData.steps : [];
+  let rules = Array.isArray(eventData.rules) ? eventData.rules : [];
+  let prizes = Array.isArray(eventData.prizes) ? eventData.prizes : [];
   const coord = (eventData.coord && typeof eventData.coord === 'object') ? eventData.coord : { name: '', phone: '', email: '' };
   const whatsapp_group = (eventData.whatsapp_group || eventData.whatsappGroup || '').trim();
 
@@ -510,21 +512,33 @@ export async function apiSaveEvent(eventData, isEdit = false) {
     ? { ...eventData.banners }
     : { event_desktop: banner, event_mobile: '', featured_desktop: '', featured_mobile: '' };
 
-  // If saving an existing event and no banners are provided in the payload (e.g. text-only admin edit), preserve existing database banners
+  // If saving an existing event, preserve existing database banners/steps/rules/prizes if not provided in payload (e.g. text-only admin edit)
   if (supabaseClient && eventData.id) {
     const hasAnyNewBanner = Boolean(banners.event_desktop || banners.featured_desktop || banners.event_mobile || banners.featured_mobile || banner);
-    if (!hasAnyNewBanner) {
+    const needsExisting = !hasAnyNewBanner || steps.length === 0 || rules.length === 0 || prizes.length === 0;
+    if (needsExisting) {
       try {
-        const { data: existing } = await supabaseClient.from('events').select('banner, banners').eq('id', eventData.id).maybeSingle();
+        const { data: existing } = await supabaseClient.from('events').select('banner, banners, steps, rules, prizes').eq('id', eventData.id).maybeSingle();
         if (existing) {
-          const eb = existing.banners || {};
-          if (eb.event_desktop || eb.featured_desktop || eb.event_mobile || eb.featured_mobile || existing.banner) {
-            banners = {
-              event_desktop: eb.event_desktop || existing.banner || '',
-              event_mobile: eb.event_mobile || '',
-              featured_desktop: eb.featured_desktop || '',
-              featured_mobile: eb.featured_mobile || '',
-            };
+          if (!hasAnyNewBanner) {
+            const eb = existing.banners || {};
+            if (eb.event_desktop || eb.featured_desktop || eb.event_mobile || eb.featured_mobile || existing.banner) {
+              banners = {
+                event_desktop: eb.event_desktop || existing.banner || '',
+                event_mobile: eb.event_mobile || '',
+                featured_desktop: eb.featured_desktop || '',
+                featured_mobile: eb.featured_mobile || '',
+              };
+            }
+          }
+          if (steps.length === 0 && Array.isArray(existing.steps) && existing.steps.length > 0) {
+            steps = existing.steps;
+          }
+          if (rules.length === 0 && Array.isArray(existing.rules) && existing.rules.length > 0) {
+            rules = existing.rules;
+          }
+          if (prizes.length === 0 && Array.isArray(existing.prizes) && existing.prizes.length > 0) {
+            prizes = existing.prizes;
           }
         }
       } catch {}
@@ -549,6 +563,7 @@ export async function apiSaveEvent(eventData, isEdit = false) {
         slug: rawDept,
         date: eventDate,
         time: eventData.time || '10:00 AM',
+        venue: eventData.venue || 'Campus',
         desc,
         details,
         accessCode,
@@ -578,6 +593,13 @@ export async function apiSaveEvent(eventData, isEdit = false) {
           localStorage.removeItem('tantra26:cache:featured_events_time');
           localStorage.removeItem('tantra26:cache:dept_events:' + rawDept);
           localStorage.removeItem('tantra26:cache:dept_events:' + dbDept);
+          const evMap = JSON.parse(localStorage.getItem('tantra26:events') || '{}');
+          if (eventData.id) {
+            delete evMap[eventData.id];
+            delete evMap[rawDept + ':' + eventData.id];
+            delete evMap[dbDept + ':' + eventData.id];
+            localStorage.setItem('tantra26:events', JSON.stringify(evMap));
+          }
         } catch {}
       };
 
@@ -773,13 +795,25 @@ export async function apiSaveOrganiserEvent(eventData) {
     try {
       const { data: current } = await supabaseClient
         .from('events')
-        .select('id, access_code')
+        .select('id, access_code, venue, fee, title, type, date, time, duration, team_size')
         .eq('id', eventData.id)
         .maybeSingle();
 
       if (current && current.access_code && current.access_code.trim().toUpperCase() !== code) {
         console.warn('apiSaveOrganiserEvent rejected: passcode mismatch (revoked or regenerated)');
         return null;
+      }
+
+      // Preserve authoritative admin fields if present in DB so organiser saves cannot overwrite them
+      if (current) {
+        if (current.venue) eventData.venue = current.venue;
+        if (current.fee) eventData.fee = current.fee;
+        if (current.title) eventData.title = current.title;
+        if (current.type) eventData.type = current.type;
+        if (current.date) eventData.date = current.date;
+        if (current.time) eventData.time = current.time;
+        if (current.duration) eventData.duration = current.duration;
+        if (current.team_size) eventData.team_size = current.team_size;
       }
     } catch {}
   }
@@ -817,13 +851,17 @@ export async function apiFetchEventByCode(rawCode) {
       // Second attempt: scan active events for unpacked accessCode (exclude heavy banners to prevent 50MB payload)
       const { data: allEvs } = await supabaseClient
         .from('events')
-        .select('id, dept_slug, type, title, date, time, venue, team_size, fee, description, details, access_code, coord, is_active, is_featured, featured_order, prizes, duration, created_at, updated_at, max_registrations, is_closed')
+        .select('id, dept_slug, type, title, date, time, venue, team_size, fee, description, details, access_code, coord, is_active, is_featured, featured_order, prizes, duration, steps, rules, created_at, updated_at, max_registrations, is_closed')
         .eq('is_active', true);
 
       if (allEvs && allEvs.length > 0) {
         for (const ev of allEvs) {
           const unpacked = unpackEventRecord(ev);
-          if (unpacked && unpacked.accessCode === code) {
+          if (unpacked && (unpacked.accessCode || unpacked.access_code || '').trim().toUpperCase() === code) {
+            try {
+              const { data: fullEv } = await supabaseClient.from('events').select('*').eq('id', ev.id).maybeSingle();
+              if (fullEv) return unpackEventRecord(fullEv);
+            } catch {}
             return unpacked;
           }
         }
