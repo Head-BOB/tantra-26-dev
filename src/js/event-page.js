@@ -455,6 +455,7 @@ function renderEvent(ev) {
       $('#ghost').textContent = '';
     }
   }
+  applyHeroBanner();
   let lastHeroW = window.innerWidth;
   if (hero._onResize) window.removeEventListener('resize', hero._onResize);
   hero._onResize = () => {
