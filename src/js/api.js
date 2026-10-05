@@ -857,7 +857,11 @@ export async function apiFetchEventByCode(rawCode) {
       if (allEvs && allEvs.length > 0) {
         for (const ev of allEvs) {
           const unpacked = unpackEventRecord(ev);
-          if (unpacked && unpacked.accessCode === code) {
+          if (unpacked && (unpacked.accessCode || unpacked.access_code || '').trim().toUpperCase() === code) {
+            try {
+              const { data: fullEv } = await supabaseClient.from('events').select('*').eq('id', ev.id).maybeSingle();
+              if (fullEv) return unpackEventRecord(fullEv);
+            } catch {}
             return unpacked;
           }
         }
