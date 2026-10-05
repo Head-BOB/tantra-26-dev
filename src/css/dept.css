@@ -595,6 +595,18 @@ input:focus, textarea:focus {
   font-family: monospace; font-size: 15px; letter-spacing: .08em;
   font-weight: 600; background: #ffffff;
 }
+#pay-txn-id.input-error {
+  border-color: #c23b22 !important;
+  background: #fff5f5 !important;
+  box-shadow: 0 0 0 3px rgba(194, 59, 34, 0.25) !important;
+}
+#pay-err:not(:empty) {
+  display: block;
+  color: var(--red, #c23b22);
+  font-size: 0.83rem;
+  font-weight: 600;
+  margin: 2px 0 0;
+}
 
 /* ── Panel 3: Ticket Pass Confirmation ── */
 .ok { padding: 8px 4px 16px; text-align: center; display: grid; gap: 12px; }

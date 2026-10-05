@@ -1160,7 +1160,21 @@ function renderEvent(ev) {
     const payErr = $('#pay-err');
     if (payErr) payErr.textContent = '';
     const txnInp = $('#pay-txn-id');
-    if (txnInp) txnInp.value = '';
+    if (txnInp) {
+      txnInp.value = '';
+      txnInp.style.borderColor = '';
+      txnInp.setAttribute('inputmode', 'numeric');
+      txnInp.setAttribute('maxlength', '14');
+      if (!txnInp._hasInputClear) {
+        txnInp._hasInputClear = true;
+        txnInp.addEventListener('input', () => {
+          txnInp.classList.remove('input-error');
+          txnInp.style.borderColor = '';
+          const pe = $('#pay-err');
+          if (pe) pe.textContent = '';
+        });
+      }
+    }
 
     const canvas = $('#pay-qr');
     const qrImg  = $('#pay-qr-img');
@@ -1216,20 +1230,38 @@ function renderEvent(ev) {
       if (isProcessing) return;
       const txnInput = $('#pay-txn-id');
       const payErr   = $('#pay-err');
-      const txnId    = txnInput ? txnInput.value.trim() : '';
+      const rawTxn   = txnInput ? txnInput.value.trim() : '';
+      const cleanTxn = rawTxn.replace(/[\s-]/g, '');
 
-      if (!txnId) {
-        if (payErr) payErr.textContent = 'Please paste the UPI Transaction ID / UTR number from your payment app.';
-        if (txnInput) txnInput.focus();
+      if (!cleanTxn) {
+        const msg = 'Please enter your 12-digit UPI Transaction ID / UTR number.';
+        if (payErr) {
+          payErr.textContent = msg;
+          payErr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        if (txnInput) {
+          txnInput.classList.add('input-error');
+          txnInput.focus();
+        }
         return;
       }
-      if (txnId.length < 6) {
-        if (payErr) payErr.textContent = 'Transaction ID / UTR must be at least 6 characters.';
-        if (txnInput) txnInput.focus();
+      if (!/^\d{12}$/.test(cleanTxn)) {
+        const msg = 'Please enter the correct 12-digit UTR number (digits only).';
+        if (payErr) {
+          payErr.textContent = msg;
+          payErr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        if (txnInput) {
+          txnInput.classList.add('input-error');
+          txnInput.focus();
+        }
         return;
       }
+      if (txnInput) {
+        txnInput.value = cleanTxn;
+        txnInput.classList.remove('input-error');
+      }
 
-      const cleanTxn = txnId.trim();
       const isTxnUsed = readLocalRegs().some((r) =>
         r.txnId &&
         r.txnId.toUpperCase() !== 'FREE-REGISTRATION' &&
@@ -1238,7 +1270,10 @@ function renderEvent(ev) {
       );
       if (isTxnUsed) {
         if (payErr) payErr.textContent = 'This UPI Transaction ID / UTR number has already been used for another registration.';
-        if (txnInput) txnInput.focus();
+        if (txnInput) {
+          txnInput.style.borderColor = 'var(--red, #c23b22)';
+          txnInput.focus();
+        }
         return;
       }
 
@@ -1256,7 +1291,7 @@ function renderEvent(ev) {
 
       try {
         await new Promise((r) => setTimeout(r, 1000));
-        await finalizeRegistration(txnId);
+        await finalizeRegistration(cleanTxn);
       } catch (submitErr) {
         if (payErr) payErr.textContent = submitErr.message || 'Verification failed. Please try again.';
       } finally {
@@ -1294,7 +1329,7 @@ function renderEvent(ev) {
         passRegId = res.pass.regId;
       }
     } catch (err) {
-      if (err.message && (err.message.includes('already registered') || err.message.includes('already been used'))) {
+      if (err.message && (err.message.includes('already registered') || err.message.includes('already been used') || err.message.includes('12 numeric digits'))) {
         throw err;
       }
       console.warn('Backend note:', err.message);
